@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Menu, X } from "lucide-react";
 
 const links = [
@@ -16,9 +17,15 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-none">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <a href="#top" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          Zaane
-          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+        <a href="#top" className="flex items-center">
+          <Image
+            src="/zaane-logo.svg"
+            alt="Zaane"
+            width={126}
+            height={22}
+            priority
+            style={{ height: 22, width: "auto" }}
+          />
         </a>
 
         <nav className="hidden items-center gap-8 md:flex">

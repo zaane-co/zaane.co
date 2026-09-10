@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const links = [
   { href: "#services", label: "Services" },
   { href: "#process", label: "Process" },
@@ -12,9 +14,14 @@ export default function Footer() {
     <footer className="border-t border-border">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <a href="#top" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-            Zaane
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+          <a href="#top" className="flex items-center">
+            <Image
+              src="/zaane-logo.svg"
+              alt="Zaane"
+              width={126}
+              height={22}
+              style={{ height: 22, width: "auto" }}
+            />
           </a>
           <p className="mt-2 max-w-xs text-sm text-muted">
             Software, apps, and business systems built to run.
