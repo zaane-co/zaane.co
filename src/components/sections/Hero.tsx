@@ -2,12 +2,8 @@ import { ArrowRight } from "lucide-react";
 
 export default function Hero() {
   return (
-    <section id="top" className="relative overflow-hidden border-b border-border">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-0 h-[480px] w-[900px] -translate-x-1/2 rounded-full bg-accent-soft opacity-40 blur-3xl"
-      />
-      <div className="relative mx-auto flex max-w-6xl flex-col items-start px-6 pb-24 pt-20 sm:pb-32 sm:pt-28">
+    <section id="top" className="border-b border-border">
+      <div className="mx-auto flex max-w-6xl flex-col items-start px-6 pb-24 pt-20 sm:pb-32 sm:pt-28">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-1.5 text-xs text-muted">
           Software · Apps · Business
         </div>
