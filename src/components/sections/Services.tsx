@@ -1,85 +1,118 @@
-import { Code2, Smartphone, Briefcase } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-
-type Service = {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  items: string[];
-};
-
-const services: Service[] = [
+"use client";
+import { useState } from "react";
+import { ArrowUpRight, Check, Asterisk } from "lucide-react";
+const services = [
   {
-    icon: Code2,
-    title: "Software",
-    description:
-      "Custom web platforms, internal tools, and integrations built for how your team actually works.",
+    title: "Custom software",
+    symbol: "{ }",
+    description: "Built around the way your business works.",
     items: [
       "Web platforms & dashboards",
       "APIs & integrations",
-      "Internal tools & automation",
+      "Internal tools",
+      "Workflow automation",
     ],
   },
   {
-    icon: Smartphone,
-    title: "Apps",
-    description:
-      "Mobile and cross-platform apps designed and shipped from a blank screen to the app store.",
+    title: "Mobile & web apps",
+    symbol: "↗",
+    description: "Your next idea. In your customers’ hands.",
     items: [
-      "iOS & Android apps",
+      "iOS & Android",
       "Cross-platform builds",
-      "Product design & UX",
+      "Customer experiences",
+      "Launch & iteration",
     ],
   },
   {
-    icon: Briefcase,
-    title: "Business",
-    description:
-      "Technical strategy and the operating systems founders need to run a business, not just an app.",
+    title: "Product design",
+    symbol: "✳",
+    description: "Thoughtful from the first tap to the last detail.",
     items: [
-      "Product & technical strategy",
-      "Process & operations systems",
-      "Ongoing support & growth",
+      "User experience",
+      "Interface design",
+      "Design systems",
+      "Interactive prototypes",
+    ],
+  },
+  {
+    title: "Business systems",
+    symbol: "⌘",
+    description: "Make the moving parts work together.",
+    items: [
+      "Technical strategy",
+      "Connected operations",
+      "Process improvement",
+      "Ongoing support",
     ],
   },
 ];
-
 export default function Services() {
+  const [open, setOpen] = useState<number | null>(2);
   return (
-    <section id="services" className="border-b border-border">
-      <div className="mx-auto max-w-6xl px-6 py-24">
-        <div className="max-w-xl">
-          <h2 className="text-sm font-medium uppercase tracking-widest text-accent">
-            What we do
-          </h2>
-          <p className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Three disciplines. One team.
-          </p>
+    <section id="services" className="studio-panel dark-panel" data-reveal>
+      <div className="section-heading">
+        <h2>Services</h2>
+        <div className="service-stars" aria-hidden="true">
+          <Asterisk />
+          <Asterisk />
+          <Asterisk />
         </div>
-
-        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service) => (
+        <span className="eyebrow">04 disciplines</span>
+      </div>
+      <div className="service-accordion">
+        {services.map((s, i) => (
+          <article
+            key={s.title}
+            className={`service-row ${open === i ? "is-open" : ""}`}
+          >
+            <h3>
+              <button
+                type="button"
+                onClick={() => setOpen(open === i ? null : i)}
+                aria-expanded={open === i}
+                aria-controls={`service-detail-${i}`}
+                id={`service-toggle-${i}`}
+              >
+                <span className="row-number">(0{i + 1})</span>
+                <span>{s.title}</span>
+                <span className="round-arrow">
+                  <ArrowUpRight size={21} />
+                </span>
+              </button>
+            </h3>
             <div
-              key={service.title}
-              className="flex flex-col rounded-2xl border border-border bg-surface p-8"
+              id={`service-detail-${i}`}
+              role="region"
+              aria-labelledby={`service-toggle-${i}`}
+              className="accordion-body"
+              inert={open !== i}
+              aria-hidden={open !== i}
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent">
-                <service.icon size={20} className="text-accent-foreground" />
+              <div>
+                <div className="service-detail">
+                  <p>{s.description}</p>
+                  <div
+                    className={`service-art service-art-${i}`}
+                    aria-hidden="true"
+                  >
+                    <span>{s.symbol}</span>
+                    <i />
+                    <i />
+                  </div>
+                  <ul>
+                    {s.items.map((item) => (
+                      <li key={item}>
+                        <Check size={15} />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              <h3 className="mt-6 text-xl font-semibold">{service.title}</h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted">
-                {service.description}
-              </p>
-              <ul className="mt-6 flex flex-col gap-2 border-t border-border pt-6">
-                {service.items.map((item) => (
-                  <li key={item} className="text-sm text-muted">
-                    {item}
-                  </li>
-                ))}
-              </ul>
             </div>
-          ))}
-        </div>
+          </article>
+        ))}
       </div>
     </section>
   );

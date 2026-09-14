@@ -1,43 +1,52 @@
-import { Check } from "lucide-react";
-
-const points = [
-  "One team across product, engineering, and design",
-  "Direct access to the people building your product",
-  "Built to run in production, not just in a demo",
-  "We stay on after launch, not just through it",
-];
-
+import { ArrowUpRight, Asterisk } from "lucide-react";
 export default function About() {
   return (
-    <section id="about" className="border-b border-border">
-      <div className="mx-auto grid max-w-6xl gap-14 px-6 py-24 lg:grid-cols-2 lg:gap-20">
-        <div>
-          <h2 className="text-sm font-medium uppercase tracking-widest text-accent">
-            About Zaane
-          </h2>
-          <p className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-            A studio built for founders who need to ship.
+    <section
+      id="about"
+      className="studio-panel light-panel about-panel"
+      data-reveal
+    >
+      <span className="eyebrow">About us</span>
+      <div className="about-copy">
+        <h2>
+          We’re a software studio
+          <br />
+          turning bold ideas into
+          <br />
+          <span>everyday essentials.</span>
+        </h2>
+        <div className="about-detail">
+          <p>
+            Great software makes a difference you can feel. We bring product
+            thinking, design, and engineering together to build apps and systems
+            that move your business forward.
           </p>
-          <p className="mt-6 max-w-lg text-base leading-relaxed text-muted">
-            Zaane exists because most businesses do not need a bigger team,
-            they need the right software built the right way. We work like a
-            product team inside your company: close, fast, and honest about
-            what it takes to get from an idea to something real.
+          <p>
+            From the first conversation to life after launch, you work directly
+            with the people bringing your idea to life.
           </p>
         </div>
-
-        <div className="flex flex-col justify-center gap-4">
-          {points.map((point) => (
-            <div key={point} className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent">
-                <Check size={14} className="text-accent-foreground" />
-              </div>
-              <span className="text-sm leading-relaxed text-foreground">
-                {point}
-              </span>
-            </div>
-          ))}
-        </div>
+        <a className="studio-button black-button" href="#contact">
+          Meet your next product team <ArrowUpRight size={19} />
+        </a>
+      </div>
+      <div className="about-bottom">
+        <Asterisk
+          size={72}
+          strokeWidth={1.1}
+          className="slow-spin"
+          aria-hidden="true"
+        />
+        <p>
+          Good people.
+          <br />
+          Thoughtful products.
+        </p>
+        <span>
+          Independent studio.
+          <br />
+          Built around your ambition.
+        </span>
       </div>
     </section>
   );

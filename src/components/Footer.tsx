@@ -1,50 +1,30 @@
-import Image from "next/image";
-
-const links = [
-  { href: "#services", label: "Services" },
-  { href: "#process", label: "Process" },
-  { href: "#about", label: "About" },
-  { href: "#contact", label: "Contact" },
-];
-
+import { ArrowUpRight } from "lucide-react";
 export default function Footer() {
-  const year = new Date().getFullYear();
-
   return (
-    <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-12 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <a href="#top" className="flex items-center">
-            <Image
-              src="/zaane-logo.svg"
-              alt="Zaane"
-              width={126}
-              height={22}
-              style={{ height: 22, width: "auto" }}
-            />
-          </a>
-          <p className="mt-2 max-w-xs text-sm text-muted">
-            Software, apps, and business systems built to run.
-          </p>
-        </div>
-
-        <nav className="flex flex-wrap gap-6">
-          {links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-sm text-muted transition-colors hover:text-foreground"
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
-      </div>
-
-      <div className="border-t border-border px-6 py-6">
-        <p className="mx-auto max-w-6xl text-xs text-muted">
-          © {year} Zaane. All rights reserved.
+    <footer className="studio-footer">
+      <div className="footer-top">
+        <p>
+          Independent minds.
+          <br />
+          Extraordinary possibilities.
         </p>
+        <nav aria-label="Footer navigation">
+          <a href="#about">About</a>
+          <a href="#services">Services</a>
+          <a href="#works">Works</a>
+          <a href="#contact">Contact</a>
+        </nav>
+        <a href="#top" className="back-top">
+          Back to top <ArrowUpRight size={20} />
+        </a>
+      </div>
+      <a href="#top" className="footer-wordmark" aria-label="Zaane home">
+        Zaane
+      </a>
+      <div className="footer-bottom">
+        <span>© {new Date().getFullYear()} Zaane. All rights reserved.</span>
+        <span>Software. Apps. Business systems.</span>
+        <a href="mailto:hello@zaane.co">Let’s create what’s next ↗</a>
       </div>
     </footer>
   );
