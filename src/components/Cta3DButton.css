@@ -1,0 +1,247 @@
+.cta3d {
+  --white: #fff0f3;
+  --red-100: #ffb8c9;
+  --red-200: #ff8aa3;
+  --red-300: #f24d6e;
+  --red-400: #f10c45;
+  --red-500: #6e0a22;
+  --radius: 14px;
+
+  display: inline-block;
+  border-radius: var(--radius);
+  outline: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  background: transparent;
+  letter-spacing: -0.2px;
+  border: 0;
+  position: relative;
+  height: 46px;
+  text-decoration: none;
+}
+
+.cta3d-bg {
+  display: none;
+}
+.cta3d-bg::before,
+.cta3d-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: calc(var(--radius) * 1.1);
+  background: var(--red-500);
+}
+.cta3d-bg::before {
+  filter: blur(4px);
+  transition: all 0.3s ease;
+  box-shadow:
+    -4px 4px 0 0 rgb(110 10 34 / 40%),
+    -8px 8px 0 0 rgb(110 10 34 / 30%),
+    -12px 12px 3px 0 rgb(110 10 34 / 25%),
+    -16px 16px 5px 0 rgb(110 10 34 / 15%),
+    -20px 20px 7px 0 rgb(110 10 34 / 12%);
+}
+
+.cta3d-wrap {
+  display: block;
+  border-radius: inherit;
+  overflow: hidden;
+  height: 100%;
+  transform: translate(4px, -4px);
+  padding: 2px;
+  background: linear-gradient(to bottom, var(--red-100) 0%, var(--red-400) 100%);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.cta3d-outline {
+  position: absolute;
+  overflow: hidden;
+  inset: 0;
+  opacity: 0;
+  border-radius: inherit;
+  transition: all 0.4s ease;
+}
+.cta3d-outline::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  width: 60px;
+  height: 200px;
+  margin: auto;
+  background: linear-gradient(to right, transparent 0%, white 50%, transparent 100%);
+  animation: cta3d-spin 3s linear infinite;
+  animation-play-state: paused;
+}
+
+.cta3d-content {
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  position: relative;
+  height: 100%;
+  gap: 10px;
+  padding: 0 18px;
+  border-radius: calc(var(--radius) * 0.85);
+  font-weight: 600;
+  color: var(--white);
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  background: linear-gradient(to bottom, var(--red-300) 0%, var(--red-400) 100%);
+  box-shadow:
+    inset -1px 8px 8px -5px var(--red-200),
+    inset 1px -2px 8px 0 rgb(0 0 0 / 35%);
+}
+.cta3d-content::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  width: 80%;
+  top: 45%;
+  bottom: 35%;
+  opacity: 0.7;
+  margin: auto;
+  background: linear-gradient(to bottom, transparent, var(--red-400));
+  filter: brightness(1.3) blur(4px);
+}
+
+.cta3d-icon {
+  z-index: 10;
+}
+.cta3d-icon span,
+.cta3d-icon span::before,
+.cta3d-icon span::after {
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--white);
+}
+.cta3d-icon span::before,
+.cta3d-icon span::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  transform-origin: center right;
+  width: 8px;
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+.cta3d-icon span {
+  position: relative;
+  display: block;
+  width: 15px;
+  box-shadow: -1px 1px 3px var(--red-400);
+  transform: scale(0.9);
+  background: linear-gradient(to bottom, var(--white), var(--red-100));
+  animation: cta3d-swing 1s ease-in-out infinite;
+  animation-play-state: paused;
+}
+.cta3d-icon span::before {
+  transform: rotate(44deg);
+  top: 0.5px;
+  box-shadow: 1px -1px 2px -1px var(--red-400);
+  animation: cta3d-rotate1 1s linear infinite;
+  animation-play-state: paused;
+}
+.cta3d-icon span::after {
+  bottom: 0.5px;
+  transform: rotate(316deg);
+  box-shadow: -1px 1px 2px 0 var(--red-400);
+  background: linear-gradient(200deg, var(--white), var(--red-100));
+  animation: cta3d-rotate2 1s linear infinite;
+  animation-play-state: paused;
+}
+
+.cta3d-splash {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  stroke-dasharray: 40 40;
+  stroke-dashoffset: 40;
+  transform: translate(-20%, -35%) scale(0.6);
+  stroke: var(--red-300);
+  width: 205px;
+  height: 125px;
+}
+
+.cta3d:hover .cta3d-wrap {
+  transform: translate(6px, -6px);
+}
+.cta3d:hover .cta3d-outline {
+  opacity: 1;
+}
+.cta3d:hover .cta3d-outline::before,
+.cta3d:hover .cta3d-icon span::before,
+.cta3d:hover .cta3d-icon span::after,
+.cta3d:hover .cta3d-icon span {
+  animation-play-state: running;
+}
+
+.cta3d:active .cta3d-bg::before {
+  filter: blur(4px);
+  opacity: 0.7;
+  box-shadow:
+    -4px 4px 0 0 rgb(110 10 34 / 40%),
+    -8px 8px 0 0 rgb(110 10 34 / 25%),
+    -12px 12px 3px 0 rgb(110 10 34 / 15%);
+}
+.cta3d:active .cta3d-content {
+  box-shadow:
+    inset -1px 8px 6px -5px rgba(110, 10, 34, 0.4),
+    inset 0 -2px 6px 0 var(--red-200);
+}
+.cta3d:active .cta3d-outline {
+  opacity: 0;
+}
+.cta3d:active .cta3d-wrap {
+  transform: translate(2px, -2px);
+}
+.cta3d:active .cta3d-splash {
+  animation: cta3d-splash-anim 0.8s cubic-bezier(0.3, 0, 0, 1) forwards 0.05s;
+}
+
+@keyframes cta3d-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes cta3d-swing {
+  50% {
+    transform: translateX(3px) scale(0.9);
+  }
+}
+@keyframes cta3d-rotate1 {
+  50% {
+    transform: rotate(30deg);
+  }
+  80% {
+    transform: rotate(55deg);
+  }
+}
+@keyframes cta3d-rotate2 {
+  50% {
+    transform: rotate(330deg);
+  }
+  80% {
+    transform: rotate(300deg);
+  }
+}
+@keyframes cta3d-splash-anim {
+  to {
+    stroke-dasharray: 2 40;
+    stroke-dashoffset: -40;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cta3d,
+  .cta3d * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

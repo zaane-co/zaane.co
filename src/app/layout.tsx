@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { ReactLenis } from "lenis/react";
+import EdgeBlur from "@/components/EdgeBlur";
+// Preloader temporarily disabled — see src/components/Preloader.tsx
+// import Preloader from "@/components/Preloader";
+import "lenis/dist/lenis.css";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -17,9 +22,10 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Zaane — Software, Apps & Business Systems",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://zaane.co"),
+  title: "Zaane — Design, Development & MVPs",
   description:
-    "Zaane is a software studio that designs and builds custom software, mobile and web apps, and the business systems that run them, for founders and teams who need to ship.",
+    "Zaane is an independent studio for brand design, UI/UX, web and app development, MVPs, and lasting brand partnerships.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -29,7 +35,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
-        {children}
+        <ReactLenis root options={{ lerp: 0.1, duration: 1.2 }}>
+          {children}
+        </ReactLenis>
+        <EdgeBlur />
       </body>
     </html>
   );

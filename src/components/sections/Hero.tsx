@@ -1,54 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import { ArrowRight, Menu, X } from "lucide-react";
+import SiteHeader from "@/components/SiteHeader";
+import GradientWaves from "@/components/GradientWaves";
+import ClientLogosArc from "@/components/ClientLogosArc";
+
+import { ArrowRight } from "lucide-react";
 import styles from "./Hero.module.css";
 
-const navLinks = [
-  { href: "#top", label: "Home" },
-  { href: "#about", label: "About" },
-  { href: "#services", label: "Services" },
-  { href: "#works", label: "Works" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#questions", label: "Questions" },
-  { href: "#contact", label: "Contact" },
-];
-const services = [
-  "Custom software",
-  "Mobile & web apps",
-  "Product design",
-  "Business systems",
-];
-
 export default function Hero() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [active, setActive] = useState("top");
+  // The entrance animations below (pill, headline lines, subhead, CTAs) are
+  // held paused until the preloader tells us its curtain is opening, so
+  // they play while actually visible instead of finishing behind it. If the
+  // preloader isn't mounted at all (e.g. currently disabled), reveal right
+  // away instead of waiting on an event that will never come.
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) setActive(entry.target.id);
-        });
-      },
-      { rootMargin: "-10% 0px -70% 0px" },
-    );
-    navLinks.forEach(({ href }) => {
-      const section = document.getElementById(href.slice(1));
-      if (section) observer.observe(section);
-    });
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
+    if (!document.querySelector("[data-preloader]")) {
+      setRevealed(true);
+      return;
+    }
+    const reveal = () => setRevealed(true);
+    window.addEventListener("preloader:reveal", reveal);
+    const fallback = setTimeout(reveal, 2600);
+    return () => {
+      window.removeEventListener("preloader:reveal", reveal);
+      clearTimeout(fallback);
     };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [mobileOpen]);
+  }, []);
 
   return (
     <section
@@ -56,66 +36,31 @@ export default function Hero() {
       className={styles.section}
       aria-label="Zaane software studio"
     >
-      <header className={styles.header}>
-        <a href="#top" aria-label="Zaane home" className={styles.logo}>
-          <Image
-            src="/zaane-logo.svg"
-            alt="Zaane"
-            width={126}
-            height={22}
-            priority
-          />
-        </a>
-        <nav aria-label="Main navigation" className={styles.desktopNav}>
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              aria-current={
-                active === link.href.slice(1) ? "location" : undefined
-              }
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
-        <a href="#contact" className={styles.headerCta}>
-          Get Started
-        </a>
-        <button
-          type="button"
-          className={styles.menuToggle}
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-navigation"
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          onClick={() => setMobileOpen(!mobileOpen)}
-        >
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-        {mobileOpen && (
-          <nav
-            id="mobile-navigation"
-            aria-label="Mobile navigation"
-            className={styles.mobileNav}
-          >
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-              >
-                {link.label}
-              </a>
-            ))}
-            <a href="#contact" onClick={() => setMobileOpen(false)}>
-              Get Started <ArrowRight size={18} />
-            </a>
-          </nav>
-        )}
-      </header>
-
       <div className={styles.hero}>
-        <div className={styles.atmosphere} aria-hidden="true" />
+        <div className={styles.heroHeader}>
+          <SiteHeader variant="dark" />
+        </div>
+        <div className={styles.atmosphere} aria-hidden="true">
+          <GradientWaves
+            horizonColor="#0a0507"
+            waveColor="#f10c45"
+            crestColor="#ff3d66"
+            speed={0.35}
+            amplitude={2.2}
+            waveScale={0.55}
+            swell={30}
+            turbulence={16}
+            tilt={1.15}
+            zoom={1.05}
+            height={5}
+            fogDepth={17}
+            detail="medium"
+            brightness={1.05}
+            mouseInteraction
+            parallaxStrength={0.4}
+            grain={false}
+          />
+        </div>
         <svg
           className={styles.grain}
           aria-hidden="true"
@@ -137,51 +82,59 @@ export default function Hero() {
             opacity="0.24"
           />
         </svg>
-        <div className={styles.topline}>
-          <p className={styles.availability}>
-            <span />
-            Available for new projects
-          </p>
-          <p className={styles.description}>
-            We design and build software,
-            <br />
-            apps, and business systems.
-            <br />
-            <span>From first idea to what’s next.</span>
-          </p>
-        </div>
-        <div className={styles.bottomline}>
-          <div className={styles.brand}>
-            <p>
-              <span>Zaane</span> turns your next big idea into
-              <br />
-              software people love to use.
-            </p>
-            <h1>
-              Zaane
-              <span className="sr-only">
-                {" "}
-                — Software, apps &amp; business systems
+
+        <div
+          className={`${styles.center} ${revealed ? "" : styles.held}`}
+        >
+          <div className={styles.socialProof}>
+            <div className={styles.avatarStack}>
+              <span className={styles.avatar}>
+                <img src="/animated img/Ellipse 9.png" alt="" />
               </span>
-            </h1>
+              <span className={styles.avatar}>
+                <img src="/animated img/Ellipse 10.png" alt="" />
+              </span>
+              <span className={styles.avatar}>
+                <img src="/animated img/Ellipse 11.png" alt="" />
+              </span>
+            </div>
+            <span className={styles.socialProofText}>200+ products shipped</span>
           </div>
-          <div className={styles.servicePanel}>
-            <a className={styles.primaryCta} href="#contact">
-              Get Started
+          <h1 className={styles.headline}>
+            <span className={styles.lineMask}>
+              <span
+                className={styles.line}
+                style={{ animationDelay: "0.22s" }}
+              >
+                Built to Turn Ideas Into MVPs.
+              </span>
+            </span>
+            <span className={styles.lineMask}>
+              <span
+                className={styles.line}
+                style={{ animationDelay: "0.36s" }}
+              >
+                Designs Into Products.
+              </span>
+            </span>
+          </h1>
+          <p className={styles.subhead}>
+            We combine creative design and technology to transform ideas
+            into thoughtful brands, digital products, and functional MVPs
+            <br />
+            built to launch, validate, and grow.
+          </p>
+          <div className={styles.ctaRow}>
+            <a className={styles.primaryCta} href="/services#inquiry">
+              Let&apos;s Build It
             </a>
-            <nav
-              className={styles.serviceList}
-              aria-label="Explore our services"
-            >
-              {services.map((service) => (
-                <a href="#services" key={service}>
-                  {service}
-                  <ArrowRight size={19} strokeWidth={1.3} aria-hidden="true" />
-                </a>
-              ))}
-            </nav>
+            <a className={styles.secondaryCta} href="/projects">
+              See Our Work
+              <ArrowRight size={16} strokeWidth={1.6} aria-hidden="true" />
+            </a>
           </div>
         </div>
+        <ClientLogosArc />
       </div>
     </section>
   );

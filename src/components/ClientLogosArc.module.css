@@ -1,0 +1,101 @@
+.wrap {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 38px;
+  padding-bottom: clamp(20px, 3vh, 34px);
+  pointer-events: none;
+}
+.viewport {
+  width: 100%;
+  overflow: hidden;
+}
+.track {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  width: max-content;
+  column-gap: clamp(18px, 2.2vw, 34px);
+  will-change: transform;
+}
+.slot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 132px;
+  height: 46px;
+  will-change: transform;
+}
+.logo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  opacity: 0.85;
+}
+.trustPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 18px 6px 6px;
+  border-radius: 999px;
+  background: rgba(20, 20, 22, 0.55);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  pointer-events: auto;
+}
+.flagStack {
+  display: flex;
+}
+.flag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  font-size: 14px;
+  background: #232326;
+  border: 2px solid #141416;
+  margin-left: -8px;
+}
+.flagStack .flag:first-child {
+  margin-left: 0;
+}
+.trustText {
+  font-size: clamp(13px, 1.3vw, 15px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #d8d6da;
+  white-space: nowrap;
+}
+@media (max-width: 800px) {
+  .wrap {
+    position: static;
+    padding: 28px 0 4px;
+    gap: 20px;
+  }
+  .slot {
+    width: 100px;
+    height: 36px;
+  }
+  .trustPill {
+    padding: 5px 14px 5px 5px;
+  }
+  .flag {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+  .trustText {
+    font-size: 12px;
+    white-space: normal;
+  }
+}

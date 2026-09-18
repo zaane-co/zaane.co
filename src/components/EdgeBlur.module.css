@@ -1,0 +1,79 @@
+.edgeBlur {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(64px, 8vh, 110px);
+  z-index: 40;
+  pointer-events: none;
+}
+.edgeBlur > div {
+  position: absolute;
+  inset: 0;
+}
+/* Smallest blur reaches furthest up the strip; largest blur is confined to
+   a thin band right at the edge. Overlapping them compounds near the
+   bottom, tapering to fully sharp at the top of the strip.
+   -webkit-backdrop-filter is listed first, standard backdrop-filter last —
+   some CSS minifiers collapse the pair and keep whichever is last, so the
+   modern unprefixed property must win that spot. */
+.l1 {
+  -webkit-backdrop-filter: blur(0.5px);
+  backdrop-filter: blur(0.5px);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    black 0%,
+    black 80%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(to top, black 0%, black 80%, transparent 100%);
+}
+.l2 {
+  -webkit-backdrop-filter: blur(1px);
+  backdrop-filter: blur(1px);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    black 0%,
+    black 64%,
+    transparent 80%
+  );
+  mask-image: linear-gradient(to top, black 0%, black 64%, transparent 80%);
+}
+.l3 {
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    black 0%,
+    black 48%,
+    transparent 64%
+  );
+  mask-image: linear-gradient(to top, black 0%, black 48%, transparent 64%);
+}
+.l4 {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    black 0%,
+    black 32%,
+    transparent 48%
+  );
+  mask-image: linear-gradient(to top, black 0%, black 32%, transparent 48%);
+}
+.l5 {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    black 0%,
+    black 16%,
+    transparent 32%
+  );
+  mask-image: linear-gradient(to top, black 0%, black 16%, transparent 32%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .edgeBlur {
+    display: none;
+  }
+}

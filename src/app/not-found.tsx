@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function NotFound(){return <main className="not-found-page"><Link href="/" className="admin-brand">Zaane</Link><span className="not-found-number" aria-hidden="true">404↗</span><span className="eyebrow">A small detour</span><h1>This page took<br/>a different direction.</h1><p>Let’s get you back to something good.</p><nav><Link className="studio-button black-button" href="/">Back to the studio →</Link><Link href="/projects">Explore our work ↗</Link><Link href="/contact">Get in touch ↗</Link></nav></main>;}

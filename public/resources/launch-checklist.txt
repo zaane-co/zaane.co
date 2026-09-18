@@ -1,0 +1,25 @@
+ZAANE / WEBSITE LAUNCH CHECKLIST
+
+CONTENT
+[ ] Proofread every page and confirm contact details.
+[ ] Replace placeholders with approved text and images.
+[ ] Check image permissions and attribution requirements.
+[ ] Review privacy and terms for your actual business.
+
+EXPERIENCE
+[ ] Test mobile, tablet and desktop layouts.
+[ ] Complete every form and verify submissions arrive.
+[ ] Check links, menus, downloads and booking flows.
+[ ] Test keyboard navigation, focus visibility and labels.
+[ ] Confirm meaningful alternative text for images.
+[ ] Check loading, empty, error and not-found states.
+
+OPERATIONS
+[ ] Confirm domain, hosting and database ownership.
+[ ] Verify production environment variables.
+[ ] Check page titles, descriptions, sitemap and indexing.
+[ ] Verify HTTPS and access permissions.
+[ ] Set up backups and an appropriate monitoring plan.
+[ ] Document how to update content and request support.
+
+Need a launch partner? hello@zaane.co

@@ -1,0 +1,3 @@
+'use client';
+import {useState} from 'react';
+export default function FAQList({items,filter=false}:{items:{category:string;q:string;a:string}[];filter?:boolean}){const [category,setCategory]=useState('All');return <>{filter&&<div className="filter-bar" aria-label="Question categories">{['All',...new Set(items.map(i=>i.category))].map(c=><button aria-pressed={category===c} onClick={()=>setCategory(c)} key={c}>{c}</button>)}</div>}<div className="new-faq">{items.filter(i=>category==='All'||i.category===category).map((i,n)=><details key={i.q}><summary><span>{String(n+1).padStart(2,'0')}</span>{i.q}<b aria-hidden="true">+</b></summary><p>{i.a}</p></details>)}</div></>;}

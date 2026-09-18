@@ -1,0 +1,17 @@
+ZAANE / MVP SCOPE CHECKLIST
+
+[ ] Name one primary audience.
+[ ] Describe one problem worth solving.
+[ ] Write the shortest user journey that solves it.
+[ ] Identify the riskiest assumption.
+[ ] Define an experiment to test that assumption.
+[ ] Choose one useful success metric.
+[ ] Separate must-have features from later improvements.
+[ ] Map sign-in, onboarding and the main action.
+[ ] List data, payment and integration requirements.
+[ ] Define basic privacy and access requirements.
+[ ] Decide how you will support the first users.
+[ ] Agree on launch criteria and known limitations.
+[ ] Plan how to gather feedback and prioritise the next iteration.
+
+Need a product partner? hello@zaane.co

@@ -1,0 +1,3 @@
+import type {MetadataRoute} from 'next';
+import {records} from '@/lib/content';
+export default async function sitemap():Promise<MetadataRoute.Sitemap>{const base=process.env.NEXT_PUBLIC_SITE_URL||'https://zaane.co';const [projects,posts]=await Promise.all([records('projects'),records('blog_posts')]);return ['', 'about','services','projects','blog','contact','pricing','brand-partnerships','testimonials','faq','careers','resources','privacy-policy','terms-of-service',...projects.map(p=>`projects/${p.slug}`),...posts.map(p=>`blog/${p.slug}`)].map(path=>({url:`${base}/${path}`,changeFrequency:'weekly',priority:path?0.7:1}));}
