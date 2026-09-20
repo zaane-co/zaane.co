@@ -27,7 +27,7 @@ export default async function Home() {
         <Hero />
         <div className="studio-sections">
           {projects.length>0&&<ScrollReveal><section className="studio-panel client-strip"><span className="eyebrow">Built together</span><div>{[...new Set(projects.map(p=>String(p.client_name)).filter(Boolean))].slice(0,6).map(name=><span key={name}>{name}</span>)}</div></section></ScrollReveal>}
-          <ScrollReveal><About /></ScrollReveal>
+          <ScrollReveal><About testimonial={quotes[0]} project={featured[0] || projects[0]} /></ScrollReveal>
           <Services />
           <section id="works" className="studio-panel light-panel">
             <div className="section-heading"><h2>Thought through.<br/><span className="muted-heading">Brought to life.</span></h2><Link className="text-link" href="/projects">All work ↗</Link></div>
