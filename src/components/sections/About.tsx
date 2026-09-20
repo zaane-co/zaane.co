@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import ScrollFillText from "@/components/ScrollFillText";
 import StepCards from "@/components/StepCards";
+import PriceSlider from "@/components/PriceSlider";
 import { safeUrl } from "@/lib/cms";
 import type { ContentRow } from "@/lib/content";
 
@@ -128,17 +129,7 @@ export default function About({ testimonial, project }: Props) {
               Flexible pricing
             </span>
             <h3>Clear packages for different stages of growth.</h3>
-            <div className="benefits-card-price">
-              <span className="benefits-card-price-label">Starting from</span>
-              <span className="benefits-card-price-value">$2,500</span>
-              <div className="benefits-card-slider">
-                <span style={{ width: "70%" }} />
-              </div>
-              <div className="benefits-card-slider-labels">
-                <span>Start simple</span>
-                <span>Expand as you go</span>
-              </div>
-            </div>
+            <PriceSlider />
           </div>
 
           <div className="benefits-card">
@@ -148,21 +139,12 @@ export default function About({ testimonial, project }: Props) {
             </span>
             <h3>Fast communication and quick turnaround on feedback.</h3>
             <div className="benefits-card-notif">
-              <div className="benefits-card-phone">
-                <span className="benefits-card-notif-time">27/7</span>
-                <strong>Support</strong>
-                <span className="benefits-card-phone-notch" />
-              </div>
-              <div className="benefits-card-toast">
-                <span className="benefits-card-toast-dot" />
-                <div>
-                  <div className="benefits-card-toast-top">
-                    <span>TRELLO</span>
-                    <em>1m ago</em>
-                  </div>
-                  <p>[...] Requested design change</p>
-                </div>
-              </div>
+              <img
+                src="/support3.png"
+                alt=""
+                className="benefits-card-support-img"
+                loading="lazy"
+              />
             </div>
           </div>
 
@@ -177,39 +159,29 @@ export default function About({ testimonial, project }: Props) {
                 Time to complete
               </span>
               <span className="benefits-card-time-value">24-36h</span>
-              <svg
-                className="benefits-card-clock"
-                viewBox="0 0 100 100"
-                aria-hidden="true"
-              >
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="46"
-                  fill="none"
-                  stroke="#d8d8d8"
-                  strokeWidth="2"
-                />
-                <line
-                  x1="50"
-                  y1="50"
-                  x2="50"
-                  y2="26"
-                  stroke="#c8c8c8"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                <line
-                  x1="50"
-                  y1="50"
-                  x2="68"
-                  y2="62"
-                  stroke="var(--accent)"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                />
-                <circle cx="50" cy="50" r="3.5" fill="var(--accent)" />
-              </svg>
+            </div>
+            <div className="benefits-card-ruler" aria-hidden="true">
+              <span className="benefits-card-ruler-accent" />
+              <div className="benefits-card-ruler-track">
+                {Array.from({ length: 2 }).map((_, dup) => (
+                  <div className="benefits-card-ruler-set" key={dup}>
+                    {Array.from({ length: 30 }).map((_, i) => {
+                      const day = new Date();
+                      day.setDate(day.getDate() + i - 15);
+                      return (
+                        <div className="benefits-card-ruler-tick" key={i}>
+                          <span className="benefits-card-ruler-mark" />
+                          {i % 4 === 0 && (
+                            <span className="benefits-card-ruler-ticklabel">
+                              {day.getDate()}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
