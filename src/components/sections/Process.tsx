@@ -1,52 +1,86 @@
-import { ArrowUpRight } from "lucide-react";
+"use client";
+import { useState } from "react";
+
 const steps = [
-  [
-    "Discover",
-    "First, the right questions.",
-    "We get close to your business, your customers, and what success looks like. Together, we define what’s worth building.",
-  ],
-  [
-    "Design",
-    "Make the idea tangible.",
-    "We map the journeys, shape the experience, and prototype the details before we move into development.",
-  ],
-  [
-    "Build",
-    "Progress you can see.",
-    "Short cycles, open conversations, and working software. You stay involved as your product takes shape.",
-  ],
-  [
-    "Launch & evolve",
-    "The beginning of what’s next.",
-    "We get you live and stay close, supporting your team and improving the product as your business grows.",
-  ],
+  {
+    title: "Discovery",
+    duration: "1–2 weeks",
+    description:
+      "We get close to your business, your users, and what success looks like — auditing what exists, mapping requirements, and agreeing the constraints that matter.",
+  },
+  {
+    title: "Strategy",
+    duration: "1 week",
+    description:
+      "We turn discovery into a shared plan: scope, technical approach, and a roadmap with milestones you can hold us to.",
+  },
+  {
+    title: "Design",
+    duration: "2–3 weeks",
+    description:
+      "We map the journeys, shape the experience, and prototype the details before a single line of production code is written.",
+  },
+  {
+    title: "Development",
+    duration: "3–5 weeks",
+    description:
+      "Short cycles, open conversations, and working software throughout — you stay involved as your product takes shape.",
+  },
+  {
+    title: "Launch",
+    duration: "1 week",
+    description:
+      "We get you live, support the handover, and stay close — the beginning of what's next, not the end of the engagement.",
+  },
 ];
+
 export default function Process() {
+  const [open, setOpen] = useState<number | null>(0);
   return (
-    <section id="process" className="studio-panel light-panel" data-reveal>
-      <div className="section-heading">
+    <section
+      id="process"
+      className="studio-panel dark-panel process-timeline"
+      data-reveal
+    >
+      <div className="section-heading process-timeline-heading">
         <h2>
-          From first idea.
+          A refined process
           <br />
-          <span className="muted-heading">To what’s next.</span>
+          <span className="muted-heading">built on clarity.</span>
         </h2>
-        <span className="eyebrow">Our process</span>
+        <span className="process-timeline-dot" aria-hidden="true" />
       </div>
-      <div className="process-grid">
-        {steps.map(([title, subtitle, copy], i) => (
+      <div className="process-rows">
+        {steps.map((s, i) => (
           <article
-            className="process-step"
-            key={title}
-            data-reveal
-            style={{ transitionDelay: `${i * 80}ms` }}
+            key={s.title}
+            className={`process-row ${open === i ? "is-open" : ""}`}
           >
-            <div className="step-top">
-              <span>0{i + 1}</span>
-              <ArrowUpRight size={24} />
+            <h3>
+              <button
+                type="button"
+                onClick={() => setOpen(open === i ? null : i)}
+                aria-expanded={open === i}
+                aria-controls={`process-detail-${i}`}
+                id={`process-toggle-${i}`}
+              >
+                <span className="row-number">00{i + 1}</span>
+                <span>{s.title}</span>
+                <span className="process-row-duration">{s.duration}</span>
+              </button>
+            </h3>
+            <div
+              id={`process-detail-${i}`}
+              role="region"
+              aria-labelledby={`process-toggle-${i}`}
+              className="accordion-body"
+              inert={open !== i}
+              aria-hidden={open !== i}
+            >
+              <div>
+                <p className="process-row-detail">{s.description}</p>
+              </div>
             </div>
-            <h3>{title}</h3>
-            <h4>{subtitle}</h4>
-            <p>{copy}</p>
           </article>
         ))}
       </div>

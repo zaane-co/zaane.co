@@ -589,36 +589,6 @@ select {
   font-size: 14px;
   line-height: 1.6;
 }
-.service-stars {
-  display: flex;
-  justify-content: space-around;
-  width: 35%;
-}
-.service-stars svg {
-  width: 17px;
-  animation: studio-spin 18s linear infinite;
-}
-.service-stars svg:nth-child(2) {
-  animation-direction: reverse;
-}
-.service-row {
-  border-top: 1px solid #303030;
-}
-.service-row:last-child {
-  border-bottom: 1px solid #303030;
-}
-.service-row h3 button {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 16% 1fr auto;
-  align-items: center;
-  text-align: left;
-  min-height: 112px;
-  gap: 20px;
-  padding: 20px 0;
-  font-size: 23px;
-  transition: color 0.3s;
-}
 .row-number {
   font-size: 14px;
   font-weight: 400;
@@ -636,14 +606,6 @@ select {
     background 0.3s,
     transform 0.3s;
 }
-.service-row.is-open h3 button,
-.service-row h3 button:hover {
-  color: #ff3d66;
-}
-.service-row.is-open .round-arrow {
-  background: #f10c45;
-  transform: rotate(45deg);
-}
 .accordion-body {
   display: grid;
   grid-template-rows: 0fr;
@@ -659,77 +621,6 @@ select {
 .is-open > .accordion-body {
   grid-template-rows: 1fr;
   opacity: 1;
-}
-.service-detail {
-  display: grid;
-  grid-template-columns: 1fr 1.15fr 1fr;
-  gap: 28px;
-  padding: 0 60px 36px calc(16% + 20px);
-}
-.service-detail > p {
-  color: #a6a6a6;
-  font-size: 15px;
-  line-height: 1.7;
-}
-.service-detail ul {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  font-size: 13px;
-  justify-content: center;
-}
-.service-detail li {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.service-detail li svg {
-  color: #ff3d66;
-  flex-shrink: 0;
-}
-.service-art {
-  position: relative;
-  min-height: 150px;
-  border-radius: 9px;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  background: #e4ded5;
-}
-.service-art > span {
-  font-size: 95px;
-  line-height: 1;
-  color: #29231c;
-  position: relative;
-  z-index: 1;
-  letter-spacing: -0.1em;
-  transition: transform 0.7s;
-}
-.service-row.is-open .service-art > span {
-  transform: rotate(-12deg);
-}
-.service-art i {
-  position: absolute;
-  width: 160px;
-  height: 160px;
-  border: 1px solid #ffffff80;
-  border-radius: 50%;
-  top: -50px;
-  right: -30px;
-}
-.service-art i:last-child {
-  top: 50px;
-  right: auto;
-  left: -30px;
-}
-.service-art-1 {
-  background: #bfd1c6;
-}
-.service-art-2 {
-  background: #fd6c37;
-}
-.service-art-3 {
-  background: #c6c0d8;
 }
 .work-grid {
   display: grid;
@@ -986,36 +877,68 @@ select {
   color: #fff;
   transform: rotate(45deg);
 }
-.process-grid {
+.process-timeline-heading {
+  align-items: flex-start;
+}
+.process-timeline-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 18px;
+  border-radius: 50%;
+  background: #fff;
+  flex-shrink: 0;
+  animation: process-dot-pulse 2.4s ease-in-out infinite;
+}
+@keyframes process-dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+}
+.process-row {
+  border-top: 1px solid #303030;
+}
+.process-row:last-child {
+  border-bottom: 1px solid #303030;
+}
+.process-row h3 button {
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 32px;
-}
-.process-step {
-  border-top: 1px solid #cfcfcf;
-  padding-top: 22px;
-}
-.step-top {
-  display: flex;
-  justify-content: space-between;
+  grid-template-columns: 64px 1fr auto;
   align-items: center;
-  color: #dd481b;
-  font-size: 13px;
-}
-.process-step h3 {
-  font-size: 25px;
-  margin: 48px 0 20px;
-  letter-spacing: -0.04em;
+  text-align: left;
+  min-height: 108px;
+  gap: 20px;
+  font-size: clamp(22px, 2.6vw, 32px);
   font-weight: 500;
+  letter-spacing: -0.03em;
+  color: #6b6b6b;
+  transition: color 0.3s;
 }
-.process-step h4 {
-  font-size: 14px;
-  margin-bottom: 10px;
+.process-row.is-open h3 button,
+.process-row h3 button:hover {
+  color: #fff;
 }
-.process-step p {
-  font-size: 14px;
+.process-row-duration {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b6b6b;
+  white-space: nowrap;
+  transition: color 0.3s;
+}
+.process-row.is-open .process-row-duration {
+  color: #fff;
+}
+.process-row-detail {
+  color: #a6a6a6;
+  font-size: 15px;
   line-height: 1.7;
-  color: #777;
+  max-width: 640px;
+  padding: 0 0 36px 84px;
 }
 .partnership-grid {
   display: grid;
@@ -1382,13 +1305,6 @@ select {
   .studio-panel {
     padding: 55px 38px;
   }
-  .service-detail {
-    grid-template-columns: 1fr 1fr;
-    padding-right: 0;
-  }
-  .service-detail > p {
-    grid-column: 1 / -1;
-  }
   .about-panel {
     grid-template-columns: minmax(120px, 180px) 1fr;
     gap: 40px;
@@ -1399,10 +1315,6 @@ select {
   }
   .benefits-cards {
     grid-template-columns: 1fr 1fr;
-  }
-  .process-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
   }
   .partnership-art {
     min-height: 440px;
@@ -1479,29 +1391,24 @@ select {
     margin-left: 0;
     width: 100%;
   }
-  .service-stars {
+  .process-timeline-dot {
     display: none;
   }
-  .service-row h3 button {
-    min-height: 94px;
-    font-size: 19px;
-    grid-template-columns: 35px 1fr auto;
+  .process-row h3 button {
+    min-height: 84px;
+    grid-template-columns: 40px 1fr auto;
     gap: 12px;
+  }
+  .process-row-duration {
+    font-size: 10px;
+  }
+  .process-row-detail {
+    padding-left: 52px;
+    font-size: 14px;
   }
   .round-arrow {
     width: 34px;
     height: 34px;
-  }
-  .service-detail {
-    padding: 0 0 28px 0;
-    gap: 18px;
-  }
-  .service-detail ul {
-    font-size: 11px;
-    gap: 10px;
-  }
-  .service-art {
-    min-height: 140px;
   }
   .work-grid {
     grid-template-columns: 1fr;
@@ -1591,12 +1498,12 @@ select {
   .section-heading h2 {
     font-size: 32px;
   }
-  .process-grid {
-    grid-template-columns: 1fr;
-    gap: 28px;
+  .process-row h3 button {
+    grid-template-columns: 30px 1fr auto;
+    font-size: 18px;
   }
-  .process-step h3 {
-    margin-top: 22px;
+  .process-row-detail {
+    padding-left: 42px;
   }
   .work-stage {
     height: 310px;
