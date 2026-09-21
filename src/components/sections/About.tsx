@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import ScrollFillText from "@/components/ScrollFillText";
 import StepCards from "@/components/StepCards";
+import StepEntrance from "@/components/StepEntrance";
 import PriceSlider from "@/components/PriceSlider";
 import { safeUrl } from "@/lib/cms";
 import type { ContentRow } from "@/lib/content";
@@ -122,7 +123,7 @@ export default function About({ testimonial, project }: Props) {
           </p>
         </div>
 
-        <div className="benefits-cards">
+        <StepEntrance className="benefits-cards">
           <div className="benefits-card">
             <span className="benefits-card-label">
               <Ticket size={16} strokeWidth={2} />
@@ -153,12 +154,12 @@ export default function About({ testimonial, project }: Props) {
               <Zap size={16} strokeWidth={2} />
               Fast turnarounds
             </span>
-            <h3>Days, not weeks. We keep projects moving.</h3>
+            <h3>Clear timelines, every step of the way.</h3>
             <div className="benefits-card-time">
               <span className="benefits-card-time-label">
                 Time to complete
               </span>
-              <span className="benefits-card-time-value">24-36h</span>
+              <span className="benefits-card-time-value">14-21 days</span>
             </div>
             <div className="benefits-card-ruler" aria-hidden="true">
               <span className="benefits-card-ruler-accent" />
@@ -184,7 +185,7 @@ export default function About({ testimonial, project }: Props) {
               </div>
             </div>
           </div>
-        </div>
+        </StepEntrance>
       </div>
     </section>
   );
