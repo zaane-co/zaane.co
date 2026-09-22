@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ReactLenis } from "lenis/react";
 import EdgeBlur from "@/components/EdgeBlur";
-// Preloader temporarily disabled — see src/components/Preloader.tsx
+// Preloader temporarily disabled, see src/components/Preloader.tsx
 // import Preloader from "@/components/Preloader";
 import "lenis/dist/lenis.css";
 import "./globals.css";
@@ -23,7 +23,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://zaane.co"),
-  title: "Zaane — Design, Development & MVPs",
+  title: "Zaane: Design, Development & MVPs",
   description:
     "Zaane is an independent studio for brand design, UI/UX, web and app development, MVPs, and lasting brand partnerships.",
 };

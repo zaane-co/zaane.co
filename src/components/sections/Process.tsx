@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
+import { ArrowUpRight } from "lucide-react";
 
 const steps = [
   {
     title: "Discovery",
     duration: "1–2 weeks",
     description:
-      "We get close to your business, your users, and what success looks like — auditing what exists, mapping requirements, and agreeing the constraints that matter.",
+      "We get close to your business, your users, and what success looks like, auditing what exists, mapping requirements, and agreeing the constraints that matter.",
   },
   {
     title: "Strategy",
@@ -24,13 +25,13 @@ const steps = [
     title: "Development",
     duration: "3–5 weeks",
     description:
-      "Short cycles, open conversations, and working software throughout — you stay involved as your product takes shape.",
+      "Short cycles, open conversations, and working software throughout. You stay involved as your product takes shape.",
   },
   {
     title: "Launch",
     duration: "1 week",
     description:
-      "We get you live, support the handover, and stay close — the beginning of what's next, not the end of the engagement.",
+      "We get you live, support the handover, and stay close. This is the beginning of what's next, not the end of the engagement.",
   },
 ];
 
@@ -48,7 +49,10 @@ export default function Process() {
           <br />
           <span className="muted-heading">built on clarity.</span>
         </h2>
-        <span className="process-timeline-dot" aria-hidden="true" />
+        <a href="#contact" className="studio-button orange-button">
+          Talk to us
+          <ArrowUpRight size={19} />
+        </a>
       </div>
       <div className="process-rows">
         {steps.map((s, i) => (

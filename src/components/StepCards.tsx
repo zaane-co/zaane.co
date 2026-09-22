@@ -17,7 +17,7 @@ type Props = {
 
 // Each child slides in from the right like a carousel, while also starting
 // at a different vertical offset (a staircase) that resolves as it settles
-// into the row — combines a lateral entrance with a "step up and align" feel.
+// into the row. Combines a lateral entrance with a "step up and align" feel.
 export default function StepCards({ children, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);

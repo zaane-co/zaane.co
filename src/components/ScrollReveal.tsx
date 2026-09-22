@@ -9,8 +9,8 @@ type Props = {
 };
 
 // Continuously ties opacity/translate/scale to how far the element has
-// scrolled into view, instead of firing a single canned transition once —
-// so the section feels physically connected to the scroll gesture itself.
+// scrolled into view, instead of firing a single canned transition once.
+// The section feels physically connected to the scroll gesture itself.
 export default function ScrollReveal({ children, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);

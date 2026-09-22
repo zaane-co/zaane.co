@@ -20,12 +20,12 @@ type Props = {
   project?: ContentRow;
 };
 
-// Shown only until a real testimonial/project exists in Supabase — swap
+// Shown only until a real testimonial/project exists in Supabase. Swap
 // these out (or just publish real rows) whenever that content is ready.
 const PLACEHOLDER_TESTIMONIAL = {
   rating: 5,
   quote:
-    "The team felt like an extension of ours — thoughtful, fast, and easy to work with from day one.",
+    "The team felt like an extension of ours. Thoughtful, fast, and easy to work with from day one.",
   photo_url: "/animated img/Ellipse 11.png",
   client_name: "Sarah Chen",
   client_role: "Founder, Loop Studio",

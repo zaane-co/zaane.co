@@ -56,7 +56,7 @@ export default function ServiceCarousel() {
   };
 
   // Keep `active` (used for the dots) in sync with manual swipes/drags too,
-  // not just arrow clicks — whichever card sits nearest centre wins.
+  // not just arrow clicks. Whichever card sits nearest centre wins.
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;

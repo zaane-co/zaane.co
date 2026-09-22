@@ -878,25 +878,8 @@ select {
   transform: rotate(45deg);
 }
 .process-timeline-heading {
-  align-items: flex-start;
-}
-.process-timeline-dot {
-  width: 10px;
-  height: 10px;
-  margin-top: 18px;
-  border-radius: 50%;
-  background: #fff;
-  flex-shrink: 0;
-  animation: process-dot-pulse 2.4s ease-in-out infinite;
-}
-@keyframes process-dot-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.35);
-  }
-  50% {
-    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
-  }
+  flex-wrap: wrap;
+  row-gap: 20px;
 }
 .process-row {
   border-top: 1px solid #303030;
@@ -1391,9 +1374,6 @@ select {
     margin-left: 0;
     width: 100%;
   }
-  .process-timeline-dot {
-    display: none;
-  }
   .process-row h3 button {
     min-height: 84px;
     grid-template-columns: 40px 1fr auto;
@@ -1549,7 +1529,7 @@ select {
   }
 }
 
-/* Agency pages — the same warm monochrome, with room for the work. */
+/* Agency pages: the same warm monochrome, with room for the work. */
 .site-header{position:sticky;top:0;max-width:1600px;margin:auto;padding:22px 48px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:35px;z-index:20;background:#fff;color:#111}
 .site-header--dark{position:relative;background:transparent;color:#fff;padding:0;width:100%}
 .site-logo{justify-self:start;flex-shrink:0}

@@ -14,8 +14,8 @@
 /* Smallest blur reaches furthest up the strip; largest blur is confined to
    a thin band right at the edge. Overlapping them compounds near the
    bottom, tapering to fully sharp at the top of the strip.
-   -webkit-backdrop-filter is listed first, standard backdrop-filter last —
-   some CSS minifiers collapse the pair and keep whichever is last, so the
+   -webkit-backdrop-filter is listed first, standard backdrop-filter last.
+   Some CSS minifiers collapse the pair and keep whichever is last, so the
    modern unprefixed property must win that spot. */
 .l1 {
   -webkit-backdrop-filter: blur(0.5px);

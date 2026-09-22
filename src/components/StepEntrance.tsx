@@ -7,8 +7,8 @@ type Props = {
   className?: string;
 };
 
-// Cards fade + step up into place once, when the row scrolls into view —
-// unlike StepCards, there's no continuous scroll-linked carousel motion.
+// Cards fade + step up into place once, when the row scrolls into view.
+// Unlike StepCards, there's no continuous scroll-linked carousel motion.
 export default function StepEntrance({ children, className }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
