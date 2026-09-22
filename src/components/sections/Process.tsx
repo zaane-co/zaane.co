@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 
 const steps = [
@@ -36,7 +36,14 @@ const steps = [
 ];
 
 export default function Process() {
-  const [open, setOpen] = useState<number | null>(0);
+  const [open, setOpen] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(hover: hover)").matches) {
+      setOpen(0);
+    }
+  }, []);
+
   return (
     <section
       id="process"
