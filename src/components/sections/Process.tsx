@@ -49,7 +49,10 @@ export default function Process() {
           <br />
           <span className="muted-heading">built on clarity.</span>
         </h2>
-        <a href="#contact" className="studio-button orange-button">
+        <a
+          href="#contact"
+          className="studio-button orange-button process-timeline-cta process-timeline-cta-top"
+        >
           Talk to us
           <ArrowUpRight size={19} />
         </a>
@@ -89,6 +92,13 @@ export default function Process() {
             </div>
           </article>
         ))}
+        <a
+          href="#contact"
+          className="studio-button orange-button process-timeline-cta process-timeline-cta-bottom"
+        >
+          Talk to us
+          <ArrowUpRight size={19} />
+        </a>
       </div>
     </section>
   );

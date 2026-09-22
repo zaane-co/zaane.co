@@ -881,6 +881,9 @@ select {
   flex-wrap: wrap;
   row-gap: 20px;
 }
+.process-timeline-cta-bottom {
+  display: none;
+}
 .process-row {
   border-top: 1px solid #303030;
 }
@@ -1335,6 +1338,13 @@ select {
   .section-heading .eyebrow {
     font-size: 11px;
     margin-top: 9px;
+  }
+  .process-timeline-cta-top {
+    display: none;
+  }
+  .process-timeline-cta-bottom {
+    display: inline-flex;
+    margin-top: 32px;
   }
   .eyebrow {
     font-size: 12px;
