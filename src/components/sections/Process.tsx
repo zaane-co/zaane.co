@@ -55,11 +55,13 @@ export default function Process() {
           <article
             key={s.title}
             className={`process-row ${open === i ? "is-open" : ""}`}
+            onMouseEnter={() => setOpen(i)}
           >
             <h3>
               <button
                 type="button"
-                onClick={() => setOpen(open === i ? null : i)}
+                onClick={() => setOpen(i)}
+                onFocus={() => setOpen(i)}
                 aria-expanded={open === i}
                 aria-controls={`process-detail-${i}`}
                 id={`process-toggle-${i}`}
