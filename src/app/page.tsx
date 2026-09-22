@@ -4,6 +4,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import Hero from "@/components/sections/Hero";
 import About from "@/components/sections/About";
 import Process from "@/components/sections/Process";
+import SelectedWorks from "@/components/sections/SelectedWorks";
 import Partnership from "@/components/sections/Partnership";
 import Pricing from "@/components/sections/Pricing";
 import Questions from "@/components/sections/Questions";
@@ -27,6 +28,7 @@ export default async function Home() {
           {projects.length>0&&<ScrollReveal><section className="studio-panel client-strip"><span className="eyebrow">Built together</span><div>{[...new Set(projects.map(p=>String(p.client_name)).filter(Boolean))].slice(0,6).map(name=><span key={name}>{name}</span>)}</div></section></ScrollReveal>}
           <ScrollReveal><About testimonial={quotes[0]} project={featured[0] || projects[0]} /></ScrollReveal>
           <Process />
+          <SelectedWorks projects={projects} />
           <section id="works" className="studio-panel light-panel">
             <div className="section-heading"><h2>Thought through.<br/><span className="muted-heading">Brought to life.</span></h2><Link className="text-link" href="/projects">All work ↗</Link></div>
             {featured.length ? <div className="work-grid">{featured.map(row=><ProjectCard row={row} key={row.id}/>)}</div> : <div className="home-work-intro"><Copy text={await pageCopy('home','work','From a clear brand identity to a product ready for its first users, we bring design and development into one considered process. Tell us what you have in mind, and we’ll share relevant work.')}/><Link className="studio-button black-button" href="/services#inquiry">Discuss your project ↗</Link></div>}
