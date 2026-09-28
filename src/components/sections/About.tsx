@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   ArrowUpRight,
   Handshake,
   Laptop,
@@ -55,10 +54,6 @@ export default function About({ testimonial, project }: Props) {
         />
 
         <div className="about-highlights">
-          <Link href="/about" className="about-highlights-link">
-            More about us
-            <ArrowRight size={16} strokeWidth={2} />
-          </Link>
           <StepCards className="about-highlights-grid">
             <figure className="about-quote-card">
               {Number(quote.rating) > 0 && (
