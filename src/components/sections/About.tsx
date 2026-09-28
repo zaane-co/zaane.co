@@ -26,7 +26,7 @@ const PLACEHOLDER_TESTIMONIAL = {
   rating: 5,
   quote:
     "The team felt like an extension of ours. Thoughtful, fast, and easy to work with from day one.",
-  photo_url: "/animated img/Ellipse 11.png",
+  photo_url: "/ff1.jpeg",
   client_name: "Anne",
   client_role: "CEO, Finance with Anne",
 };
