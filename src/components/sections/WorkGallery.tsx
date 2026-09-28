@@ -21,7 +21,11 @@ export default function WorkGallery() {
   return (
     <section id="our-work" className="wstack" aria-labelledby="wstack-title">
       <div className="wstack-intro">
-        <h2 id="wstack-title">Our work</h2>
+        <h2 id="wstack-title">Featured work</h2>
+        <p className="wstack-subhead">
+          A look at the brands, products, and interfaces we&apos;ve shaped,
+          each one built with intention, from first sketch to launch.
+        </p>
       </div>
       <div className="work-gallery-frame">
         <FlexCarousel
@@ -44,7 +48,7 @@ export default function WorkGallery() {
           dispersion={0.45}
           liquid={0}
           followCursor={false}
-          autoplay={false}
+          autoplay
           interval={4}
           captureWheel
         />
