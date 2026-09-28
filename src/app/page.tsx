@@ -15,6 +15,7 @@ import { ProjectCard, Testimonials, Copy } from "@/components/PageParts";
 export default async function Home() {
   const [projects, quotes] = await Promise.all([records('projects'), records('testimonials')]);
   const featured = projects.filter(p=>p.featured).slice(0,4);
+  const clientNames = [...new Set(projects.map(p=>String(p.client_name)).filter(Boolean))];
 
   return (
     <>
@@ -25,7 +26,7 @@ export default async function Home() {
       <main>
         <Hero />
         <div className="studio-sections">
-          {projects.length>0&&<ScrollReveal><section className="studio-panel client-strip"><span className="eyebrow">Built together</span><div>{[...new Set(projects.map(p=>String(p.client_name)).filter(Boolean))].slice(0,6).map(name=><span key={name}>{name}</span>)}</div></section></ScrollReveal>}
+          {clientNames.length>0&&<ScrollReveal><section className="studio-panel client-strip"><span className="eyebrow">Built together</span><div>{clientNames.slice(0,6).map(name=><span key={name}>{name}</span>)}</div></section></ScrollReveal>}
           <ScrollReveal><About testimonial={quotes[0]} project={featured[0] || projects[0]} /></ScrollReveal>
           <Process />
           <WorkGallery />
