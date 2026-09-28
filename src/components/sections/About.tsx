@@ -27,8 +27,8 @@ const PLACEHOLDER_TESTIMONIAL = {
   quote:
     "The team felt like an extension of ours. Thoughtful, fast, and easy to work with from day one.",
   photo_url: "/animated img/Ellipse 11.png",
-  client_name: "Sarah Chen",
-  client_role: "Founder, Loop Studio",
+  client_name: "Anne",
+  client_role: "CEO, Finance with Anne",
 };
 const PLACEHOLDER_PROJECT = {
   title: "Studio Mudiaga",
@@ -39,8 +39,11 @@ const PLACEHOLDER_PROJECT = {
 
 export default function About({ testimonial, project }: Props) {
   const quote = testimonial ?? PLACEHOLDER_TESTIMONIAL;
-  const work = project ?? PLACEHOLDER_PROJECT;
-  const isPlaceholderProject = !project;
+  // Only swap the placeholder out for a project tied to a real client;
+  // concept/visual-only entries (blank client_name) shouldn't bump it.
+  const hasRealClient = !!project && !!String(project.client_name ?? "").trim();
+  const work = hasRealClient ? project! : PLACEHOLDER_PROJECT;
+  const isPlaceholderProject = !hasRealClient;
 
   return (
     <section id="about" className="studio-panel light-panel about-panel">
