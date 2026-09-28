@@ -937,7 +937,7 @@ select {
 .wstack {
   background: #f4f3ef;
   border-radius: 28px;
-  padding: clamp(32px, 4vw, 56px) clamp(32px, 4vw, 64px);
+  padding: clamp(32px, 4vw, 56px) 0 0;
 }
 .wstack-intro {
   text-align: center;
@@ -954,7 +954,10 @@ select {
   position: relative;
   width: 100%;
   height: clamp(420px, 46vw, 640px);
-  border-radius: 14px;
+  /* Flush with the panel's own edges (no side/bottom padding on .wstack
+     any more), so only the bottom corners round, matching the panel's own
+     radius exactly where this frame IS that corner. */
+  border-radius: 0 0 28px 28px;
   overflow: hidden;
 }
 .partnership-grid {
@@ -1609,5 +1612,6 @@ select {
   }
   .work-gallery-frame {
     height: clamp(320px, 78vw, 460px);
+    border-radius: 0 0 23px 23px;
   }
 }
