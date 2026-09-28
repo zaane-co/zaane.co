@@ -938,6 +938,7 @@ select {
   background: #f4f3ef;
   border-radius: 28px;
   padding: clamp(32px, 4vw, 56px) 0 0;
+  overflow: hidden;
 }
 .wstack-intro {
   text-align: center;
