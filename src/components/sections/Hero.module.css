@@ -66,6 +66,11 @@
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  /* Safari/WebKit can fail to clip a WebGL <canvas> to overflow:hidden's
+     border-radius, letting the gradient escape past one corner. clip-path
+     uses a separate, more reliable clipping path in that engine, so it's
+     kept in sync with border-radius as a belt-and-braces fix. */
+  clip-path: inset(0 round 28px);
   max-width: 1920px;
   height: calc(100svh - 44px);
   min-height: 620px;
@@ -280,6 +285,7 @@
     height: auto;
     padding: 40px 22px;
     border-radius: 23px;
+    clip-path: inset(0 round 23px);
   }
   .subhead {
     font-size: 16px;
