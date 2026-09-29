@@ -117,7 +117,7 @@ select {
 .eyebrow.icon-eyebrow {
   gap: 8px;
   font-weight: 600;
-  color: #111;
+  color: var(--accent);
 }
 .eyebrow::before {
   content: "";
