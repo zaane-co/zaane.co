@@ -57,8 +57,11 @@ export default function ClientLogosArc() {
     const place = () => {
       if (!viewportWidth || !copyWidth) return;
       trackEl.style.transform = `translate3d(${-offset}px, 0, 0)`;
-      // Keep the arc proportional on narrow screens.
+      // Keep the arc proportional on narrow screens, and shrink the
+      // reserved top padding to match so it doesn't leave dead space
+      // above the logos on mobile.
       const maxLift = Math.min(ARC_LIFT, viewportWidth * 0.06);
+      viewport.style.paddingTop = `${maxLift + 12}px`;
       for (let i = 0; i < slots.length; i++) {
         const centre = lefts[i] - offset + slotWidth / 2;
         const u = centre / viewportWidth;

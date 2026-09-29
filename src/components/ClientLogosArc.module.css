@@ -79,8 +79,8 @@
 @media (max-width: 800px) {
   .wrap {
     position: static;
-    padding: 28px 0 4px;
-    gap: 20px;
+    padding: 16px 0 4px;
+    gap: 16px;
   }
   .slot {
     width: 100px;
