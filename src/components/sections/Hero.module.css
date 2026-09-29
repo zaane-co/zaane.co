@@ -283,9 +283,13 @@
   }
   .hero {
     height: auto;
-    padding: 40px 22px;
+    padding: 18px 22px;
     border-radius: 0;
     clip-path: none;
+  }
+  .heroHeader {
+    width: calc(100% + 44px);
+    margin: 0 -22px clamp(16px, 3vh, 32px);
   }
   .subhead {
     font-size: 16px;
