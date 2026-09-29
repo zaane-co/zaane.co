@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Handshake, Laptop, Ticket, Zap } from "lucide-react";
+import ScrollFillText from "@/components/ScrollFillText";
+import StepEntrance from "@/components/StepEntrance";
+import PriceSlider from "@/components/PriceSlider";
 
 const steps = [
   {
@@ -106,6 +109,88 @@ export default function Process() {
           Talk to us
           <ArrowUpRight size={19} />
         </a>
+      </div>
+
+      <div className="benefits-row">
+        <span className="eyebrow icon-eyebrow">
+          <Handshake size={16} strokeWidth={2} />
+          Benefits
+        </span>
+        <div className="benefits-copy">
+          <ScrollFillText
+            className="about-heading"
+            text="We focus on making your business stand out with work that's useful, flexible, and built for the long term."
+          />
+          <p className="benefits-text">
+            Our clients come to us because they want more than good-looking
+            visuals. They want design that solves problems, branding that
+            resonates, and websites that actually perform.
+          </p>
+        </div>
+
+        <StepEntrance className="benefits-cards">
+          <div className="benefits-card">
+            <span className="benefits-card-label">
+              <Ticket size={16} strokeWidth={2} />
+              Flexible pricing
+            </span>
+            <h3>Clear packages for different stages of growth.</h3>
+            <PriceSlider />
+          </div>
+
+          <div className="benefits-card">
+            <span className="benefits-card-label">
+              <Laptop size={16} strokeWidth={2} />
+              Priority support
+            </span>
+            <h3>Fast communication and quick turnaround on feedback.</h3>
+            <div className="benefits-card-notif">
+              <img
+                src="/support3.png"
+                alt=""
+                className="benefits-card-support-img"
+                loading="lazy"
+              />
+            </div>
+          </div>
+
+          <div className="benefits-card">
+            <span className="benefits-card-label">
+              <Zap size={16} strokeWidth={2} />
+              Fast turnarounds
+            </span>
+            <h3>Clear timelines, every step of the way.</h3>
+            <div className="benefits-card-time">
+              <span className="benefits-card-time-label">
+                Time to complete
+              </span>
+              <span className="benefits-card-time-value">14-21 days</span>
+            </div>
+            <div className="benefits-card-ruler" aria-hidden="true">
+              <span className="benefits-card-ruler-accent" />
+              <div className="benefits-card-ruler-track">
+                {Array.from({ length: 2 }).map((_, dup) => (
+                  <div className="benefits-card-ruler-set" key={dup}>
+                    {Array.from({ length: 30 }).map((_, i) => {
+                      const day = new Date();
+                      day.setDate(day.getDate() + i - 15);
+                      return (
+                        <div className="benefits-card-ruler-tick" key={i}>
+                          <span className="benefits-card-ruler-mark" />
+                          {i % 4 === 0 && (
+                            <span className="benefits-card-ruler-ticklabel">
+                              {day.getDate()}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </StepEntrance>
       </div>
     </section>
   );

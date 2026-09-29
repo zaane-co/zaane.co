@@ -6,3 +6,9 @@
   color: #c7c7c7;
   transition: color 0.3s ease;
 }
+:global(.dark-panel) .filled {
+  color: #fff;
+}
+:global(.dark-panel) .dim {
+  color: #5a5a5a;
+}

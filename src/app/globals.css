@@ -372,6 +372,12 @@ select {
   font-size: 16px;
   line-height: 1.7;
 }
+.dark-panel .benefits-row .about-heading {
+  color: #fff;
+}
+.dark-panel .benefits-text {
+  color: #b3b3b3;
+}
 .benefits-cards {
   grid-column: 1 / -1;
   margin-top: 40px;
