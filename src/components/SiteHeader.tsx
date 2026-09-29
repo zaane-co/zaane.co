@@ -96,23 +96,37 @@ export default function SiteHeader({ variant = "light" }: { variant?: "light" | 
             </button>
 
             <nav className="mobile-overlay-nav" aria-label="Primary">
-              {[...links, ["Contact", "/contact"]].map(([label, href]) => (
+              {[...links, ["Contact", "/contact"]].map(([label, href], i) => (
                 <Link
                   key={href}
                   href={href}
                   onClick={() => setOpen(false)}
                   aria-current={path === href ? "page" : undefined}
                 >
-                  <span className="mobile-overlay-plus">+</span>
-                  {label}
+                  <span className="mobile-overlay-link-mask">
+                    <span
+                      className="mobile-overlay-link-inner"
+                      style={{ animationDelay: `${0.32 + i * 0.06}s` }}
+                    >
+                      <span className="mobile-overlay-plus">+</span>
+                      {label}
+                    </span>
+                  </span>
                 </Link>
               ))}
             </nav>
 
             <div className="mobile-overlay-contact">
               <a href="mailto:hello@zaane.co">
-                <span className="mobile-overlay-plus">+</span>
-                hello@zaane.co
+                <span className="mobile-overlay-link-mask">
+                  <span
+                    className="mobile-overlay-link-inner"
+                    style={{ animationDelay: `${0.32 + (links.length + 1) * 0.06}s` }}
+                  >
+                    <span className="mobile-overlay-plus">+</span>
+                    hello@zaane.co
+                  </span>
+                </span>
               </a>
             </div>
           </div>,
