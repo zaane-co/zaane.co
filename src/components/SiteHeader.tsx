@@ -16,17 +16,32 @@ const links = [
   ["Pricing", "/pricing"],
 ];
 
+const CLOSE_DURATION = 400;
+
 export default function SiteHeader({ variant = "light" }: { variant?: "light" | "dark" }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  const closeMenu = () => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setOpen(false);
+      return;
+    }
+    setClosing(true);
+    setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, CLOSE_DURATION);
+  };
 
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape" && open) closeMenu();
     };
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
-  }, []);
+  }, [open]);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -75,21 +90,27 @@ export default function SiteHeader({ variant = "light" }: { variant?: "light" | 
       <button
         type="button"
         className="site-menu"
-        onClick={() => setOpen(!open)}
+        onClick={() => (open ? closeMenu() : setOpen(true))}
         aria-expanded={open}
         aria-controls="site-mobile"
-        inert={open || undefined}
+        inert={(open || closing) || undefined}
       >
         {open ? "Close −" : "Menu +"}
       </button>
 
-      {open &&
+      {(open || closing) &&
         createPortal(
-          <div id="site-mobile" className="mobile-overlay" role="dialog" aria-modal="true" aria-label="Mobile navigation">
+          <div
+            id="site-mobile"
+            className={`mobile-overlay${closing ? " is-closing" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation"
+          >
             <button
               type="button"
               className="mobile-overlay-close"
-              onClick={() => setOpen(false)}
+              onClick={closeMenu}
               aria-label="Close menu"
             >
               <X size={22} strokeWidth={1.75} />
@@ -100,7 +121,7 @@ export default function SiteHeader({ variant = "light" }: { variant?: "light" | 
                 <Link
                   key={href}
                   href={href}
-                  onClick={() => setOpen(false)}
+                  onClick={closeMenu}
                   aria-current={path === href ? "page" : undefined}
                 >
                   <span className="mobile-overlay-link-mask">
