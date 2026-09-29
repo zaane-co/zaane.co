@@ -101,20 +101,40 @@ export default function Hero() {
             <span className={styles.socialProofText}>200+ products shipped</span>
           </div>
           <h1 className={styles.headline}>
-            <span className={styles.lineMask}>
-              <span
-                className={styles.line}
-                style={{ animationDelay: "0.22s" }}
-              >
-                Built to Turn Ideas Into MVPs.
+            <span className={styles.headlineDesktop}>
+              <span className={styles.lineMask}>
+                <span
+                  className={styles.line}
+                  style={{ animationDelay: "0.22s" }}
+                >
+                  Built to Turn Ideas Into MVPs.
+                </span>
+              </span>
+              <span className={styles.lineMask}>
+                <span
+                  className={styles.line}
+                  style={{ animationDelay: "0.36s" }}
+                >
+                  Designs Into Products.
+                </span>
               </span>
             </span>
-            <span className={styles.lineMask}>
-              <span
-                className={styles.line}
-                style={{ animationDelay: "0.36s" }}
-              >
-                Designs Into Products.
+            <span className={styles.headlineMobile}>
+              <span className={styles.lineMask}>
+                <span
+                  className={styles.line}
+                  style={{ animationDelay: "0.22s" }}
+                >
+                  Built to Turn Ideas
+                </span>
+              </span>
+              <span className={styles.lineMask}>
+                <span
+                  className={styles.line}
+                  style={{ animationDelay: "0.36s" }}
+                >
+                  Into MVPs. Designs Into Products.
+                </span>
               </span>
             </span>
           </h1>
