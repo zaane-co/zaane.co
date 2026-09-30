@@ -24,12 +24,16 @@ const questions = [
   ],
 ];
 export default function Questions() {
-  const [open, setOpen] = useState<number | null>(1);
+  const [open, setOpen] = useState<number | null>(0);
   return (
-    <section id="questions" className="studio-panel light-panel" data-reveal>
-      <div className="section-heading">
-        <h2>Questions</h2>
-        <span className="eyebrow">FAQ</span>
+    <section id="questions" className="studio-panel faq-panel" data-reveal>
+      <div className="faq-head">
+        <span className="faq-eyebrow">FAQ</span>
+        <h2>
+          Frequently
+          <br />
+          Asked Questions
+        </h2>
       </div>
       <div className="faq-list">
         {questions.map(([question, answer], i) => (
@@ -45,9 +49,10 @@ export default function Questions() {
                 aria-controls={`answer-${i}`}
                 onClick={() => setOpen(open === i ? null : i)}
               >
-                <span className="row-number">0{i + 1}.</span>
                 <span>{question}</span>
-                <Plus size={20} />
+                <span className="faq-toggle" aria-hidden="true">
+                  <Plus size={16} strokeWidth={2} />
+                </span>
               </button>
             </h3>
             <div

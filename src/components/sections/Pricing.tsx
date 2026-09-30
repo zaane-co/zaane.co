@@ -7,11 +7,7 @@ export default function Pricing() {
       data-reveal
     >
       <div className="section-heading">
-        <h2>
-          The right fit.
-          <br />
-          From the start.
-        </h2>
+        <h2>The right fit, from the start.</h2>
         <span className="eyebrow">Working together</span>
       </div>
       <p className="section-intro">

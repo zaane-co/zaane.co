@@ -1534,39 +1534,132 @@ select {
 .ongoing-card ul {
   border-color: #444;
 }
+/* --- FAQ: centered heading over stacked pill rows; the open row turns white. --- */
+.faq-panel {
+  position: relative;
+  background: #f8f9fc;
+  padding-top: clamp(64px, 8vw, 120px);
+  padding-bottom: clamp(64px, 8vw, 120px);
+}
+.faq-panel::before,
+.faq-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.faq-panel::before {
+  left: clamp(24px, 8vw, 120px);
+  right: clamp(24px, 8vw, 120px);
+  border-left: 1px solid #e8ebf2;
+  border-right: 1px solid #e8ebf2;
+}
+.faq-panel::after {
+  top: clamp(32px, 5vw, 64px);
+  bottom: clamp(32px, 5vw, 64px);
+  border-top: 1px solid #e8ebf2;
+  border-bottom: 1px solid #e8ebf2;
+}
+.faq-head {
+  position: relative;
+  text-align: center;
+  margin-bottom: 40px;
+}
+.faq-eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #1a1a1f;
+  margin-bottom: 18px;
+}
+.faq-head h2 {
+  font-size: clamp(36px, 4.4vw, 60px);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: #0f1020;
+}
 .faq-list {
-  border-top: 1px solid #e1e1e1;
+  position: relative;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .faq-row {
-  border-bottom: 1px solid #e1e1e1;
+  background: #eaeff8;
+  border: 1px solid #eaeff8;
+  border-radius: 28px;
+  transition:
+    background 0.3s,
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+.faq-row.is-open {
+  background: #fff;
+  border-color: #e3e7ef;
+  box-shadow: 0 10px 30px rgba(15, 16, 32, 0.05);
 }
 .faq-row button {
   width: 100%;
-  display: grid;
-  grid-template-columns: 22% 1fr auto;
-  gap: 22px;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 20px;
   text-align: left;
-  padding: 28px 6%;
-  font-size: 17px;
+  padding: 8px 8px 8px 26px;
+  min-height: 60px;
+  font-size: 16px;
   font-weight: 500;
-  transition: color 0.25s;
+  color: #0f1020;
 }
-.faq-row button > svg {
-  transition: transform 0.35s;
+.faq-toggle {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 6px rgba(15, 16, 32, 0.06);
+  transition:
+    background 0.3s,
+    transform 0.35s;
 }
-.faq-row.is-open button {
-  color: #bc451f;
-}
-.faq-row.is-open button > svg {
+.faq-row.is-open .faq-toggle {
+  background: #eaeff8;
+  box-shadow: none;
   transform: rotate(45deg);
 }
 .faq-row p {
-  margin-left: 27%;
-  padding: 0 12% 28px 0;
-  color: #6b6b6b;
+  padding: 0 90px 24px 26px;
+  color: #5b5e6b;
   font-size: 14px;
   line-height: 1.7;
+}
+@media (max-width: 800px) {
+  .faq-panel::before,
+  .faq-panel::after {
+    display: none;
+  }
+  .faq-row {
+    border-radius: 22px;
+  }
+  .faq-row button {
+    padding: 6px 6px 6px 20px;
+    font-size: 15px;
+  }
+  .faq-toggle {
+    width: 40px;
+    height: 40px;
+  }
+  .faq-row p {
+    padding: 0 20px 20px;
+    font-size: 13px;
+  }
 }
 .contact-panel {
   background: #f3f0e9;
@@ -1914,17 +2007,6 @@ select {
   }
   .pricing-card h3 {
     font-size: 30px;
-  }
-  .faq-row button {
-    padding: 24px 0;
-    grid-template-columns: 30px 1fr auto;
-    gap: 12px;
-    font-size: 15px;
-  }
-  .faq-row p {
-    margin-left: 42px;
-    padding: 0 0 24px;
-    font-size: 13px;
   }
   .contact-panel {
     gap: 45px;
