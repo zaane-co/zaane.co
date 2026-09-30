@@ -7,6 +7,16 @@ import type { ContentRow } from "@/lib/content";
 
 const PAGE_SIZE = 5;
 
+// The entrance animation's fill-mode keeps pinning `transform` after it
+// finishes, which outranks a plain `:hover` rule in the cascade and would
+// silently block the hover-lift. Clearing the animation once it ends frees
+// `transform` back up for hover/transition to control.
+function clearFinishedAnimation(e: React.AnimationEvent<HTMLDivElement>) {
+  if (e.animationName === "showcase-item-in") {
+    (e.target as HTMLElement).style.animation = "none";
+  }
+}
+
 function QuoteCard({ row, accent }: { row: ContentRow; accent?: boolean }) {
   const photo = safeUrl(row.photo_url);
   return (
@@ -68,8 +78,8 @@ export default function Testimonials({ rows }: { rows: ContentRow[] }) {
         )}
 
         {count > 0 && featured && (
-          <>
-            <div className="showcase-grid">
+          <div className="showcase-page" key={page}>
+            <div className="showcase-grid" onAnimationEnd={clearFinishedAnimation}>
               <div className="showcase-column">
                 {left.map((row) => (
                   <QuoteCard key={row.id} row={row} />
@@ -123,7 +133,7 @@ export default function Testimonials({ rows }: { rows: ContentRow[] }) {
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </section>

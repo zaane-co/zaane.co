@@ -1243,6 +1243,79 @@ select {
 .testimonial-showcase .empty-state {
   margin: 0 auto;
 }
+.showcase-card,
+.showcase-photo {
+  animation: showcase-item-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-play-state: paused;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.testimonial-showcase:not(.reveal-pending) .showcase-card,
+.testimonial-showcase:not(.reveal-pending) .showcase-photo {
+  animation-play-state: running;
+}
+.showcase-column .showcase-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.showcase-column .showcase-card:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.showcase-feature .showcase-photo {
+  animation-delay: 0.1s;
+}
+.showcase-feature .showcase-card {
+  animation-delay: 0.24s;
+}
+@keyframes showcase-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.showcase-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 34px rgba(20, 20, 20, 0.08);
+}
+.showcase-card-accent:hover {
+  box-shadow: 0 16px 34px rgba(241, 12, 69, 0.28);
+}
+.showcase-photo img {
+  transition: transform 0.5s ease;
+}
+.showcase-photo:hover img {
+  transform: scale(1.04);
+}
+.showcase-page {
+  animation: showcase-page-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes showcase-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .showcase-card,
+  .showcase-photo,
+  .showcase-page {
+    animation: none;
+  }
+  .showcase-card:hover {
+    transform: none;
+  }
+  .showcase-photo:hover img {
+    transform: none;
+  }
+}
 @media (max-width: 800px) {
   .testimonial-showcase {
     padding: 8px;
