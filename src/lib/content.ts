@@ -1,8 +1,14 @@
 import 'server-only';
 import {configured,publicClient} from './supabase/server';
 import {cache} from 'react';
+import {unstable_noStore as noStore} from 'next/cache';
 export type ContentRow={id:string;[key:string]:unknown};
 export const records=cache(async(table:string):Promise<ContentRow[]>=>{
+ // Vercel's data cache persists indefinitely across deploys for an
+ // uncached fetch with no revalidate window, so a route-level revalidate
+ // alone can keep re-reading the same stuck entry. noStore() opts this
+ // fetch out of that cache entirely so CMS edits always show up live.
+ noStore();
  if(!configured())return [];
  let query=publicClient().from(table).select('*');
  if(['projects','blog_posts','testimonials','team_members','resources','jobs'].includes(table))query=query.eq('status','published');

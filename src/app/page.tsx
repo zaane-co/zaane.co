@@ -11,11 +11,6 @@ import Pricing from "@/components/sections/Pricing";
 import Questions from "@/components/sections/Questions";
 import Contact from "@/components/sections/Contact";
 import { records } from "@/lib/content";
-// Vercel persists Next's data cache across deployments, so a page with no
-// explicit revalidate window can keep serving CMS content from whenever it
-// was first cached — long past any new deploy — until admin edits trigger
-// revalidatePath. This bounds that staleness to a minute either way.
-export const revalidate = 60;
 export default async function Home() {
   const [projects, quotes] = await Promise.all([records('projects'), records('testimonials')]);
   const featured = projects.filter(p=>p.featured).slice(0,4);
