@@ -397,3 +397,12 @@
     animation: none;
   }
 }
+/* The logo arc is pinned to the hero's bottom, so reserve its height below
+   the CTAs and let the hero grow on short screens instead of overlapping. */
+@media (min-width: 801px) {
+  .hero {
+    height: auto;
+    min-height: max(620px, calc(100svh - 44px));
+    padding-bottom: calc(min(108px, 6vw) + 190px);
+  }
+}
