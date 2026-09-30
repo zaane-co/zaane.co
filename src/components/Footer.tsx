@@ -5,7 +5,7 @@ import { settings } from "@/lib/content";
 import { safeUrl } from "@/lib/cms";
 
 const columns: [string, [string, string][]][] = [
-  ["Explore", [["Work", "/projects"], ["Services", "/services"], ["About", "/about"], ["Pricing", "/pricing"]]],
+  ["Explore", [["Work", "/projects"], ["Services", "/services"], ["About", "/about"]]],
   ["Company", [["Journal", "/blog"], ["Client stories", "/testimonials"], ["Partnerships", "/brand-partnerships"], ["Careers", "/careers"], ["Resources", "/resources"]]],
   ["Support", [["Contact", "/contact"], ["FAQ", "/faq"], ["Privacy policy", "/privacy-policy"], ["Terms of service", "/terms-of-service"]]],
 ];

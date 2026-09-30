@@ -13,7 +13,6 @@ const links = [
   ["Services", "/services"],
   ["Work", "/projects"],
   ["Journal", "/blog"],
-  ["Pricing", "/pricing"],
 ];
 
 const CLOSE_DURATION = 400;
