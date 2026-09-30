@@ -1,5 +1,75 @@
-import Link from 'next/link';
-import {PageHero,Section,CTA,ProjectCard,Empty} from '@/components/PageParts';
-import {records} from '@/lib/content';
-export const metadata={title:'Projects | Zaane',description:'Explore Zaane’s design and development work, from brands to digital products.'};
-export default async function Page({searchParams}:{searchParams:Promise<{category?:string;industry?:string;type?:string}>}){const all=await records('projects');const {category='',industry='',type=''}=await searchParams;const rows=all.filter(r=>(!category||r.category===category)&&(!industry||r.industry_tag===industry)&&(!type||r.sub_category===type));return <main id="main" className="site-main"><PageHero label="03 / Selected work" title="Thought through. Brought to life." intro="Brand identities, digital experiences and products built around real challenges."/><Section title="A closer look."><form className="filter-form"><label>Discipline<select name="category" defaultValue={category}><option value="">All disciplines</option><option>Design</option><option>Development</option></select></label><label>Specialism<select name="type" defaultValue={type}><option value="">All specialisms</option>{['Graphics & Brand Design','UI/UX Design','Web Design','App Design'].map(t=><option key={t}>{t}</option>)}</select></label><label>Industry<select name="industry" defaultValue={industry}><option value="">All industries</option>{[...new Set(all.map(r=>String(r.industry_tag)))].filter(Boolean).map(s=><option key={s}>{s}</option>)}</select></label><button className="studio-button black-button">Apply filters →</button><Link href="/projects">Reset</Link></form>{rows.length?<div className="work-grid">{rows.map(r=><ProjectCard row={r} key={r.id}/>)}</div>:<Empty title={all.length?'No projects match those filters.':'Our next chapter is taking shape.'} body={all.length?'Try another discipline or industry.':'Selected case studies will appear here as they’re ready to share. Ask us about work relevant to your project.'}/>}</Section><CTA/></main>;}
+import Link from "next/link";
+import { Fraunces } from "next/font/google";
+import { records } from "@/lib/content";
+import { safeUrl } from "@/lib/cms";
+
+export const metadata = {
+  title: "Projects | Zaane",
+  description: "Explore Zaane’s design and development work, from brands to digital products.",
+};
+
+const display = Fraunces({ subsets: ["latin"], weight: ["700"], display: "swap" });
+
+const tabs: [string, string][] = [
+  ["All", ""],
+  ["Brand design", "Graphics & Brand Design"],
+  ["UI/UX design", "UI/UX Design"],
+  ["Web design", "Web Design"],
+  ["App design", "App Design"],
+];
+
+export default async function Page({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
+  const all = await records("projects");
+  const { type = "" } = await searchParams;
+  const rows = all.filter((r) => !type || r.sub_category === type);
+
+  return (
+    <main id="main" className="wk">
+      <section className="wk-hero">
+        <h1 className={display.className}>Selected Work</h1>
+        <div className="wk-hero-foot">
+          <p>
+            A collection of selected projects, built to solve real problems and create experiences people
+            genuinely enjoy using.
+          </p>
+          <span>© {new Date().getFullYear()}</span>
+        </div>
+      </section>
+
+      <nav className="wk-tabs" aria-label="Filter projects">
+        {tabs.map(([label, value]) => (
+          <Link
+            key={label}
+            href={value ? `/projects?type=${encodeURIComponent(value)}` : "/projects"}
+            aria-current={type === value ? "page" : undefined}
+            scroll={false}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+
+      {rows.length > 0 ? (
+        <div className="wk-grid">
+          {rows.map((r) => {
+            const cover = safeUrl(r.cover_image);
+            return (
+              <Link key={r.id} href={`/projects/${r.slug}`} className="wk-tile">
+                {cover ? <img src={cover} alt={String(r.title)} loading="lazy" /> : <span className="wk-tile-blank" />}
+                <span className="wk-tile-label">
+                  <strong>{String(r.title)}</strong>
+                  <span>{String(r.sub_category || r.category)}</span>
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="wk-empty">
+          <p>No projects in this category yet.</p>
+          <Link href="/projects">See all work</Link>
+        </div>
+      )}
+    </main>
+  );
+}
