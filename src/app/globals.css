@@ -1562,7 +1562,12 @@ select {
     height: 34px;
   }
   .services-heading {
+    align-items: flex-start;
+    text-align: left;
     margin-bottom: 44px;
+  }
+  .services-heading-title {
+    font-size: clamp(36px, 12vw, 48px);
   }
   .services-row h3 button {
     min-height: 84px;
