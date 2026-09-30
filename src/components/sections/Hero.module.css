@@ -247,7 +247,7 @@
 }
 @media (max-width: 800px) {
   .section {
-    padding: 0 0 24px;
+    padding: 0;
   }
   .header {
     height: 84px;

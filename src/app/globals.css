@@ -1482,6 +1482,12 @@ select {
     padding: var(--panel-pad-y) var(--panel-pad-x);
     border-radius: 23px;
   }
+  /* First panel right after the hero: less top padding so real content
+     shows sooner and the near-white panel bg doesn't read as dead space
+     under the dark hero, especially on taller phone screens. */
+  #about {
+    padding-top: 16px;
+  }
   .section-heading {
     margin-bottom: 36px;
     gap: 20px;
