@@ -1637,7 +1637,9 @@ select {
   }
 }
 .contact-panel {
-  background: #f3f0e9;
+  background: #080808;
+  color: #fff;
+  color-scheme: dark;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10%;
@@ -1650,19 +1652,19 @@ select {
   margin: 40px 0 36px;
 }
 .contact-copy h2 > span {
-  color: #a39f96;
+  color: var(--accent);
 }
 .contact-email {
   display: inline-flex;
   align-items: center;
   gap: 20px;
-  border-bottom: 1px solid #aaa59c;
+  border-bottom: 1px solid #444;
   padding-bottom: 8px;
   font-size: 23px;
   letter-spacing: -0.04em;
 }
 .contact-copy > p {
-  color: #7a776f;
+  color: #a6a6a6;
   margin-top: 28px;
   font-size: 14px;
   line-height: 1.7;
@@ -1697,6 +1699,37 @@ select {
 }
 .contact-form .studio-button {
   width: 100%;
+}
+.contact-panel .contact-form input,
+.contact-panel .contact-form select,
+.contact-panel .contact-form textarea {
+  border-bottom-color: #333;
+  color: #fff;
+}
+.contact-panel .contact-form input:focus,
+.contact-panel .contact-form select:focus,
+.contact-panel .contact-form textarea:focus {
+  border-bottom-color: var(--accent);
+}
+.contact-panel .contact-form input::placeholder,
+.contact-panel .contact-form textarea::placeholder {
+  color: #6f6f6f;
+}
+.contact-panel .optional {
+  color: #8a8a8a;
+}
+.contact-panel .contact-form .studio-button {
+  background: var(--accent);
+  color: #fff;
+}
+.contact-panel .contact-form .studio-button:hover {
+  background: #c40a3a;
+}
+.contact-panel .form-feedback {
+  color: #ff5c7c;
+}
+.contact-panel .form-success {
+  color: #171717;
 }
 .form-note {
   color: #6c685f;
