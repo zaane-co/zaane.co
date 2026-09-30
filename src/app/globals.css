@@ -1043,12 +1043,7 @@ select {
 }
 /* --- Testimonials: a 2-1-2 showcase grid with a featured story in the middle. --- */
 .testimonial-showcase {
-  padding: clamp(20px, 3vw, 40px);
-}
-.showcase-panel {
   background: #fff;
-  border-radius: 28px;
-  padding: clamp(24px, 3.2vw, 44px);
   box-shadow: 0 20px 60px rgba(20, 20, 20, 0.05);
 }
 .showcase-top {
@@ -1317,9 +1312,6 @@ select {
   }
 }
 @media (max-width: 800px) {
-  .testimonial-showcase {
-    padding: 8px;
-  }
   .showcase-top {
     flex-direction: column;
   }

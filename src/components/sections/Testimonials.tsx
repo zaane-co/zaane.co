@@ -52,90 +52,88 @@ export default function Testimonials({ rows }: { rows: ContentRow[] }) {
   const featuredPhoto = featured ? safeUrl(featured.photo_url) : "";
 
   return (
-    <section id="testimonials" className="studio-panel light-panel testimonial-showcase" data-reveal>
-      <div className="showcase-panel">
-        <div className="showcase-top">
-          <div>
-            <span className="showcase-eyebrow">Client stories</span>
-            <h2 className="showcase-heading-title">
-              Trusted by teams
-              <br />
-              building what&rsquo;s next.
-            </h2>
-          </div>
-          <p className="showcase-heading-note">
-            See how founders and product teams work with Zaane to design, build and ship with
-            confidence.
-          </p>
+    <section id="testimonials" className="studio-panel testimonial-showcase" data-reveal>
+      <div className="showcase-top">
+        <div>
+          <span className="showcase-eyebrow">Client stories</span>
+          <h2 className="showcase-heading-title">
+            Trusted by teams
+            <br />
+            building what&rsquo;s next.
+          </h2>
         </div>
+        <p className="showcase-heading-note">
+          See how founders and product teams work with Zaane to design, build and ship with
+          confidence.
+        </p>
+      </div>
 
-        {count === 0 && (
-          <div className="empty-state">
-            <span className="empty-mark">”</span>
-            <h3>The work comes first.</h3>
-            <p>Client stories will be shared here as they&rsquo;re approved for publication.</p>
+      {count === 0 && (
+        <div className="empty-state">
+          <span className="empty-mark">”</span>
+          <h3>The work comes first.</h3>
+          <p>Client stories will be shared here as they&rsquo;re approved for publication.</p>
+        </div>
+      )}
+
+      {count > 0 && featured && (
+        <div className="showcase-page" key={page}>
+          <div className="showcase-grid" onAnimationEnd={clearFinishedAnimation}>
+            <div className="showcase-column">
+              {left.map((row) => (
+                <QuoteCard key={row.id} row={row} />
+              ))}
+            </div>
+            <div className="showcase-feature">
+              {featuredPhoto && (
+                <div className="showcase-photo">
+                  <img src={featuredPhoto} alt="" loading="lazy" />
+                </div>
+              )}
+              <QuoteCard row={featured} accent />
+            </div>
+            <div className="showcase-column">
+              {right.map((row) => (
+                <QuoteCard key={row.id} row={row} />
+              ))}
+            </div>
           </div>
-        )}
 
-        {count > 0 && featured && (
-          <div className="showcase-page" key={page}>
-            <div className="showcase-grid" onAnimationEnd={clearFinishedAnimation}>
-              <div className="showcase-column">
-                {left.map((row) => (
-                  <QuoteCard key={row.id} row={row} />
+          {pageCount > 1 && (
+            <div className="showcase-footer">
+              <div className="showcase-dots">
+                {Array.from({ length: pageCount }).map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={i === page ? "is-active" : ""}
+                    aria-label={`Show testimonials page ${i + 1}`}
+                    aria-current={i === page}
+                    onClick={() => setPage(i)}
+                  />
                 ))}
               </div>
-              <div className="showcase-feature">
-                {featuredPhoto && (
-                  <div className="showcase-photo">
-                    <img src={featuredPhoto} alt="" loading="lazy" />
-                  </div>
-                )}
-                <QuoteCard row={featured} accent />
-              </div>
-              <div className="showcase-column">
-                {right.map((row) => (
-                  <QuoteCard key={row.id} row={row} />
-                ))}
+              <div className="showcase-arrows">
+                <button
+                  type="button"
+                  aria-label="Previous testimonials"
+                  onClick={() => setPage((page - 1 + pageCount) % pageCount)}
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="is-primary"
+                  aria-label="Next testimonials"
+                  onClick={() => setPage((page + 1) % pageCount)}
+                >
+                  <ArrowRight size={16} />
+                </button>
               </div>
             </div>
-
-            {pageCount > 1 && (
-              <div className="showcase-footer">
-                <div className="showcase-dots">
-                  {Array.from({ length: pageCount }).map((_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      className={i === page ? "is-active" : ""}
-                      aria-label={`Show testimonials page ${i + 1}`}
-                      aria-current={i === page}
-                      onClick={() => setPage(i)}
-                    />
-                  ))}
-                </div>
-                <div className="showcase-arrows">
-                  <button
-                    type="button"
-                    aria-label="Previous testimonials"
-                    onClick={() => setPage((page - 1 + pageCount) % pageCount)}
-                  >
-                    <ArrowLeft size={16} />
-                  </button>
-                  <button
-                    type="button"
-                    className="is-primary"
-                    aria-label="Next testimonials"
-                    onClick={() => setPage((page + 1) % pageCount)}
-                  >
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </section>
   );
 }
