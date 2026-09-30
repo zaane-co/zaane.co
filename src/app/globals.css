@@ -1536,29 +1536,7 @@ select {
 }
 /* --- FAQ: centered heading over stacked pill rows; the open row turns white. --- */
 .faq-panel {
-  position: relative;
-  background: #f8f9fc;
-  padding-top: clamp(64px, 8vw, 120px);
-  padding-bottom: clamp(64px, 8vw, 120px);
-}
-.faq-panel::before,
-.faq-panel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.faq-panel::before {
-  left: clamp(24px, 8vw, 120px);
-  right: clamp(24px, 8vw, 120px);
-  border-left: 1px solid #e8ebf2;
-  border-right: 1px solid #e8ebf2;
-}
-.faq-panel::after {
-  top: clamp(32px, 5vw, 64px);
-  bottom: clamp(32px, 5vw, 64px);
-  border-top: 1px solid #e8ebf2;
-  border-bottom: 1px solid #e8ebf2;
+  background: #fff;
 }
 .faq-head {
   position: relative;
@@ -1571,7 +1549,7 @@ select {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #1a1a1f;
+  color: var(--accent);
   margin-bottom: 18px;
 }
 .faq-head h2 {
@@ -1579,7 +1557,7 @@ select {
   font-weight: 400;
   line-height: 1.12;
   letter-spacing: -0.03em;
-  color: #0f1020;
+  color: var(--foreground);
 }
 .faq-list {
   position: relative;
@@ -1590,8 +1568,8 @@ select {
   gap: 10px;
 }
 .faq-row {
-  background: #eaeff8;
-  border: 1px solid #eaeff8;
+  background: #f4f3ef;
+  border: 1px solid #f4f3ef;
   border-radius: 28px;
   transition:
     background 0.3s,
@@ -1600,8 +1578,8 @@ select {
 }
 .faq-row.is-open {
   background: #fff;
-  border-color: #e3e7ef;
-  box-shadow: 0 10px 30px rgba(15, 16, 32, 0.05);
+  border-color: #e6e3dc;
+  box-shadow: 0 10px 30px rgba(20, 20, 20, 0.05);
 }
 .faq-row button {
   width: 100%;
@@ -1614,7 +1592,7 @@ select {
   min-height: 60px;
   font-size: 16px;
   font-weight: 500;
-  color: #0f1020;
+  color: var(--foreground);
 }
 .faq-toggle {
   flex-shrink: 0;
@@ -1624,27 +1602,24 @@ select {
   background: #fff;
   display: grid;
   place-items: center;
-  box-shadow: 0 2px 6px rgba(15, 16, 32, 0.06);
+  box-shadow: 0 2px 6px rgba(20, 20, 20, 0.06);
   transition:
     background 0.3s,
     transform 0.35s;
 }
 .faq-row.is-open .faq-toggle {
-  background: #eaeff8;
+  background: var(--accent);
+  color: #fff;
   box-shadow: none;
   transform: rotate(45deg);
 }
 .faq-row p {
   padding: 0 90px 24px 26px;
-  color: #5b5e6b;
+  color: #6f6d68;
   font-size: 14px;
   line-height: 1.7;
 }
 @media (max-width: 800px) {
-  .faq-panel::before,
-  .faq-panel::after {
-    display: none;
-  }
   .faq-row {
     border-radius: 22px;
   }
