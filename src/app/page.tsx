@@ -38,7 +38,6 @@ export default async function Home() {
             <div className="section-heading"><h2>Thought through.<br/><span className="muted-heading">Brought to life.</span></h2><Link className="text-link" href="/projects">All work ↗</Link></div>
             {featured.length ? <div className="work-grid">{featured.map(row=><ProjectCard row={row} key={row.id}/>)}</div> : <div className="home-work-intro"><Copy text={await pageCopy('home','work','From a clear brand identity to a product ready for its first users, we bring design and development into one considered process. Tell us what you have in mind, and we’ll share relevant work.')}/><Link className="studio-button black-button" href="/services#inquiry">Discuss your project ↗</Link></div>}
           </section>
-          <section className="studio-panel light-panel"><div className="section-heading"><h2>A little more<br/><span className="muted-heading">thought in every step.</span></h2><span className="eyebrow">Why Zaane</span></div><div className="four-column">{[['One connected team','Design and development working toward the same outcome.'],['Clear communication','A shared scope, agreed milestones and regular feedback.'],['Made for your users','Decisions grounded in the people and problems that matter.'],['Built to keep going','Considered handover and options for ongoing support.']].map(([a,b])=><article key={a}><h3>{a}</h3><p>{b}</p></article>)}</div></section>
           <Partnership />
           <Pricing />
           <Questions />
