@@ -6,7 +6,7 @@ import About from "@/components/sections/About";
 import Process from "@/components/sections/Process";
 import WorkGallery from "@/components/sections/WorkGallery";
 import Services from "@/components/sections/Services";
-import TestimonialStack from "@/components/sections/TestimonialStack";
+import Testimonials from "@/components/sections/Testimonials";
 import Pricing from "@/components/sections/Pricing";
 import Questions from "@/components/sections/Questions";
 import Contact from "@/components/sections/Contact";
@@ -30,7 +30,7 @@ export default async function Home() {
           <Process />
           <WorkGallery />
           <Services />
-          <TestimonialStack rows={quotes} />
+          <Testimonials rows={quotes} />
           <Pricing />
           <Questions />
           <Contact />
