@@ -1,8 +1,6 @@
 import Login from '@/components/admin/Login';
+import LoginHero from '@/components/admin/LoginHero';
 import {configured,staff} from '@/lib/supabase/server';
 import {redirect} from 'next/navigation';
 export const metadata={title:'Staff sign in | Zaane',robots:{index:false,follow:false}};
-export default async function Page(){if(await staff())redirect('/admin');return <main className="admin-login">
- <aside className="admin-login-hero"><div className="admin-login-photo"><img src="/zaane-logo-light.svg" alt="Zaane" className="admin-login-logo"/><img src="/zaane-mark.svg" alt="" aria-hidden="true" className="admin-login-mark"/><div className="admin-login-shade"/><div className="admin-login-caption"><h2>Admin Portal</h2><p>Manage your projects, content, and inquiries from one place.</p></div></div></aside>
- <Login configured={configured()}/>
-</main>;}
+export default async function Page({searchParams}:{searchParams:Promise<{error?:string}>}){if(await staff())redirect('/admin');const {error}=await searchParams;return <main className="admin-login"><LoginHero/><Login configured={configured()} notice={error==='expired'?'That reset link is invalid or has expired. Request a new one.':''}/></main>;}

@@ -2802,3 +2802,8 @@ select {
 .admin-login-foot a:hover{color:var(--lp-muted)}
 @media(max-width:1023px){.admin-login-hero{display:none}.admin-login-panel{margin:8px}}
 @media(max-width:600px){.admin-login-top,.admin-login-foot{padding:18px 16px}.admin-login-main{padding:32px 16px}.admin-login-panel{margin:0;border-radius:0}}
+.admin-login-forgot{justify-self:center;color:var(--accent);font-size:14px;font-weight:500}
+.admin-login-forgot:hover{text-decoration:underline}
+.admin-login-back{display:inline-flex;align-items:center;gap:6px;color:var(--lp-muted);font-size:13px;margin-bottom:24px}
+.admin-login-back:hover{color:var(--lp-fg)}
+.admin-login-sent{padding:16px 18px;border-radius:10px;background:var(--lp-input);border:1px solid var(--lp-border);font-size:14px;line-height:1.6}
