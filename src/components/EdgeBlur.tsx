@@ -8,7 +8,7 @@ import styles from "./EdgeBlur.module.css";
 // gradient rather than a single hard-edged blurred block.
 export default function EdgeBlur() {
   return (
-    <div className={styles.edgeBlur} aria-hidden="true">
+    <div className={styles.edgeBlur} aria-hidden="true" data-edge-blur>
       <div className={styles.l1} />
       <div className={styles.l2} />
       <div className={styles.l3} />

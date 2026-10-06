@@ -2806,3 +2806,6 @@ select {
 .admin-login-back{display:inline-flex;align-items:center;gap:6px;color:var(--lp-muted);font-size:13px;margin-bottom:24px}
 .admin-login-back:hover{color:var(--lp-fg)}
 .admin-login-sent{padding:16px 18px;border-radius:10px;background:var(--lp-input);border:1px solid var(--lp-border);font-size:14px;line-height:1.6}
+
+/* No bottom edge blur on admin screens */
+body:has(.za-admin,.admin-login) [data-edge-blur]{display:none}
