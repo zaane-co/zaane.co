@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ReactLenis } from "lenis/react";
 import EdgeBlur from "@/components/EdgeBlur";
+import AuthLinkForwarder from "@/components/AuthLinkForwarder";
 // Preloader temporarily disabled, see src/components/Preloader.tsx
 // import Preloader from "@/components/Preloader";
 import "lenis/dist/lenis.css";
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </ReactLenis>
         <EdgeBlur />
+        <AuthLinkForwarder />
       </body>
     </html>
   );
