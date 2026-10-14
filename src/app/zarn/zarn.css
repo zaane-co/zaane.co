@@ -636,3 +636,12 @@ html:has(.zarn.is-light),body:has(.zarn.is-light),html:has(.zarn-auth.is-light),
  .zarn{padding-bottom:0}
  .zarn.is-deep .zn-main{padding-bottom:env(safe-area-inset-bottom)}
 }
+/* iPhone home-screen app: size to the real screen (100lvh) and keep the tab bar in normal layout flow,
+   so iOS's shortened layout viewport can't leave an empty band under it. */
+@media(max-width:860px){
+ .zarn{position:fixed;top:0;left:0;right:0;bottom:auto;height:100lvh;min-height:0;flex-direction:column;padding:env(safe-area-inset-top) 0 0}
+ .zarn .zn-main{flex:1;min-height:0;padding-bottom:0!important}
+ .zarn.is-deep .zn-main{padding-bottom:env(safe-area-inset-bottom)!important}
+ .zn-tabbar{position:static;flex-shrink:0;padding-bottom:max(8px,calc(env(safe-area-inset-bottom) - 10px))}
+}
+@supports not (height:100lvh){@media(max-width:860px){.zarn{height:100vh}}}
