@@ -97,6 +97,7 @@ export async function POST(request:Request){
   case 'send_email':{
    const {data:l}=await db.from('leads').select('id,name,email').eq('id',b.lead_id).single();
    if(!l)return fail('Lead not found.',404);
+   if(!l.email)return fail('This lead has no email address. Add one in Details first.');
    const key=process.env.RESEND_API_KEY,inbox=process.env.CRM_FROM_EMAIL||process.env.LEAD_NOTIFICATION_EMAIL;
    if(!key||!inbox)return fail('Email isn’t configured. Set RESEND_API_KEY and LEAD_NOTIFICATION_EMAIL.',503);
    // Sent from the studio inbox with a BCC to it, so replies and the sent copy both live in the real mailbox.

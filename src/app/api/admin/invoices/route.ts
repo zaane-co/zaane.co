@@ -68,6 +68,7 @@ export async function POST(request:Request){
    if(!inv.items.length||Number(inv.total)<=0)return fail('Add at least one priced line before sending.');
    const {data:lead}=await db.from('leads').select('id,name,email').eq('id',inv.lead_id).single();
    if(!lead)return fail('Client not found.',404);
+   if(!lead.email)return fail('This client has no email address. Add one on their lead page first.');
    const key=process.env.RESEND_API_KEY,inbox=process.env.CRM_FROM_EMAIL||process.env.LEAD_NOTIFICATION_EMAIL;
    if(!key||!inbox)return fail('Email isn’t configured. Set RESEND_API_KEY and LEAD_NOTIFICATION_EMAIL.',503);
    const link=`${new URL(request.url).origin}/invoice/${inv.public_token}`;

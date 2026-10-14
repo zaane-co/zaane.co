@@ -69,6 +69,8 @@ function systemText(m:ZMessage,people:Record<string,{display_name:string}>){
   case 'channel_created':return `${by} created this channel.`;
   case 'topic':return m.meta.topic?`${by} set the topic: ${m.meta.topic}`:`${by} cleared the topic.`;
   case 'members_added':{const names=String(m.meta.users??'').split(',').map(id=>people[id]?.display_name).filter(Boolean);return `${by} added ${names.join(', ')||'people'}.`;}
+  case 'members_removed':{const names=String(m.meta.users??'').split(',').map(id=>people[id]?.display_name).filter(Boolean);return `${by} removed ${names.join(', ')||'people'} from the team.`;}
+  case 'client_opened':return `${by} opened this client space.`;
   default:return '';
  }
 }
@@ -92,7 +94,8 @@ function CrmEvent({m}:{m:ZMessage}){
  const {lead,loadLead}=useZarn();const l=m.lead_id?lead(m.lead_id):undefined;
  useEffect(()=>{if(m.lead_id)loadLead(m.lead_id);},[m.lead_id,loadLead]);
  const e=String(m.meta.event);const name=l?.company||l?.name||'a lead';
- const text=e==='lead_created'?<><UserPlus size={14}/> New lead from {m.meta.source==='website'||m.meta.source==='partnership'?'the website':String(m.meta.source)}: <b>{name}</b></>
+ const src=String(m.meta.source??'');
+ const text=e==='lead_created'?<><UserPlus size={14}/> {src==='website'||src==='partnership'?<>New lead from the website: </>:src==='other'?<>New client added: </>:<>New lead ({src}): </>}<b>{name}</b></>
   :e==='stage'?<><TrendingUp size={14}/> <b>{name}</b> moved to <b>{l?.stage_label&&l.status===m.meta.to?l.stage_label:String(m.meta.to)}</b></>
   :e==='invoice_sent'?<><Receipt size={14}/> Invoice <b>{String(m.meta.number)}</b> ({money(Number(m.meta.total),String(m.meta.currency))}) sent to <b>{name}</b></>
   :e==='invoice_paid'?<><Receipt size={14}/> Invoice <b>{String(m.meta.number)}</b> paid by <b>{name}</b>: {money(Number(m.meta.total),String(m.meta.currency))}</>:null;

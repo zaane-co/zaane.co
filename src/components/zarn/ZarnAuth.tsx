@@ -29,7 +29,7 @@ export default function ZarnAuth({initial,name='',title='',notice=''}:{initial:V
   }catch(err){setMsg(err instanceof Error?err.message:'Something went wrong.');}finally{setBusy(false);}
  }
  return <main className={`zarn-auth${light?' is-light':''}`}>
-  <section className="zn-auth-brand"><span className="zn-logo zn-logo-lg">Z</span><h1>ZARN</h1><p>Channels, DMs and the studio pipeline, in one place. Invite-only for the Zaane team.</p></section>
+  <section className="zn-auth-brand"><span className="zn-auth-mark"><img src="/zarnlogo.png" alt="ZARN"/></span><h1>ZARN</h1><p>Channels, DMs and the studio pipeline, in one place. Invite-only for the Zaane team.</p></section>
   <section className="zn-auth-card">
    <h2>{copy[view].title}</h2><p className="zn-note">{copy[view].sub}</p>
    {sent?<div className="zn-ok">If that email belongs to a ZARN member, a reset link is on its way.</div>:

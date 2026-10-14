@@ -4,7 +4,7 @@ import {useRouter} from 'next/navigation';
 import {browserClient} from '@/lib/supabase/browser';
 import type {RealtimePostgresChangesPayload} from '@supabase/supabase-js';
 type Change=RealtimePostgresChangesPayload<Record<string,unknown>>;
-import {channelTitle,type ZChannel,type ZLead,type ZMember,type ZMembership,type ZMessage,type ZReaction} from '@/lib/zarn';
+import {channelHref,channelTitle,type ZChannel,type ZLead,type ZMember,type ZMembership,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {plain} from './format';
 
 export type ZEvent={table:'zarn_messages';type:'INSERT'|'UPDATE'|'DELETE';row:ZMessage}|{table:'zarn_reactions';type:'INSERT'|'DELETE';row:ZReaction};
@@ -13,19 +13,19 @@ export type Me=ZMember&{staffRole:string|null};
 type Ctx={
  me:Me;people:Record<string,ZMember>;members:ZMember[];channels:ZChannel[];membership:Record<string,ZMembership>;unread:Unread;online:Set<string>;
  db:ReturnType<typeof browserClient>;reload:()=>Promise<void>;markRead:(channelId:string)=>void;subscribe:(fn:(e:ZEvent)=>void)=>()=>void;
- active:string|null;setActive:(id:string|null)=>void;title:(c:ZChannel)=>string;lead:(id:string)=>ZLead|undefined;loadLead:(id:string)=>void;
+ active:string|null;setActive:(id:string|null)=>void;title:(c:ZChannel)=>string;lead:(id:string)=>ZLead|undefined;loadLead:(id:string,force?:boolean)=>void;
  openDm:(ids:string[])=>Promise<void>;notifyOn:boolean;enableNotify:()=>void;emit:(e:ZEvent)=>void;
 };
 const ZarnCtx=createContext<Ctx|null>(null);
 export const useZarn=()=>{const c=useContext(ZarnCtx);if(!c)throw new Error('ZARN context missing');return c;};
 
-export default function ZarnProvider({me,initial,children}:{me:Me;initial:{members:ZMember[];channels:ZChannel[];membership:ZMembership[]};children:React.ReactNode}){
+export default function ZarnProvider({me,initial,children}:{me:Me;initial:{members:ZMember[];channels:ZChannel[];membership:ZMembership[];leads?:ZLead[]};children:React.ReactNode}){
  const db=browserClient(),router=useRouter();
  const [members,setMembers]=useState(initial.members),[channels,setChannels]=useState(initial.channels);
  const [membershipRows,setMembershipRows]=useState(initial.membership);
  const [unread,setUnread]=useState<Unread>({}),[online,setOnline]=useState<Set<string>>(new Set());
  const [active,setActive]=useState<string|null>(null);
- const [leads,setLeads]=useState<Record<string,ZLead>>({});
+ const [leads,setLeads]=useState<Record<string,ZLead>>(()=>Object.fromEntries((initial.leads??[]).map(l=>[l.id,l])));
  const listeners=useRef(new Set<(e:ZEvent)=>void>());
  const activeRef=useRef(active);useEffect(()=>{activeRef.current=active;},[active]);
  const people=useMemo(()=>Object.fromEntries(members.map(m=>[m.user_id,m])),[members]);
@@ -51,8 +51,11 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
   void db.from('zarn_mentions').update({read_at:now}).eq('channel_id',channelId).eq('user_id',me.user_id).is('read_at',null).then(()=>{});
  },[db,me.user_id]);
 
- const loadLead=useCallback((id:string)=>{
-  setLeads(l=>{if(l[id])return l;void db.from('zarn_leads').select('*').eq('id',id).maybeSingle().then(({data}:{data:unknown})=>{if(data)setLeads(x=>({...x,[id]:data as ZLead}));});return l;});
+ // Lead summaries are fetched once per id (force=true refetches, e.g. after a stage change).
+ const requested=useRef(new Set<string>((initial.leads??[]).map(l=>l.id)));
+ const loadLead=useCallback((id:string,force?:boolean)=>{
+  if(requested.current.has(id)&&!force)return;requested.current.add(id);
+  void db.from('zarn_leads').select('*').eq('id',id).maybeSingle().then(({data}:{data:unknown})=>{if(data)setLeads(x=>({...x,[id]:data as ZLead}));else requested.current.delete(id);});
  },[db]);
 
  const openDm=useCallback(async(ids:string[])=>{
@@ -61,7 +64,9 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
   await reload();router.push(`/zarn/c/${data}`);
  },[db,reload,router]);
 
- const title=useCallback((c:ZChannel)=>channelTitle(c,me.user_id,people),[me.user_id,people]);
+ const title=useCallback((c:ZChannel)=>{if(c.kind==='client'&&c.lead_id){const l=leads[c.lead_id];return l?(l.company||l.name):'Client';}return channelTitle(c,me.user_id,people);},[me.user_id,people,leads]);
+ // Client spaces are named after their client, so keep those leads loaded.
+ useEffect(()=>{for(const c of channels)if(c.kind==='client'&&c.lead_id)loadLead(c.lead_id);},[channels,loadLead]);
 
  // Initial unread + live updates.
  useEffect(()=>{void db.rpc('zarn_unread').then(({data}:{data:unknown})=>setUnread(Object.fromEntries(((data??[]) as {channel_id:string;unread:number;mentions:number}[]).map(r=>[r.channel_id,{unread:r.unread,mentions:r.mentions}]))));},[db]);
@@ -77,8 +82,8 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
     const c=channelsRef.current.find(x=>x.id===row.channel_id);
     if((mention||c?.kind==='dm')&&document.visibilityState!=='visible'&&'Notification' in window&&Notification.permission==='granted'){
      const who=peopleRef.current[row.user_id??'']?.display_name??'ZARN';
-     const n=new Notification(c?.kind==='dm'?who:`${who} in #${c?.name??''}`,{body:plain(row.body,peopleRef.current).slice(0,140)||'Sent an attachment',tag:row.id});
-     n.onclick=()=>{window.focus();router.push(`/zarn/c/${row.channel_id}`);};
+     const n=new Notification(c?.kind==='dm'?who:c?.kind==='client'?`${who} in a client space`:`${who} in #${c?.name??''}`,{body:plain(row.body,peopleRef.current).slice(0,140)||'Sent an attachment',tag:row.id});
+     n.onclick=()=>{window.focus();router.push(channelHref(c,row.channel_id));};
     }
    })
    .on('postgres_changes',{event:'*',schema:'public',table:'zarn_reactions'},(p:Change)=>{

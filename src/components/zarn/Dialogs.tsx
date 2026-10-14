@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Check,Hash,Lock,Search as SearchIcon,X} from 'lucide-react';
-import {channelSlug,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
+import {channelHref,channelSlug,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
 
@@ -70,8 +70,8 @@ export function SearchDialog({onClose}:{onClose:()=>void}){
  },[q,db]);
  return <Modal title="Search ZARN" onClose={onClose} wide>
   <span className="zn-prefix"><SearchIcon size={16}/><input className="zn-input" autoFocus placeholder="Search messages" value={q} onChange={e=>setQ(e.target.value)}/></span>
-  <ul className="zn-list zn-list-scroll">{(q.trim().length>=2?rows:[]).map(m=>{const c=channels.find(x=>x.id===m.channel_id);return <li key={m.id}><button type="button" onClick={()=>{onClose();router.push(`/zarn/c/${m.channel_id}${m.parent_id?'':`#m-${m.id}`}`);}}>
-   <Avatar m={people[m.user_id??'']} size={30}/><span><b>{people[m.user_id??'']?.display_name??'CRM'} <small>in {c?(c.kind==='dm'?title(c):`#${c.name}`):'a channel'} · {dayOf(m.created_at)} {timeOf(m.created_at)}</small></b><small className="zn-snippet">{plain(m.body,people).slice(0,160)}</small></span></button></li>;})}
+  <ul className="zn-list zn-list-scroll">{(q.trim().length>=2?rows:[]).map(m=>{const c=channels.find(x=>x.id===m.channel_id);return <li key={m.id}><button type="button" onClick={()=>{onClose();router.push(`${channelHref(c,m.channel_id)}${m.parent_id?'':`#m-${m.id}`}`);}}>
+   <Avatar m={people[m.user_id??'']} size={30}/><span><b>{people[m.user_id??'']?.display_name??'CRM'} <small>in {c?(c.kind==='dm'||c.kind==='client'?title(c):`#${c.name}`):'a channel'} · {dayOf(m.created_at)} {timeOf(m.created_at)}</small></b><small className="zn-snippet">{plain(m.body,people).slice(0,160)}</small></span></button></li>;})}
    {q.trim().length>=2&&!busy&&!rows.length&&<li className="zn-empty-row">No messages found.</li>}</ul>
  </Modal>;
 }

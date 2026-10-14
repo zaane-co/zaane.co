@@ -3,13 +3,13 @@ import {useEffect,useMemo,useState} from 'react';
 import {useRouter,useSearchParams} from 'next/navigation';
 import {Briefcase,Search,Send,X} from 'lucide-react';
 import {money} from '@/lib/crm';
-import type {ZLead} from '@/lib/zarn';
+import {zarnApi,type ZLead} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {LeadCard} from './Message';
 
 // Read-only CRM for the whole team: pipeline summary from the zarn_leads view, share a lead into any channel.
 export default function CrmPanel(){
- const {db,channels,membership,me,title,loadLead}=useZarn(),router=useRouter(),params=useSearchParams();
+ const {db,channels,membership,me,title,loadLead,reload}=useZarn(),router=useRouter(),params=useSearchParams();
  const [rows,setRows]=useState<ZLead[]>([]),[q,setQ]=useState(''),[stage,setStage]=useState('all'),[loading,setLoading]=useState(true);
  const [open,setOpen]=useState<string|null>(params.get('lead')),[sharing,setSharing]=useState(false),[target,setTarget]=useState(''),[note,setNote]=useState(''),[flash,setFlash]=useState('');
  useEffect(()=>{void db.from('zarn_leads').select('*').order('last_activity_at',{ascending:false}).limit(1000).then(({data}:{data:unknown})=>{setRows((data??[]) as ZLead[]);setLoading(false);});},[db]);
@@ -19,7 +19,7 @@ export default function CrmPanel(){
  const openTotals=useMemo(()=>{const m:Record<string,number>={};for(const r of rows)if(r.stage_kind==='open'&&r.deal_value)m[r.currency]=(m[r.currency]??0)+Number(r.deal_value);return Object.entries(m).map(([c,v])=>money(v,c)).join(' · ')||'-';},[rows]);
  const staff=me.staffRole&&['super_admin','admin','sales'].includes(me.staffRole);
  if(!me.can_view_crm)return <div className="zn-empty-state"><h2>No CRM access</h2><p>Ask a ZARN admin to turn on CRM access for your account.</p></div>;
- const targets=channels.filter(c=>membership[c.id]&&!c.archived_at);
+ const targets=channels.filter(c=>membership[c.id]&&!c.archived_at&&c.kind!=='client');
  async function share(){
   if(!open||!target)return;
   const {error}=await db.from('zarn_messages').insert({channel_id:target,user_id:me.user_id,body:note.trim(),lead_id:open});
@@ -46,7 +46,8 @@ export default function CrmPanel(){
     {sharing?<div className="zn-share"><label className="zn-label">Share to<select className="zn-input" value={target} onChange={e=>setTarget(e.target.value)}><option value="">Choose a channel or DM…</option>{targets.map(c=><option key={c.id} value={c.id}>{c.kind==='dm'?title(c):`#${c.name}`}</option>)}</select></label>
      <label className="zn-label">Message (optional)<textarea className="zn-input" rows={3} maxLength={2000} value={note} onChange={e=>setNote(e.target.value)}/></label>
      <div className="zn-row"><button type="button" className="zn-btn" onClick={()=>setSharing(false)}>Cancel</button><button type="button" className="zn-btn is-primary" disabled={!target} onClick={()=>void share()}><Send size={14}/>Share</button></div></div>
-    :<button type="button" className="zn-btn is-primary" onClick={()=>setSharing(true)}><Send size={14}/>Share in a channel</button>}
+    :<div className="zn-row"><button type="button" className="zn-btn is-primary" onClick={()=>setSharing(true)}><Send size={14}/>Share in a channel</button>
+     {me.account_type!=='guest'&&<button type="button" className="zn-btn" onClick={async()=>{try{const r=await zarnApi<{lead_id:string}>('/api/zarn/clients',{action:'open',lead_id:open});await reload();router.push(`/zarn/clients/${r.lead_id}`);}catch(e){setFlash(e instanceof Error?e.message:'Could not open the client space.');}}}><Briefcase size={14}/>Open client space</button>}</div>}
    </div></aside>}
  </div>;
 }

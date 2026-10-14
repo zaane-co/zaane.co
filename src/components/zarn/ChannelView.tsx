@@ -1,7 +1,7 @@
 'use client';
 import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Bell,BellOff,Hash,Info,Lock,Pin,Star,UserPlus,X} from 'lucide-react';
+import {Bell,BellOff,Briefcase,Hash,Info,Lock,Pin,Star,UserPlus,X} from 'lucide-react';
 import {zarnApi,type ZChannel,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {useZarn,type ZEvent} from './ZarnProvider';
 import Message from './Message';
@@ -12,7 +12,8 @@ import {PeoplePicker} from './Dialogs';
 const PAGE=50;
 const sameGroup=(a:ZMessage|undefined,b:ZMessage)=>!!a&&a.kind==='user'&&b.kind==='user'&&a.user_id===b.user_id&&!a.deleted_at&&new Date(b.created_at).getTime()-new Date(a.created_at).getTime()<5*60000&&dayOf(a.created_at)===dayOf(b.created_at);
 
-export default function ChannelView({id}:{id:string}){
+// embedded: rendered inside a client space (no channel header; the client page has its own).
+export default function ChannelView({id,embedded}:{id:string;embedded?:boolean}){
  const z=useZarn(),{db,me,people,channels,membership,subscribe,markRead,setActive,title}=z,router=useRouter();
  const channel=channels.find(c=>c.id===id);
  const [messages,setMessages]=useState<ZMessage[]>([]),[reactions,setReactions]=useState<ZReaction[]>([]);
@@ -20,6 +21,9 @@ export default function ChannelView({id}:{id:string}){
  const [details,setDetails]=useState(false),[typing,setTyping]=useState<Record<string,number>>({});
  const list=useRef<HTMLDivElement>(null),stick=useRef(true),typingCh=useRef<ReturnType<typeof db.channel>|null>(null),lastTyping=useRef(0);
  const joined=!!membership[id];
+ // Admins can read and post in client spaces they aren't on.
+ const canPost=joined||(channel?.kind==='client'&&(me.staffRole==='super_admin'||me.staffRole==='admin'));
+ useEffect(()=>{if(channel?.kind==='client'&&!embedded&&channel.lead_id)router.replace(`/zarn/clients/${channel.lead_id}`);},[channel,embedded,router]);
  const counted=useRef(new Set<string>());
 
  const load=useCallback(async(before?:string)=>{
@@ -76,7 +80,7 @@ export default function ChannelView({id}:{id:string}){
  const pinned=messages.filter(m=>m.pinned_at&&!m.deleted_at);
  return <div className={`zn-channel${thread?' has-thread':''}`}>
   <div className="zn-chan-main">
-   <header className="zn-chan-head">
+   {!embedded&&<header className="zn-chan-head">
     <button type="button" className="zn-chan-title" onClick={()=>setDetails(true)}>{channel.kind==='dm'?null:channel.kind==='private'?<Lock size={16}/>:<Hash size={17}/>}<h1>{title(channel)}</h1></button>
     {channel.topic&&<p className="zn-topic" title={channel.topic}>{channel.topic}</p>}
     <div className="zn-head-actions">
@@ -84,7 +88,7 @@ export default function ChannelView({id}:{id:string}){
      {joined&&<button type="button" aria-label={membership[id]?.starred?'Unstar':'Star'} data-tip={membership[id]?.starred?'Unstar':'Star'} className={membership[id]?.starred?'is-on':''} onClick={async()=>{await db.from('zarn_channel_members').update({starred:!membership[id]?.starred}).eq('channel_id',id).eq('user_id',me.user_id);await z.reload();}}><Star size={16}/></button>}
      <button type="button" aria-label="Channel details" data-tip="Details" onClick={()=>setDetails(true)}><Info size={16}/></button>
     </div>
-   </header>
+   </header>}
    <div className="zn-messages" ref={list} onScroll={()=>void onScroll()} data-lenis-prevent>
     {!more&&!loading&&<ChannelIntro c={channel}/>}
     {loading&&!messages.length?<div className="zn-loading">Loading messages…</div>:messages.map((m,i)=>{
@@ -94,7 +98,7 @@ export default function ChannelView({id}:{id:string}){
     })}
    </div>
    <div className="zn-typing">{typers.length?`${typers.join(', ')} ${typers.length>1?'are':'is'} typing…`:''}</div>
-   {joined?<Composer channelId={id} placeholder={`Message ${channel.kind==='dm'?title(channel):'#'+channel.name}`} onSent={()=>{stick.current=true;}} onTyping={onTyping} disabled={channel.archived_at?'This channel is archived.':undefined}/>
+   {canPost?<Composer channelId={id} placeholder={`Message ${channel.kind==='dm'?title(channel):channel.kind==='client'?`the ${title(channel)} team`:'#'+channel.name}`} onSent={()=>{stick.current=true;}} onTyping={onTyping} disabled={channel.archived_at?'This channel is archived.':undefined}/>
     :<div className="zn-join"><p>You’re previewing <b>#{channel.name}</b>.</p><button type="button" className="zn-btn is-primary" onClick={()=>void join()}>Join channel</button></div>}
   </div>
   {thread&&<Thread parent={thread} onClose={()=>setThread(null)}/>}
@@ -104,9 +108,9 @@ export default function ChannelView({id}:{id:string}){
 
 function ChannelIntro({c}:{c:ZChannel}){
  const {title}=useZarn();
- return <div className="zn-intro"><span className="zn-intro-icon">{c.kind==='dm'?'@':c.kind==='private'?<Lock size={22}/>:<Hash size={24}/>}</span>
-  <h2>{c.kind==='dm'?title(c):`Welcome to #${c.name}`}</h2>
-  <p>{c.kind==='dm'?'This is the start of your direct conversation.':c.crm_feed?`CRM updates (${c.crm_feed==='leads'?'new leads and stage changes':'invoices sent and paid'}) are posted here automatically.`:c.topic||'This is the very beginning of the channel.'}</p></div>;
+ return <div className="zn-intro"><span className="zn-intro-icon">{c.kind==='dm'?'@':c.kind==='client'?<Briefcase size={22}/>:c.kind==='private'?<Lock size={22}/>:<Hash size={24}/>}</span>
+  <h2>{c.kind==='dm'?title(c):c.kind==='client'?`${title(c)} team chat`:`Welcome to #${c.name}`}</h2>
+  <p>{c.kind==='client'?'Private to this client’s team and admins. Nobody else on ZARN can see it.':c.kind==='dm'?'This is the start of your direct conversation.':c.crm_feed?`CRM updates (${c.crm_feed==='leads'?'new leads and stage changes':'invoices sent and paid'}) are posted here automatically.`:c.topic||'This is the very beginning of the channel.'}</p></div>;
 }
 
 function Thread({parent,onClose}:{parent:ZMessage;onClose:()=>void}){
