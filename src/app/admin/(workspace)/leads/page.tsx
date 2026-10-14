@@ -1,7 +1,7 @@
 import CrmBoard from '@/components/admin/crm/CrmBoard';
 import type {Lead,Task} from '@/lib/crm';
 import {crmAccess,loadStages,staffList} from './data';
-export default async function Page(){
+export default async function Page({searchParams}:{searchParams:Promise<{new?:string}>}){
  const {db,user}=await crmAccess();
  const [{data:leads,error},{data:tasks},team,stages]=await Promise.all([
   db.from('leads').select('*').order('position').order('created_at',{ascending:false}).limit(2000),
@@ -10,5 +10,5 @@ export default async function Page(){
   loadStages(db),
  ]);
  if(error)return <div className="za-page"><div className="za-page-head"><div><h1>Leads</h1></div></div><div className="za-notice" role="alert">Could not load the CRM. Check that the 202610140003_crm migration is applied.</div></div>;
- return <CrmBoard stages={stages} leads={(leads??[]) as Lead[]} tasks={(tasks??[]) as Task[]} team={team} me={user.id}/>;
+ return <CrmBoard startNew={(await searchParams).new==='1'} stages={stages} leads={(leads??[]) as Lead[]} tasks={(tasks??[]) as Task[]} team={team} me={user.id}/>;
 }

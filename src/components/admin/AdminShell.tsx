@@ -14,7 +14,7 @@ const groups:{label:string;items:Item[]}[]=[
  {label:'Inbox',items:[
   {label:'Leads',href:'/admin/leads',key:'leads',icon:Inbox},
   {label:'Invoices',href:'/admin/invoices',key:'invoices',icon:Receipt},
-  {label:'Contacts',href:'/admin/contact_submissions',key:'contact_submissions',icon:Mail},
+  {label:'Contacts',href:'/admin/contacts',key:'contact_submissions',icon:Mail},
   {label:'Subscribers',href:'/admin/subscribers',key:'subscribers',icon:Users},
  ]},
  {label:'Content',items:[

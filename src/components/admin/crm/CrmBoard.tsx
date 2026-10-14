@@ -14,7 +14,7 @@ function readView():View{try{return localStorage.getItem(VIEW_KEY)==='table'?'ta
 function subscribeView(cb:()=>void){window.addEventListener('za-crm-view',cb);return()=>window.removeEventListener('za-crm-view',cb);}
 function pickView(v:View){try{localStorage.setItem(VIEW_KEY,v);}catch{}window.dispatchEvent(new Event('za-crm-view'));}
 
-export default function CrmBoard({stages,leads,tasks,team,me}:{stages:PipelineStage[];leads:Lead[];tasks:Task[];team:Staff[];me:string}){
+export default function CrmBoard({stages,leads,tasks,team,me,startNew}:{startNew?:boolean;stages:PipelineStage[];leads:Lead[];tasks:Task[];team:Staff[];me:string}){
  const router=useRouter();
  // Local copy for optimistic drags; reset whenever the server sends fresh leads.
  const [items,setItems]=useState(leads),[seen,setSeen]=useState(leads);
@@ -22,7 +22,7 @@ export default function CrmBoard({stages,leads,tasks,team,me}:{stages:PipelineSt
  const view=useSyncExternalStore(subscribeView,readView,()=>'board' as View);
  const [search,setSearch]=useState(''),[owner,setOwner]=useState('all'),[source,setSource]=useState('all'),[category,setCategory]=useState('all');
  const allCats=useMemo(()=>[...new Set(leads.flatMap(l=>l.categories))].sort(),[leads]);
- const [creating,setCreating]=useState(false),[managing,setManaging]=useState(false),[flash,setFlash]=useState('');
+ const [creating,setCreating]=useState(!!startNew),[managing,setManaging]=useState(false),[flash,setFlash]=useState('');
  const byKey=stageMap(stages),kindOf=(l:Lead)=>byKey[l.status]?.kind??'open';
  const people=useMemo(()=>Object.fromEntries(team.map(s=>[s.id,s])),[team]);
  // Earliest open task per lead drives the follow-up chip.

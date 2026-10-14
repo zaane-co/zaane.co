@@ -14,9 +14,11 @@ const primary=(r:Row)=>String(r.title||r.name||r.client_name||r.email||r.key||r.
 const publicHref=(c:string,r:Row)=>r.status&&r.status!=='published'?'':c==='projects'?`/projects/${r.slug}`:c==='testimonials'?'/testimonials':c==='team_members'?'/about':c==='jobs'?'/careers':c==='resources'?safeUrl(r.download_url):'';
 const secondary=(r:Row)=>String(r.excerpt||r.subject||r.service_interested||r.slug||r.role||r.client_role||r.section_key||r.value||r.location||'');
 
-export default function Manager({collection,rows,role,options,gallery={}}:{collection:string;rows:Row[];role:string;options:Record<string,{value:string;label:string}[]>;gallery?:Record<string,{id:string;image_url:string;order:number}[]>}){
+export default function Manager({collection,rows,role,options,gallery={},openId}:{collection:string;rows:Row[];role:string;options:Record<string,{value:string;label:string}[]>;gallery?:Record<string,{id:string;image_url:string;order:number}[]>;openId?:string}){
  const spec=collections[collection],router=useRouter();
- const [selected,setSelected]=useState<Row|null>(null),[values,setValues]=useState<Row>({}),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[search,setSearch]=useState(''),[preview,setPreview]=useState(false),[deleting,setDeleting]=useState(false);
+ // openId: deep link from the Contacts address book (/admin/contact_submissions?open=<id>).
+ const startRow=openId?rows.find(r=>r.id===openId)??null:null;
+ const [selected,setSelected]=useState<Row|null>(startRow),[values,setValues]=useState<Row>(()=>startRow?Object.fromEntries(collections[collection].fields.map(f=>[f.key,startRow[f.key]??''])) as Row:{}),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[search,setSearch]=useState(''),[preview,setPreview]=useState(false),[deleting,setDeleting]=useState(false);
  const bodyRef=useRef<HTMLTextAreaElement>(null);
  const [pickFor,setPickFor]=useState<string|null>(null);
  const [added,setAdded]=useState<Record<string,{value:string;label:string}[]>>({}),[creating,setCreating]=useState<string|null>(null),[newName,setNewName]=useState('');
