@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Search,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
+import {Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Images,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Search,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
 
 type User={name:string;email:string;role:string};
 type Item={label:string;href:string;icon:LucideIcon;key?:string;children?:{label:string;href:string;key:string}[]};
@@ -18,6 +18,7 @@ const groups:{label:string;items:Item[]}[]=[
  {label:'Content',items:[
   {label:'Projects',href:'/admin/projects',icon:Briefcase,children:[{label:'All projects',href:'/admin/projects',key:'projects'},{label:'Gallery',href:'/admin/project_images',key:'project_images'},{label:'Categories',href:'/admin/project-categories',key:'blog_categories'}]},
   {label:'Blog',href:'/admin/blog',icon:BookOpen,children:[{label:'All Posts',href:'/admin/blog',key:'blog_posts'},{label:'New Post',href:'/admin/blog/new',key:'blog_posts'},{label:'Categories',href:'/admin/blog/categories',key:'blog_categories'},{label:'Archives',href:'/admin/blog/archives',key:'blog_posts'},{label:'Post Metrics',href:'/admin/blog/metrics',key:'blog_posts'},{label:'Comments',href:'/admin/blog/comments',key:'blog_posts'},{label:'Curated',href:'/admin/blog/curated',key:'blog_categories'},{label:'Editors',href:'/admin/editors',key:'users'}]},
+  {label:'Media',href:'/admin/media',icon:Images},
   {label:'Testimonials',href:'/admin/testimonials',key:'testimonials',icon:Quote},
   {label:'Team',href:'/admin/team_members',key:'team_members',icon:UserRound},
   {label:'Resources',href:'/admin/resources',key:'resources',icon:FolderDown},
