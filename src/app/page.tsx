@@ -11,9 +11,19 @@ import Pricing from "@/components/sections/Pricing";
 import Questions from "@/components/sections/Questions";
 import Contact from "@/components/sections/Contact";
 import { records } from "@/lib/content";
+import { safeUrl } from "@/lib/cms";
 export default async function Home() {
   const [projects, quotes] = await Promise.all([records('projects'), records('testimonials')]);
-  const featured = projects.filter(p=>p.featured).slice(0,4);
+  const featured = projects.filter(p=>p.featured);
+  // Featured work carousel: starred projects (newest first), else the latest published projects.
+  // Images go through the same-origin optimizer so WebGL can draw covers from any allowed host.
+  const workSource = (featured.length ? featured : projects).filter(p=>safeUrl(p.cover_image)).slice(0,16);
+  const workItems = workSource.map(p=>({
+    src: `/_next/image?url=${encodeURIComponent(safeUrl(p.cover_image))}&w=1200&q=75`,
+    alt: String(p.title),
+    title: String(p.title),
+    subtitle: String(p.sub_category || p.category || ''),
+  }));
   const clientNames = [...new Set(projects.map(p=>String(p.client_name)).filter(Boolean))];
 
   return (
@@ -28,7 +38,7 @@ export default async function Home() {
           {clientNames.length>0&&<ScrollReveal><section className="studio-panel client-strip"><span className="eyebrow">Built together</span><div>{clientNames.slice(0,6).map(name=><span key={name}>{name}</span>)}</div></section></ScrollReveal>}
           <ScrollReveal><About testimonial={quotes[0]} project={featured[0] || projects[0]} /></ScrollReveal>
           <Process />
-          <WorkGallery />
+          <WorkGallery items={workItems} />
           <Services />
           <Testimonials rows={quotes} />
           <Pricing />

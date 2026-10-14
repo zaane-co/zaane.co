@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import FlexCarousel from "@/components/FlexCarousel";
 
-export default function WorkGallery() {
+export type WorkItem = { src: string; alt: string; title?: string; subtitle?: string };
+
+export default function WorkGallery({ items }: { items?: WorkItem[] }) {
   // The mobile frame (.work-gallery-frame) is shorter in absolute pixels, so
   // the same fraction-of-height card leaves less room for the caption below
   // it. A lower fraction there keeps the caption from clipping; desktop's
@@ -29,6 +31,7 @@ export default function WorkGallery() {
       </div>
       <div className="work-gallery-frame">
         <FlexCarousel
+          items={items && items.length ? items : undefined}
           preset="liquid"
           intro="rise"
           cardHeight={cardHeight}
