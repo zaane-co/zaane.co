@@ -2,13 +2,14 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {AtSign,BarChart3,Bell,Briefcase,ChevronDown,Contact,Hash,LayoutDashboard,Lock,LogOut,Menu,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {AtSign,BarChart3,Bell,Download,Briefcase,ChevronDown,Contact,Hash,LayoutDashboard,Lock,LogOut,Menu,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import type {ZChannel} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
 import {Browse,Invite,NewChannel,NewDm,Profile,SearchDialog} from './Dialogs';
 import AddClient from './AddClient';
+import {useInstall} from './ZarnPwa';
 
 type Dialog='channel'|'dm'|'browse'|'search'|'profile'|'invite'|'client'|null;
 type Area='chat'|'business'|'clients';
@@ -18,7 +19,8 @@ const areaOf=(p:string):Area=>p.startsWith('/zarn/clients')?'clients':p.startsWi
 export default function ZarnShell({children}:{children:React.ReactNode}){
  const z=useZarn(),{me,channels,membership,unread,online,people,title}=z,pathname=usePathname(),{light}=useAdminTheme();
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[open,setOpen]=useState(false),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
- const [clientQ,setClientQ]=useState('');
+ const [clientQ,setClientQ]=useState(''),[iosHelp,setIosHelp]=useState(false);
+ const {mode:installMode,install}=useInstall();
  const routeArea=areaOf(pathname);
  const [area,setArea]=useState<Area>(routeArea);
  // Close the mobile drawer and follow the route's area whenever the route changes.
@@ -78,6 +80,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       <button type="button" onClick={()=>{setMenu(false);setDialog('profile');}}><UserRound size={15}/>Profile and status</button>
       <button type="button" onClick={()=>writeTheme(!light)}>{light?<Moon size={15}/>:<Sun size={15}/>}{light?'Dark mode':'Light mode'}</button>
       {!z.notifyOn&&<button type="button" onClick={()=>{z.enableNotify();setMenu(false);}}><Bell size={15}/>Turn on desktop notifications</button>}
+      {installMode&&<button type="button" onClick={()=>{setMenu(false);if(installMode==='prompt')void install();else setIosHelp(true);}}><Download size={15}/>Install ZARN on this device</button>}
       {staffAdmin&&<><div className="zn-menu-sep"/><p className="zn-menu-label">Admin</p>
        <button type="button" onClick={()=>{setMenu(false);setDialog('invite');}}><UserPlus size={15}/>Invite people</button>
        <Link href="/admin/zarn"><Settings2 size={15}/>ZARN admin</Link></>}
@@ -121,5 +124,10 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
   {dialog==='profile'&&<Profile onClose={()=>setDialog(null)}/>}
   {dialog==='invite'&&<Invite onClose={()=>setDialog(null)}/>}
   {dialog==='client'&&<AddClient onClose={()=>setDialog(null)}/>}
+  {iosHelp&&<div className="zn-modal-scrim" onClick={()=>setIosHelp(false)}><div className="zn-modal" role="dialog" aria-label="Install ZARN" onClick={e=>e.stopPropagation()}>
+   <div className="zn-modal-head"><h2>Install ZARN on iPhone</h2><button type="button" aria-label="Close" onClick={()=>setIosHelp(false)}><X size={18}/></button></div>
+   <ol className="zn-steps"><li>Open zaane.co/zarn in <b>Safari</b>.</li><li>Tap the <b>Share</b> button (the square with an arrow).</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol>
+   <p className="zn-note">ZARN then opens full-screen from your home screen like any other app.</p>
+  </div></div>}
  </div>;
 }
