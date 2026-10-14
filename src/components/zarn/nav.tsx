@@ -5,7 +5,7 @@ import {usePathname} from 'next/navigation';
 import {Hash,Lock} from 'lucide-react';
 import type {ZChannel} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
-import {Avatar} from './format';
+import {Avatar,StatusMark} from './format';
 
 // Shared navigation pieces for the desktop sidebar and the phone tab screens.
 export type Dialog='channel'|'dm'|'browse'|'search'|'profile'|'invite'|'client'|'install'|null;
@@ -47,7 +47,7 @@ export function ChannelRow({c,big}:{c:ZChannel;big?:boolean}){
   :c.kind==='private'?<Lock size={big?17:15}/>:<Hash size={big?18:15}/>;
  const badge=u?.mentions?u.mentions:(c.kind==='dm'||c.kind==='client')&&u?.unread?u.unread:0;
  return <Link href={href} className={`zn-nav-item${big?' is-big':''}${isActive?' is-active':''}${u?.unread&&!muted?' is-unread':''}${muted?' is-muted':''}`}>
-  {icon}<span>{title(c)}{big&&c.kind==='client'&&lead?.stage_label&&<small>{lead.stage_label}</small>}{big&&c.kind==='dm'&&<small>{online.has(other??'')?'Online':people[other??'']?.title||'Direct message'}</small>}</span>
+  {icon}<span>{title(c)}{c.kind==='dm'&&other&&<StatusMark m={people[other]}/>}{big&&c.kind==='client'&&lead?.stage_label&&<small>{lead.stage_label}</small>}{big&&c.kind==='dm'&&<small>{online.has(other??'')?'Online':people[other??'']?.title||'Direct message'}</small>}</span>
   {badge?<em className="zn-badge">{badge}</em>:!membership[c.id]&&c.kind==='client'?<em className="zn-admin-eye" title="You can see this as an admin">admin</em>:null}
  </Link>;
 }

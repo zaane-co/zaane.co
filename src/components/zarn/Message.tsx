@@ -6,7 +6,7 @@ import {quickReactions,zarnApi,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {money} from '@/lib/crm';
 import {useZarn} from './ZarnProvider';
 import {useShell} from './nav';
-import {Avatar,renderBody,timeOf,tokensToText,textToTokens} from './format';
+import {Avatar,StatusMark,renderBody,timeOf,tokensToText,textToTokens} from './format';
 
 // One message row. compact = same author as the previous message within a few minutes (no avatar/name).
 export type Receipt={pending:boolean;seen:{id:string;at:string}[];unseen:string[]};
@@ -40,7 +40,7 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
  return <div className={`zn-msg${compact?' is-compact':''}${m.pinned_at?' is-pinned':''}${m.pending?' is-pending':''}${tapped?' is-tapped':''}`} id={`m-${m.id}`} onClick={onTap}>
   <div className="zn-gutter">{compact?<time className="zn-hover-time">{timeOf(m.created_at)}</time>:m.kind==='crm'?<span className="zn-bot"><TrendingUp size={16}/></span>:<button type="button" className="zn-author-btn" aria-label={`${author?.display_name??'Member'}’s profile`} onClick={()=>m.user_id&&profile(m.user_id)}><Avatar m={author}/></button>}</div>
   <div className="zn-msg-main">
-   {!compact&&<p className="zn-msg-head">{m.kind==='crm'?<b>CRM</b>:<button type="button" className="zn-author-name" onClick={()=>m.user_id&&profile(m.user_id)}>{author?.display_name??'Former member'}</button>}{m.kind==='crm'&&<span className="zn-app-tag">APP</span>}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time>{m.pinned_at&&<span className="zn-pin-tag"><Pin size={11}/>Pinned</span>}</p>}
+   {!compact&&<p className="zn-msg-head">{m.kind==='crm'?<b>CRM</b>:<button type="button" className="zn-author-name" onClick={()=>m.user_id&&profile(m.user_id)}>{author?.display_name??'Former member'}</button>}{m.kind!=='crm'&&<StatusMark m={author}/>}{m.kind==='crm'&&<span className="zn-app-tag">APP</span>}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time>{m.pinned_at&&<span className="zn-pin-tag"><Pin size={11}/>Pinned</span>}</p>}
    {editing?<div className="zn-edit"><textarea autoFocus value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void saveEdit();}if(e.key==='Escape')setEditing(false);}}/><div><button type="button" onClick={()=>setEditing(false)}>Cancel</button><button type="button" className="is-primary" onClick={()=>void saveEdit()}>Save</button></div></div>
     :m.body&&<div className="zn-body">{renderBody(m.body,people,me.user_id)}{m.edited_at&&<span className="zn-edited"> (edited)</span>}</div>}
    {m.kind==='crm'&&<CrmEvent m={m}/>}

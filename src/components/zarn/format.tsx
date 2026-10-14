@@ -1,5 +1,5 @@
 import {Fragment,type ReactNode} from 'react';
-import type {ZMember} from '@/lib/zarn';
+import {liveStatus,type ZMember} from '@/lib/zarn';
 // Message formatting without HTML injection: the body is tokenised into React nodes.
 // Supports ```code blocks```, `code`, *bold*, _italic_, ~strike~, links, <@user> mentions and <!channel>.
 const inline=/(`[^`\n]+`|\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~|https?:\/\/[^\s<]+[^\s<.,:;"')\]]|<@[0-9a-f-]{36}>|<!channel>)/g;
@@ -28,6 +28,8 @@ export function textToTokens(text:string,people:ZMember[]){
  let out=text.replace(/@channel\b/g,'<!channel>');
  // Longest names first so "Ada O" doesn't eat "Ada Okafor".
  for(const p of [...people].sort((a,b)=>b.display_name.length-a.display_name.length))out=out.split(`@${p.display_name}`).join(`<@${p.user_id}>`);
+ // Typed @usernames work too (whole word only, so @isaac doesn't match @isaac.o).
+ for(const p of [...people].filter(p=>p.username).sort((a,b)=>b.username!.length-a.username!.length))out=out.replace(new RegExp(`@${p.username!.replace(/[.]/g,'\\.')}(?![a-z0-9._])`,'gi'),`<@${p.user_id}>`);
  return out;
 }
 export const plain=(body:string,people:Record<string,ZMember>)=>tokensToText(body,people).replace(/[*_~`]/g,'');
@@ -46,4 +48,9 @@ export function dayOf(d:string){
  const x=new Date(d),t=new Date();const y=new Date();y.setDate(t.getDate()-1);
  if(x.toDateString()===t.toDateString())return 'Today';if(x.toDateString()===y.toDateString())return 'Yesterday';
  return x.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+}
+// Status emoji next to a name (hover for the text).
+export function StatusMark({m}:{m?:ZMember}){
+ const s=liveStatus(m);if(!s)return null;
+ return <span className="zn-status-mark" title={s.text||undefined} aria-label={s.text||'status'}>{s.emoji||'💬'}</span>;
 }

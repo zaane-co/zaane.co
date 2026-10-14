@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {AtSign,BarChart3,Bell,Volume2,VolumeX,Briefcase,ChevronRight,Contact,Download,LayoutDashboard,LogOut,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
+import {liveStatus} from '@/lib/zarn';
 import {Avatar} from './format';
 import {ChannelRow,useNav,useShell} from './nav';
 import {useInstall} from './ZarnPwa';
@@ -62,7 +63,7 @@ export function YouTab(){
  const z=useZarn(),{me}=z,{open,profile}=useShell(),{staffAdmin,canBusiness}=useNav(),{light}=useAdminTheme(),{mode,install}=useInstall(),sound=useSound();
  return <Screen title="You">
   <button type="button" className="zn-you-card" onClick={()=>profile(me.user_id)}>
-   <Avatar m={me} size={56} online/><span><b>{me.display_name}</b><small>{me.username?`@${me.username}`:''}{me.username?' · ':''}{me.status_text||me.title||'Set a status'}</small></span><ChevronRight size={18} className="zn-chev"/>
+   <Avatar m={me} size={56} online/><span><b>{me.display_name}</b><small>{me.username?`@${me.username}`:''}{me.username?' · ':''}{liveStatus(me)?`${liveStatus(me)!.emoji} ${liveStatus(me)!.text}`:me.title||'Set a status'}</small></span><ChevronRight size={18} className="zn-chev"/>
   </button>
   <Group label="Preferences">
    <Row icon={<UserRound size={18}/>} label="Profile and status" onClick={()=>open('profile')}/>

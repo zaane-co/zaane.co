@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Check,Hash,Lock,Search as SearchIcon,X} from 'lucide-react';
-import {channelHref,channelSlug,usernameOk,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
+import {channelHref,channelSlug,clearAt,clearOptions,liveStatus,statusPresets,usernameOk,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
 
@@ -76,31 +76,66 @@ export function SearchDialog({onClose}:{onClose:()=>void}){
  </Modal>;
 }
 
+// Crop to a centred square and shrink to 512px WebP before upload.
+async function squareCrop(file:File):Promise<File>{
+ const bmp=await createImageBitmap(file),side=Math.min(bmp.width,bmp.height),size=Math.min(512,side);
+ const c=document.createElement('canvas');c.width=c.height=size;
+ c.getContext('2d')!.drawImage(bmp,(bmp.width-side)/2,(bmp.height-side)/2,side,side,0,0,size,size);bmp.close();
+ const blob=await new Promise<Blob|null>(r=>c.toBlob(r,'image/webp',.88));
+ if(!blob)throw new Error('Could not read that image.');
+ return new File([blob],'avatar.webp',{type:blob.type||'image/webp'});
+}
 export function Profile({onClose}:{onClose:()=>void}){
  const z=useZarn(),me=z.me;
- const [v,setV]=useState({display_name:me.display_name,username:me.username??'',title:me.title,status_text:me.status_text,work_email:me.work_email||me.email,phone:me.phone});
+ const [v,setV]=useState({display_name:me.display_name,username:me.username??'',title:me.title,work_email:me.work_email||me.email,phone:me.phone});
+ const live=liveStatus(me);
+ const [st,setSt]=useState({emoji:live?.emoji??'',text:live?.text??'',clear:'',date:''});
+ const [photo,setPhoto]=useState(me.avatar_url),[uploading,setUploading]=useState(false);
  const [em,setEm]=useState({name:'',relation:'',phone:''}),[busy,setBusy]=useState(false),[err,setErr]=useState('');
  useEffect(()=>{void z.db.from('zarn_emergency').select('name,relation,phone').eq('user_id',me.user_id).maybeSingle().then(({data}:{data:{name:string;relation:string;phone:string}|null})=>{if(data)setEm(data);});},[z.db,me.user_id]);
  const set=(k:keyof typeof v)=>(e:React.ChangeEvent<HTMLInputElement>)=>setV(s=>({...s,[k]:k==='username'?e.target.value.toLowerCase().replace(/[^a-z0-9._]/g,''):e.target.value}));
+ async function upload(f?:File){
+  if(!f)return;setUploading(true);setErr('');
+  try{const form=new FormData();form.set('file',await squareCrop(f));const r=await fetch('/api/zarn/avatar',{method:'POST',body:form});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Upload failed.');setPhoto(d.url);}
+  catch(x){setErr(x instanceof Error?x.message:'Upload failed.');}finally{setUploading(false);}
+ }
+ async function removePhoto(){setUploading(true);await fetch('/api/zarn/avatar',{method:'DELETE'});setPhoto(null);setUploading(false);}
  async function save(e:React.FormEvent){
   e.preventDefault();setErr('');
   if(!v.display_name.trim())return setErr('Enter your name.');
   if(!usernameOk(v.username))return setErr('Usernames are 2 to 30 characters: letters, numbers, dots or underscores, starting with a letter or number.');
   if(v.work_email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.work_email))return setErr('Check the work email.');
+  if(st.clear==='pick'&&!st.date)return setErr('Pick the date your status should clear.');
   setBusy(true);
-  const {error}=await z.db.from('zarn_members').update({display_name:v.display_name.trim(),username:v.username,title:v.title.trim(),status_text:v.status_text.trim(),work_email:v.work_email.trim(),phone:v.phone.trim()}).eq('user_id',me.user_id);
+  const hasStatus=!!(st.emoji||st.text.trim());
+  const {error}=await z.db.from('zarn_members').update({display_name:v.display_name.trim(),username:v.username,title:v.title.trim(),work_email:v.work_email.trim(),phone:v.phone.trim(),
+   status_emoji:hasStatus?st.emoji:'',status_text:hasStatus?st.text.trim():'',status_until:hasStatus?(st.clear?clearAt(st.clear,st.date):(live?.until??null)):null}).eq('user_id',me.user_id);
   if(error){setBusy(false);return setErr(error.code==='23505'?`@${v.username} is taken. Try another.`:'Could not save.');}
   const {error:e2}=await z.db.from('zarn_emergency').upsert({user_id:me.user_id,name:em.name.trim(),relation:em.relation.trim(),phone:em.phone.trim(),updated_at:new Date().toISOString()});
   setBusy(false);if(e2)return setErr('Saved your profile, but not the emergency contact. Try again.');
   await z.reload();onClose();window.location.reload();
  }
+ const pick=(p:typeof statusPresets[number])=>setSt({emoji:p.emoji,text:p.text,clear:p.clear===null?'':String(p.clear),date:''});
  return <Modal title="Edit profile" onClose={onClose}><form className="zn-modal-body" onSubmit={save} data-lenis-prevent>
+  <div className="zn-photo-row">
+   <Avatar m={{...me,avatar_url:photo}} size={72}/>
+   <div><label className="zn-btn">{uploading?'Uploading…':photo?'Change photo':'Upload photo'}<input type="file" accept="image/jpeg,image/png,image/webp,image/heic" hidden disabled={uploading} onChange={e=>{void upload(e.target.files?.[0]);e.target.value='';}}/></label>
+    {photo&&<button type="button" className="zn-link-btn" onClick={()=>void removePhoto()}>Remove</button>}<small>Square photos look best. We crop it for you.</small></div>
+  </div>
   <div className="zn-grid-2">
    <label className="zn-label">Full name<input className="zn-input" maxLength={80} value={v.display_name} onChange={set('display_name')}/></label>
    <label className="zn-label">Username<span className="zn-prefix zn-at"><AtSignIcon/><input className="zn-input" maxLength={30} value={v.username} onChange={set('username')}/></span></label>
   </div>
   <label className="zn-label">Title<input className="zn-input" maxLength={80} placeholder="e.g. Product designer" value={v.title} onChange={set('title')}/></label>
-  <label className="zn-label">Status<input className="zn-input" maxLength={100} placeholder="e.g. In a client call until 3pm" value={v.status_text} onChange={set('status_text')}/></label>
+  <div className="zn-label">Status</div>
+  <div className="zn-status-presets">{statusPresets.map(p=><button key={p.text} type="button" className={st.text===p.text?'is-on':''} onClick={()=>pick(p)}><span>{p.emoji}</span>{p.text}</button>)}</div>
+  <div className="zn-status-custom">
+   <input className="zn-input zn-emoji-in" aria-label="Status emoji" maxLength={4} placeholder="🙂" value={st.emoji} onChange={e=>setSt({...st,emoji:e.target.value})}/>
+   <input className="zn-input" aria-label="Status text" maxLength={100} placeholder="What’s your status?" value={st.text} onChange={e=>setSt({...st,text:e.target.value})}/>
+   {(st.emoji||st.text)&&<button type="button" className="zn-btn" onClick={()=>setSt({emoji:'',text:'',clear:'',date:''})}>Clear</button>}
+  </div>
+  {(st.emoji||st.text)&&<div className="zn-status-clear"><span>Clear after</span><select className="zn-input" value={st.clear} onChange={e=>setSt({...st,clear:e.target.value})}>{clearOptions.map(([k,l])=><option key={k} value={k}>{l}</option>)}</select>
+   {st.clear==='pick'&&<input className="zn-input" type="date" min={new Date().toISOString().slice(0,10)} value={st.date} onChange={e=>setSt({...st,date:e.target.value})} aria-label="Clear on"/>}</div>}
   <div className="zn-grid-2">
    <label className="zn-label">Work email<input className="zn-input" type="email" maxLength={254} value={v.work_email} onChange={set('work_email')}/></label>
    <label className="zn-label">Hotline<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={v.phone} onChange={set('phone')}/></label>
@@ -112,7 +147,7 @@ export function Profile({onClose}:{onClose:()=>void}){
    <input className="zn-input" aria-label="Emergency phone" type="tel" maxLength={40} placeholder="Phone" value={em.phone} onChange={e=>setEm({...em,phone:e.target.value})}/>
   </div>
   {err&&<p className="zn-error">{err}</p>}
-  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary" disabled={busy}>{busy?'Saving…':'Save'}</button></div>
+  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary" disabled={busy||uploading}>{busy?'Saving…':'Save'}</button></div>
  </form></Modal>;
 }
 const AtSignIcon=()=><span className="zn-at-sign">@</span>;

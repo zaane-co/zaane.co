@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {AtSign,Copy,HeartPulse,Mail,MessageSquare,Pencil,Phone,X} from 'lucide-react';
-import type {ZEmergency} from '@/lib/zarn';
+import {liveStatus,type ZEmergency} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
 
@@ -24,7 +24,8 @@ export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onCl
    {p.username&&<p className="zn-handle">@{p.username}</p>}
    {p.title&&<p className="zn-ptitle">{p.title}</p>}
    <p className={`zn-presence${on?' is-on':''}`}>{on?'Active now':seen?`Last seen ${seen.toLocaleDateString()===new Date().toLocaleDateString()?'today':seen.toLocaleDateString('en-GB',{day:'numeric',month:'short'})} at ${seen.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}`:'Offline'}</p>
-   {p.status_text&&<p className="zn-pstatus">“{p.status_text}”</p>}
+   {(()=>{const st=liveStatus(p);if(!st)return null;const u=st.until?new Date(st.until):null;
+    return <p className="zn-pstatus"><span>{st.emoji}</span> {st.text}{u&&<small> · until {u.toDateString()===new Date().toDateString()?u.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):u.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</small>}</p>;})()}
   </div>
   <div className="zn-profile-actions">
    {isMe?<button type="button" className="zn-btn is-primary" onClick={onEdit}><Pencil size={15}/>Edit profile</button>

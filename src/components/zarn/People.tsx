@@ -3,7 +3,8 @@ import {useState} from 'react';
 import {Contact,MessageSquare,Search} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useShell} from './nav';
-import {Avatar} from './format';
+import {Avatar,StatusMark} from './format';
+import {liveStatus} from '@/lib/zarn';
 
 // Team directory: everyone you can see on ZARN, with a one-click DM.
 export default function People(){
@@ -15,7 +16,7 @@ export default function People(){
   <div className="zn-crm-bar"><span className="zn-prefix"><Search size={15}/><input className="zn-input" placeholder="Search by name, title or email" value={q} onChange={e=>setQ(e.target.value)}/></span></div>
   <div className="zn-people" data-lenis-prevent>{list.map(m=><div key={m.user_id} className="zn-person-card">
    <button type="button" className="zn-person-open" aria-label={`${m.display_name}’s profile`} onClick={()=>profile(m.user_id)}><Avatar m={m} size={52} online={online.has(m.user_id)}/></button>
-   <div onClick={()=>profile(m.user_id)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')profile(m.user_id);}} className="zn-person-text"><b>{m.display_name}{m.user_id===me.user_id&&' (you)'}</b><small>{m.username?`@${m.username}`:''}{m.username&&m.title?' · ':''}{m.title||(!m.username?m.email:'')}</small>{m.status_text&&<em>{m.status_text}</em>}{m.account_type==='guest'&&<span className="zn-guest-tag">Guest</span>}</div>
+   <div onClick={()=>profile(m.user_id)} role="button" tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')profile(m.user_id);}} className="zn-person-text"><b>{m.display_name}{m.user_id===me.user_id&&' (you)'}<StatusMark m={m}/></b><small>{m.username?`@${m.username}`:''}{m.username&&m.title?' · ':''}{m.title||(!m.username?m.email:'')}</small>{liveStatus(m)?.text&&<em>{liveStatus(m)!.text}</em>}{m.account_type==='guest'&&<span className="zn-guest-tag">Guest</span>}</div>
    {m.user_id!==me.user_id&&<button type="button" className="zn-btn" disabled={busy===m.user_id} onClick={async()=>{setBusy(m.user_id);try{await openDm([m.user_id]);}finally{setBusy(null);}}}><MessageSquare size={14}/>Message</button>}
   </div>)}</div>
  </div>;

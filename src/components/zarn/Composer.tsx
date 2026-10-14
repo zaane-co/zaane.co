@@ -22,7 +22,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
 
  // Guests only see people they share a channel with (RLS), so `members` is already scoped for them.
  const active=members.filter(m=>!m.deactivated_at&&m.user_id!==me.user_id&&people[m.user_id]);
- const options:({id:string;label:string;m?:ZMember})[]=mention?[...(('channel'.startsWith(mention.q.toLowerCase()))?[{id:'channel',label:'channel'}]:[]),...active.filter(m=>m.display_name.toLowerCase().includes(mention.q.toLowerCase())).slice(0,7).map(m=>({id:m.user_id,label:m.display_name,m}))]:[];
+ const options:({id:string;label:string;m?:ZMember})[]=mention?[...(('channel'.startsWith(mention.q.toLowerCase()))?[{id:'channel',label:'channel'}]:[]),...active.filter(m=>m.display_name.toLowerCase().includes(mention.q.toLowerCase())||(m.username??'').startsWith(mention.q.toLowerCase())).slice(0,7).map(m=>({id:m.user_id,label:m.display_name,m}))]:[];
  function onChange(v:string,caret:number){
   setText(v);onTyping?.();
   const before=v.slice(0,caret),hit=before.match(/(?:^|\s)@([\w .'-]{0,30})$/);
@@ -72,7 +72,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
  if(disabled)return <div className="zn-composer is-disabled">{disabled}</div>;
  const l=leadId?lead(leadId):undefined;
  return <div className="zn-composer" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();void addFiles(e.dataTransfer.files);}}>
-  {mention&&options.length>0&&<ul className="zn-suggest" role="listbox">{options.map((o,i)=><li key={o.id} role="option" aria-selected={i===pick} className={i===pick?'is-on':''} onMouseDown={e=>{e.preventDefault();choose(o);}}>{o.m?<Avatar m={o.m} size={22}/>:<AtSign size={16}/>}<b>{o.label}</b>{o.m?.title&&<small>{o.m.title}</small>}{!o.m&&<small>Notify everyone in this channel</small>}</li>)}</ul>}
+  {mention&&options.length>0&&<ul className="zn-suggest" role="listbox">{options.map((o,i)=><li key={o.id} role="option" aria-selected={i===pick} className={i===pick?'is-on':''} onMouseDown={e=>{e.preventDefault();choose(o);}}>{o.m?<Avatar m={o.m} size={22}/>:<AtSign size={16}/>}<b>{o.label}</b>{o.m&&<small>{o.m.username?`@${o.m.username}`:''}{o.m.username&&o.m.title?' · ':''}{o.m.title}</small>}{!o.m&&<small>Notify everyone in this channel</small>}</li>)}</ul>}
   {(files.length>0||leadId)&&<div className="zn-attach-row">
    {files.map(f=><span key={f.tmp} className={`zn-chip${f.error?' is-error':''}`} title={f.error}>{f.uploading?<Loader2 size={13} className="zn-spin"/>:<Paperclip size={13}/>}{f.name}<button type="button" aria-label="Remove" onClick={()=>setFiles(x=>x.filter(y=>y.tmp!==f.tmp))}><X size={12}/></button></span>)}
    {leadId&&<span className="zn-chip"><Briefcase size={13}/>{l?.company||l?.name||'Lead'}<button type="button" aria-label="Remove lead" onClick={()=>setLeadId(null)}><X size={12}/></button></span>}
