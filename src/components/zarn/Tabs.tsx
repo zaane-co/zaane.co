@@ -59,10 +59,10 @@ export function ClientsTab(){
 }
 
 export function YouTab(){
- const z=useZarn(),{me}=z,{open}=useShell(),{staffAdmin,canBusiness}=useNav(),{light}=useAdminTheme(),{mode,install}=useInstall(),sound=useSound();
+ const z=useZarn(),{me}=z,{open,profile}=useShell(),{staffAdmin,canBusiness}=useNav(),{light}=useAdminTheme(),{mode,install}=useInstall(),sound=useSound();
  return <Screen title="You">
-  <button type="button" className="zn-you-card" onClick={()=>open('profile')}>
-   <Avatar m={me} size={56} online/><span><b>{me.display_name}</b><small>{me.status_text||me.title||'Set a status'}</small></span><ChevronRight size={18} className="zn-chev"/>
+  <button type="button" className="zn-you-card" onClick={()=>profile(me.user_id)}>
+   <Avatar m={me} size={56} online/><span><b>{me.display_name}</b><small>{me.username?`@${me.username}`:''}{me.username?' · ':''}{me.status_text||me.title||'Set a status'}</small></span><ChevronRight size={18} className="zn-chev"/>
   </button>
   <Group label="Preferences">
    <Row icon={<UserRound size={18}/>} label="Profile and status" onClick={()=>open('profile')}/>

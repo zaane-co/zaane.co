@@ -1,5 +1,7 @@
 // ZARN (team chat) shared types and helpers for the client and the API routes.
-export type ZMember={user_id:string;email:string;display_name:string;title:string;status_text:string;avatar_url:string|null;joined_at:string|null;deactivated_at:string|null;last_seen_at:string|null;created_at:string;account_type:'member'|'guest';can_view_crm:boolean;can_create_channels:boolean;expires_at:string|null};
+export type ZMember={user_id:string;email:string;display_name:string;title:string;status_text:string;avatar_url:string|null;joined_at:string|null;deactivated_at:string|null;last_seen_at:string|null;created_at:string;account_type:'member'|'guest';can_view_crm:boolean;can_create_channels:boolean;expires_at:string|null;username:string|null;phone:string;work_email:string};
+export type ZEmergency={user_id:string;name:string;relation:string;phone:string};
+export const usernameOk=(u:string)=>/^[a-z0-9][a-z0-9._]{1,29}$/.test(u);
 export type ZChannel={id:string;kind:'public'|'private'|'dm'|'client';lead_id:string|null;name:string|null;topic:string;crm_feed:string|null;dm_key:string|null;is_default:boolean;archived_at:string|null;created_at:string};
 export type ZMembership={channel_id:string;user_id:string;last_read_at:string;muted:boolean;starred:boolean};
 export type ZAttachment={key:string;name:string;size:number;type:string};

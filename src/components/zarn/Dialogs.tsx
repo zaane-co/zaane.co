@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Check,Hash,Lock,Search as SearchIcon,X} from 'lucide-react';
-import {channelHref,channelSlug,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
+import {channelHref,channelSlug,usernameOk,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
 
@@ -77,21 +77,45 @@ export function SearchDialog({onClose}:{onClose:()=>void}){
 }
 
 export function Profile({onClose}:{onClose:()=>void}){
- const z=useZarn();
- const [v,setV]=useState({display_name:z.me.display_name,title:z.me.title,status_text:z.me.status_text}),[busy,setBusy]=useState(false),[err,setErr]=useState('');
+ const z=useZarn(),me=z.me;
+ const [v,setV]=useState({display_name:me.display_name,username:me.username??'',title:me.title,status_text:me.status_text,work_email:me.work_email||me.email,phone:me.phone});
+ const [em,setEm]=useState({name:'',relation:'',phone:''}),[busy,setBusy]=useState(false),[err,setErr]=useState('');
+ useEffect(()=>{void z.db.from('zarn_emergency').select('name,relation,phone').eq('user_id',me.user_id).maybeSingle().then(({data}:{data:{name:string;relation:string;phone:string}|null})=>{if(data)setEm(data);});},[z.db,me.user_id]);
+ const set=(k:keyof typeof v)=>(e:React.ChangeEvent<HTMLInputElement>)=>setV(s=>({...s,[k]:k==='username'?e.target.value.toLowerCase().replace(/[^a-z0-9._]/g,''):e.target.value}));
  async function save(e:React.FormEvent){
-  e.preventDefault();if(!v.display_name.trim())return setErr('Enter your name.');setBusy(true);
-  const {error}=await z.db.from('zarn_members').update({display_name:v.display_name.trim(),title:v.title.trim(),status_text:v.status_text.trim()}).eq('user_id',z.me.user_id);
-  setBusy(false);if(error)return setErr('Could not save.');await z.reload();onClose();window.location.reload();
+  e.preventDefault();setErr('');
+  if(!v.display_name.trim())return setErr('Enter your name.');
+  if(!usernameOk(v.username))return setErr('Usernames are 2 to 30 characters: letters, numbers, dots or underscores, starting with a letter or number.');
+  if(v.work_email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.work_email))return setErr('Check the work email.');
+  setBusy(true);
+  const {error}=await z.db.from('zarn_members').update({display_name:v.display_name.trim(),username:v.username,title:v.title.trim(),status_text:v.status_text.trim(),work_email:v.work_email.trim(),phone:v.phone.trim()}).eq('user_id',me.user_id);
+  if(error){setBusy(false);return setErr(error.code==='23505'?`@${v.username} is taken. Try another.`:'Could not save.');}
+  const {error:e2}=await z.db.from('zarn_emergency').upsert({user_id:me.user_id,name:em.name.trim(),relation:em.relation.trim(),phone:em.phone.trim(),updated_at:new Date().toISOString()});
+  setBusy(false);if(e2)return setErr('Saved your profile, but not the emergency contact. Try again.');
+  await z.reload();onClose();window.location.reload();
  }
- return <Modal title="Your profile" onClose={onClose}><form className="zn-modal-body" onSubmit={save}>
-  <label className="zn-label">Display name<input className="zn-input" maxLength={80} value={v.display_name} onChange={e=>setV({...v,display_name:e.target.value})}/></label>
-  <label className="zn-label">Title<input className="zn-input" maxLength={80} placeholder="e.g. Product designer" value={v.title} onChange={e=>setV({...v,title:e.target.value})}/></label>
-  <label className="zn-label">Status<input className="zn-input" maxLength={100} placeholder="e.g. In a client call until 3pm" value={v.status_text} onChange={e=>setV({...v,status_text:e.target.value})}/></label>
+ return <Modal title="Edit profile" onClose={onClose}><form className="zn-modal-body" onSubmit={save} data-lenis-prevent>
+  <div className="zn-grid-2">
+   <label className="zn-label">Full name<input className="zn-input" maxLength={80} value={v.display_name} onChange={set('display_name')}/></label>
+   <label className="zn-label">Username<span className="zn-prefix zn-at"><AtSignIcon/><input className="zn-input" maxLength={30} value={v.username} onChange={set('username')}/></span></label>
+  </div>
+  <label className="zn-label">Title<input className="zn-input" maxLength={80} placeholder="e.g. Product designer" value={v.title} onChange={set('title')}/></label>
+  <label className="zn-label">Status<input className="zn-input" maxLength={100} placeholder="e.g. In a client call until 3pm" value={v.status_text} onChange={set('status_text')}/></label>
+  <div className="zn-grid-2">
+   <label className="zn-label">Work email<input className="zn-input" type="email" maxLength={254} value={v.work_email} onChange={set('work_email')}/></label>
+   <label className="zn-label">Hotline<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={v.phone} onChange={set('phone')}/></label>
+  </div>
+  <p className="zn-label">Emergency contact <small>Visible to the team, never to guests.</small></p>
+  <div className="zn-grid-3">
+   <input className="zn-input" aria-label="Emergency contact name" maxLength={80} placeholder="Name" value={em.name} onChange={e=>setEm({...em,name:e.target.value})}/>
+   <input className="zn-input" aria-label="Relationship" maxLength={40} placeholder="Relationship" value={em.relation} onChange={e=>setEm({...em,relation:e.target.value})}/>
+   <input className="zn-input" aria-label="Emergency phone" type="tel" maxLength={40} placeholder="Phone" value={em.phone} onChange={e=>setEm({...em,phone:e.target.value})}/>
+  </div>
   {err&&<p className="zn-error">{err}</p>}
   <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary" disabled={busy}>{busy?'Saving…':'Save'}</button></div>
  </form></Modal>;
 }
+const AtSignIcon=()=><span className="zn-at-sign">@</span>;
 
 // Admin-only: invite straight from inside ZARN.
 export function Invite({onClose}:{onClose:()=>void}){

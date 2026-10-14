@@ -9,6 +9,7 @@ import {Avatar} from './format';
 import {Browse,Invite,NewChannel,NewDm,Profile,SearchDialog} from './Dialogs';
 import AddClient from './AddClient';
 import {useInstall} from './ZarnPwa';
+import ProfileSheet from './ProfileSheet';
 import {setSound,useSound} from '@/lib/zarn-sound';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 
@@ -23,7 +24,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const z=useZarn(),{me,channels}=z,pathname=usePathname(),{light}=useAdminTheme();
  const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,badges}=nav;
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
- const [clientQ,setClientQ]=useState('');
+ const [clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null);
  const {mode:installMode,install}=useInstall(),sound=useSound();
  const routeArea=areaOf(pathname);
  const [area,setArea]=useState<Area>(routeArea);
@@ -51,7 +52,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const railBtn=(a:Area,icon:React.ReactNode,label:string,badge:number)=><button type="button" className={`zn-rail-btn${area===a?' is-on':''}`} aria-pressed={area===a} onClick={()=>setArea(a)}><span className="zn-rail-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small>{label}</small></button>;
  const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small>{label}</small></Link>;};
 
- return <ShellCtx.Provider value={{open:setDialog}}>
+ return <ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
  <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}`}>
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
@@ -59,7 +60,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
     {railBtn('chat',<MessageSquare size={20}/>,'Chat',badges.home+badges.dms)}
     {canBusiness&&railBtn('business',<BarChart3 size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
-    <button type="button" className="zn-rail-me" aria-label="Your profile" onClick={()=>setDialog('profile')}><Avatar m={me} size={34} online/></button>
+    <button type="button" className="zn-rail-me" aria-label="Your profile" onClick={()=>setProfileId(me.user_id)}><Avatar m={me} size={34} online/></button>
    </nav>
    <aside className="zn-sidebar">
     <div className="zn-workspace">
@@ -116,6 +117,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
    {tab('/zarn/activity',<AtSign size={22}/>,'Activity',badges.activity)}
    {tab('/zarn/you',<Avatar m={me} size={24}/>,'You',0)}
   </nav>
+  {profileId&&<ProfileSheet userId={profileId} onClose={()=>setProfileId(null)} onEdit={()=>{setProfileId(null);setDialog('profile');}}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {dialog==='dm'&&<NewDm onClose={()=>setDialog(null)}/>}
   {dialog==='browse'&&<Browse onClose={()=>setDialog(null)}/>}

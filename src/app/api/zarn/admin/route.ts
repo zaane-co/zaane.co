@@ -47,6 +47,9 @@ export async function POST(request:Request){
    const drop=((cur??[]) as unknown as {channel_id:string;zarn_channels:{kind:string}}[]).filter(r=>(r.zarn_channels.kind==='public'||r.zarn_channels.kind==='private')&&!ids.includes(r.channel_id)).map(r=>r.channel_id);
    if(drop.length)await db.from('zarn_channel_members').delete().eq('user_id',userId).in('channel_id',drop);}
  };
+ // A free @username from their email, e.g. isaac.o or isaac.o2.
+ const pickUsername=async(email:string)=>{let base=email.split('@')[0]!.toLowerCase().replace(/[^a-z0-9._]/g,'').slice(0,26);if(!/^[a-z0-9]/.test(base)||base.length<2)base='member';
+  const {data}=await db.from('zarn_members').select('username').like('username',`${base}%`);const taken=new Set((data??[]).map(r=>r.username));let u=base,n=1;while(taken.has(u))u=`${base}${++n}`;return u;};
  const accessRow=(a:z.infer<typeof access>)=>({account_type:a.account_type,can_view_crm:a.can_view_crm,can_create_channels:a.account_type==='guest'?false:a.can_create_channels,expires_at:a.expires_at});
  const invite=async(email:string,first:string,type:'invite'|'magiclink')=>{
   const {data:link,error}=await db.auth.admin.generateLink({type,email,options:type==='invite'?{data:{name:first}}:undefined});
@@ -63,14 +66,14 @@ export async function POST(request:Request){
    // Existing account (e.g. staff): add them and tell them to sign in with their current password.
    const {data:existing}=await db.from('users').select('id,name').eq('email',email).maybeSingle();
    if(existing){
-    const {error}=await db.from('zarn_members').insert({user_id:existing.id,email,display_name:b.name,title:b.title,invited_by:me.id,joined_at:new Date().toISOString(),...accessRow(b)});
+    const {error}=await db.from('zarn_members').insert({user_id:existing.id,email,display_name:b.name,title:b.title,invited_by:me.id,joined_at:new Date().toISOString(),username:await pickUsername(email),work_email:email,...accessRow(b)});
     if(error)return fail('Could not add them.');
     await setChannels(existing.id,b.channels,b.account_type,false);
     const sent=await mail(email,me.email,'You’ve been added to ZARN','You’re on ZARN',[`Hi ${b.name.split(' ')[0]}, ${me.name||'the Zaane team'} added you to ZARN, our team chat.`,'Sign in with the same email and password you already use for Zaane.'],'Open ZARN',`${emailBase()}/zarn/login`);
     return Response.json({ok:true,existing:true,emailed:sent});
    }
    const r=await invite(email,b.name,'invite');if(!r)return fail('Could not create the invite.');
-   const {error}=await db.from('zarn_members').insert({user_id:r.userId,email,display_name:b.name,title:b.title,invited_by:me.id,...accessRow(b)});
+   const {error}=await db.from('zarn_members').insert({user_id:r.userId,email,display_name:b.name,title:b.title,invited_by:me.id,username:await pickUsername(email),work_email:email,...accessRow(b)});
    if(error){await db.auth.admin.deleteUser(r.userId);return fail('Could not add them.');}
    await setChannels(r.userId,b.channels,b.account_type,false);
    return Response.json({ok:true,emailed:r.sent});
