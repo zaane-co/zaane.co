@@ -1,5 +1,6 @@
 'use client';
-import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
+import {useEffect,useRef,useState} from 'react';
+import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Search,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
@@ -15,8 +16,8 @@ const groups:{label:string;items:Item[]}[]=[
   {label:'Subscribers',href:'/admin/subscribers',key:'subscribers',icon:Users},
  ]},
  {label:'Content',items:[
-  {label:'Projects',href:'/admin/projects',icon:Briefcase,children:[{label:'All projects',href:'/admin/projects',key:'projects'},{label:'Gallery',href:'/admin/project_images',key:'project_images'}]},
-  {label:'Blog',href:'/admin/blog_posts',icon:BookOpen,children:[{label:'All posts',href:'/admin/blog_posts',key:'blog_posts'},{label:'Categories',href:'/admin/blog_categories',key:'blog_categories'}]},
+  {label:'Projects',href:'/admin/projects',icon:Briefcase,children:[{label:'All projects',href:'/admin/projects',key:'projects'},{label:'Gallery',href:'/admin/project_images',key:'project_images'},{label:'Categories',href:'/admin/project-categories',key:'blog_categories'}]},
+  {label:'Blog',href:'/admin/blog',icon:BookOpen,children:[{label:'All Posts',href:'/admin/blog',key:'blog_posts'},{label:'New Post',href:'/admin/blog/new',key:'blog_posts'},{label:'Categories',href:'/admin/blog/categories',key:'blog_categories'},{label:'Archives',href:'/admin/blog/archives',key:'blog_posts'},{label:'Post Metrics',href:'/admin/blog/metrics',key:'blog_posts'},{label:'Comments',href:'/admin/blog/comments',key:'blog_posts'},{label:'Curated',href:'/admin/blog/curated',key:'blog_categories'},{label:'Editors',href:'/admin/editors',key:'users'}]},
   {label:'Testimonials',href:'/admin/testimonials',key:'testimonials',icon:Quote},
   {label:'Team',href:'/admin/team_members',key:'team_members',icon:UserRound},
   {label:'Resources',href:'/admin/resources',key:'resources',icon:FolderDown},
@@ -29,11 +30,6 @@ const groups:{label:string;items:Item[]}[]=[
  ]},
 ];
 
-const THEME_KEY='zaane_admin_theme';
-const themeListeners=new Set<()=>void>();
-const readTheme=()=>{try{return localStorage.getItem(THEME_KEY)==='light';}catch{return false;}};
-const subscribeTheme=(fn:()=>void)=>{themeListeners.add(fn);return()=>{themeListeners.delete(fn);};};
-const writeTheme=(light:boolean)=>{try{localStorage.setItem(THEME_KEY,light?'light':'dark');}catch{}themeListeners.forEach(fn=>fn());};
 
 async function signOut(){try{await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});}finally{window.location.assign('/admin/login');}}
 
@@ -45,7 +41,7 @@ function useOutside<T extends HTMLElement>(open:boolean,close:()=>void){
 
 export default function AdminShell({user,allowedKeys,newLeads,children}:{user:User;allowedKeys:string[];newLeads:number;children:React.ReactNode}){
  const pathname=usePathname();
- const light=useSyncExternalStore(subscribeTheme,readTheme,()=>false);
+ const {light}=useAdminTheme();
  const [collapsed,setCollapsed]=useState(false);
  const [mobileOpen,setMobileOpen]=useState(false);
  const [search,setSearch]=useState('');
@@ -61,10 +57,11 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
  const can=(key?:string)=>!key||allowedKeys.includes(key);
  const visible=groups.map(g=>({...g,items:g.items.map(i=>({...i,children:i.children?.filter(c=>can(c.key))})).filter(i=>i.children?i.children.length>0:can(i.key))})).filter(g=>g.items.length);
  const isActive=(href:string)=>href==='/admin'?pathname==='/admin':pathname===href||pathname.startsWith(href+'/');
+ const subActive=(href:string)=>pathname===href||(href==='/admin/blog'&&/^\/admin\/blog\/[0-9a-f-]{36}$/.test(pathname));
  const groupActive=(i:Item)=>i.children?i.children.some(c=>isActive(c.href)):isActive(i.href);
  const [expanded,setExpanded]=useState<string|null>(()=>visible.flatMap(g=>g.items).find(i=>i.children&&groupActive(i))?.label??null);
 
- const flat=visible.flatMap(g=>g.items.flatMap(i=>i.children?i.children.map(c=>({label:c.label==='All posts'?'Blog posts':c.label==='All projects'?'Projects':c.label==='Categories'?'Blog categories':c.label==='Gallery'?'Project gallery':c.label,href:c.href,icon:i.icon})):[{label:i.label,href:i.href,icon:i.icon}]));
+ const flat=visible.flatMap(g=>g.items.flatMap(i=>i.children?i.children.map(c=>({label:c.label==='All Posts'?'Blog posts':c.label==='New Post'?'New blog post':c.label==='Archives'?'Blog archives':c.label==='Comments'?'Blog comments':c.label==='Curated'?'Curated links':c.label==='Editors'?'Blog editors':c.label==='All projects'?'Projects':c.label==='Categories'?(c.href==='/admin/project-categories'?'Project categories':'Blog categories'):c.label==='Gallery'?'Project gallery':c.label,href:c.href,icon:i.icon})):[{label:i.label,href:i.href,icon:i.icon}]));
  const results=search?flat.filter(i=>i.label.toLowerCase().includes(search.toLowerCase())):null;
 
  const first=(user.name||user.email).split(/[\s@]/)[0];
@@ -97,7 +94,7 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
        <ChevronDown size={13} className={`za-nav-chev${expanded===i.label?' is-open':''}`}/>
        {i.key==='leads'&&newLeads>0&&<span className="za-count">{newLeads}</span>}
       </button>
-      {expanded===i.label&&!collapsed&&<div className="za-subnav">{i.children.map(c=><Link key={c.href} href={c.href} className={`za-subnav-item${isActive(c.href)?' is-active':''}`}><span className="za-dot"/>{c.label}</Link>)}</div>}
+      {expanded===i.label&&!collapsed&&<div className="za-subnav">{i.children.map(c=><Link key={c.href+c.label} href={c.href} className={`za-subnav-item${subActive(c.href)?' is-active':''}`}><span className="za-dot"/>{c.label}</Link>)}</div>}
      </div>:<NavLink key={i.href} href={i.href} label={i.label} Icon={i.icon} active={isActive(i.href)} badge={i.key==='leads'?newLeads:0}/>)}
     </div>)}
    </nav>

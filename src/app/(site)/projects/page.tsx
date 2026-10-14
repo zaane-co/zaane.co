@@ -10,16 +10,28 @@ export const metadata = {
 
 const display = Fraunces({ subsets: ["latin"], weight: ["700"], display: "swap" });
 
-const tabs: [string, string][] = [
-  ["All", ""],
-  ["Brand design", "Graphics & Brand Design"],
-  ["UI/UX design", "UI/UX Design"],
-  ["Web design", "Web Design"],
-  ["App design", "App Design"],
-];
+// Short tab labels for the original subcategories; any new subcategory shows under its own name.
+const tabLabels: Record<string, string> = {
+  "Graphics & Brand Design": "Brand design",
+  "UI/UX Design": "UI/UX design",
+  "Web Design": "Web design",
+  "App Design": "App design",
+};
+const rank = (n: string) => { const i = Object.keys(tabLabels).indexOf(n); return i < 0 ? 99 : i; };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
-  const all = await records("projects");
+  const [all, subcats] = await Promise.all([
+    records("projects"),
+    records("project_categories").catch(() => []),
+  ]);
+  const tabs: [string, string][] = [
+    ["All", ""],
+    ...subcats
+      .filter((c) => c.kind === "sub_category")
+      .map((c) => String(c.name))
+      .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+      .map((n): [string, string] => [tabLabels[n] ?? n, n]),
+  ];
   const { type = "" } = await searchParams;
   const rows = all.filter((r) => !type || r.sub_category === type);
 

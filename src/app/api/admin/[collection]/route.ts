@@ -24,6 +24,7 @@ export async function POST(request:Request,{params}:{params:Promise<{collection:
    if(f.required&&!v)return Response.json({error:`${f.label} is required`},{status:400});
    if(String(v).length>(f.type==='markdown'?100000:10000))return Response.json({error:`${f.label} is too long`},{status:400});
    if(f.options&&!f.options.includes(String(v)))return Response.json({error:`Invalid ${f.label}`},{status:400});
+   if(f.taxonomy&&String(v).length>80)return Response.json({error:`${f.label} is too long`},{status:400});
    if(f.key==='slug'&&!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(v)))return Response.json({error:'Use lowercase letters, numbers and hyphens in the slug.'},{status:400});
    if((f.type==='url'||f.type==='image')&&v&&!safeUrl(v))return Response.json({error:`Use a valid URL for ${f.label}`},{status:400});
    if(f.key.endsWith('_id')&&v&&!uuid.test(String(v)))return Response.json({error:`Select a valid ${f.label}`},{status:400});
@@ -41,6 +42,8 @@ export async function POST(request:Request,{params}:{params:Promise<{collection:
    values.published_at=old?.published_at||new Date().toISOString();
   }
   if(collection==='blog_posts'&&!body.id)values.author_id=user.id;
+  // New project category names typed into a dropdown are added to the managed list.
+  if(collection==='projects'&&user.role!=='editor'){const add=spec.fields.filter(f=>f.taxonomy&&values[f.key]).map(f=>({kind:f.key,name:String(values[f.key])}));if(add.length)await db.from('project_categories').upsert(add,{onConflict:'kind,name',ignoreDuplicates:true});}
   const result=body.id?await db.from(collection).update(values).eq('id',body.id).select('id'):await db.from(collection).insert(values).select('id');
   if(result.error||!result.data?.length)return Response.json({error:result.error?.code==='23505'?'That slug or key already exists.':'Could not save. Check your fields and publishing permissions.'},{status:400});
  }
