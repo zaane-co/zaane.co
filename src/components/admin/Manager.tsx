@@ -2,13 +2,15 @@
 import {useEffect,useState,useRef} from 'react';
 import {useRouter} from 'next/navigation';
 import Markdown from 'react-markdown';
-import {Download,ImagePlus,Plus,Search,X,Upload,Trash2} from 'lucide-react';
+import {ChevronDown,Copy,Download,ExternalLink,ImagePlus,Pencil,Plus,Search,Star,X,Upload,Trash2} from 'lucide-react';
 import MediaPicker from '@/components/admin/MediaPicker';
 import ProjectGallery from '@/components/admin/ProjectGallery';
 import {collections,safeUrl,type Field} from '@/lib/cms';
 import {Status,when} from '@/components/admin/ui';
 type Row=Record<string,unknown>;
 const primary=(r:Row)=>String(r.title||r.name||r.client_name||r.email||r.key||r.page_key||'Gallery image');
+// Public page for a record, when it has one.
+const publicHref=(c:string,r:Row)=>r.status&&r.status!=='published'?'':c==='projects'?`/projects/${r.slug}`:c==='testimonials'?'/testimonials':c==='team_members'?'/about':c==='jobs'?'/careers':c==='resources'?safeUrl(r.download_url):'';
 const secondary=(r:Row)=>String(r.excerpt||r.subject||r.service_interested||r.slug||r.role||r.client_role||r.section_key||r.value||r.location||'');
 
 export default function Manager({collection,rows,role,options,gallery={}}:{collection:string;rows:Row[];role:string;options:Record<string,{value:string;label:string}[]>;gallery?:Record<string,{id:string;image_url:string;order:number}[]>}){
@@ -26,7 +28,20 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
  }
  const close=()=>{setSelected(null);setDeleting(false);};
  useEffect(()=>{if(!selected)return;const h=(e:KeyboardEvent)=>{if(e.key==='Escape')close();};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[selected]);
- function edit(row:Row){setSelected(row);setValues(Object.fromEntries(spec.fields.map(f=>[f.key,Array.isArray(row[f.key])?(row[f.key] as string[]).join(', '):row[f.key]??(f.key==='author_name'?'Zaane Studio':f.type==='select'&&!f.taxonomy?(f.options?.[0]||''):f.key==='rating'?5:f.key==='order'?0:'')])));setMessage('');setDeleting(false);setPreview(false);}
+ const valuesOf=(row:Row)=>Object.fromEntries(spec.fields.map(f=>[f.key,Array.isArray(row[f.key])?(row[f.key] as string[]).join(', '):row[f.key]??(f.key==='author_name'?'Zaane Studio':f.type==='select'&&!f.taxonomy?(f.options?.[0]||''):f.key==='rating'?5:f.key==='order'?0:'')])) as Row;
+ function edit(row:Row){setSelected(row);setValues(valuesOf(row));setMessage('');setDeleting(false);setPreview(false);}
+ // Row actions (status, feature, duplicate, delete) save straight from the table.
+ const [menu,setMenu]=useState<string|null>(null),[confirmDelete,setConfirmDelete]=useState<Row|null>(null),[working,setWorking]=useState<string|null>(null);
+ async function quick(row:Row|null,action:'save'|'delete',patch:Row={},done='Saved.'){
+  setWorking(String(row?.id??'new'));setMessage('');
+  try{const r=await fetch(`/api/admin/${collection}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,id:row?.id,values:row?{...valuesOf(row),...patch}:patch})});const d=await r.json();if(!r.ok)throw new Error(d.error);setMessage(done);router.refresh();return true;}
+  catch(e){setMessage(e instanceof Error?e.message:'Could not save.');return false;}finally{setWorking(null);setMenu(null);}
+ }
+ const duplicate=(row:Row)=>{const v=valuesOf(row),tag=Math.random().toString(36).slice(2,6);if('title' in v)v.title=`${v.title} (copy)`;if('name' in v&&!('title' in v))v.name=`${v.name} (copy)`;if('slug' in v)v.slug=`${String(v.slug).slice(0,100)}-copy-${tag}`;if('status' in v)v.status='draft';if('featured' in v)v.featured=false;return quick(null,'save',v,'Duplicated as a draft.');};
+ const statusField=spec.fields.find(f=>f.key==='status');
+ const canDelete=role!=='editor'&&collection!=='users';
+ const canDuplicate=!spec.inbox&&!['settings','pages_content','users'].includes(collection);
+ const hasFeatured=spec.fields.some(f=>f.key==='featured');
  async function save(action:'save'|'delete'){
   setBusy(true);setMessage('');try{const r=await fetch(`/api/admin/${collection}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,id:selected?.id,values})});const data=await r.json();if(!r.ok)throw new Error(data.error);close();setMessage(action==='save'?'Saved successfully.':'Record deleted.');router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Could not save.');}finally{setBusy(false);}
  }
@@ -48,12 +63,22 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
   {message&&!selected&&<p role="status" className="za-flash">{message}</p>}
   <section className="za-card">
    {shown.length?<div className="za-table-wrap"><table className="za-table za-table-click">
-    <thead><tr><th>{spec.inbox?'From':'Title'}</th><th className="za-hide-sm">Details</th>{hasStatus&&<th>Status</th>}<th className="za-hide-sm">Created</th></tr></thead>
+    <thead><tr><th>{spec.inbox?'From':'Title'}</th><th className="za-hide-sm">Details</th>{hasStatus&&<th>Status</th>}<th className="za-hide-sm">Created</th><th className="za-th-actions">Actions</th></tr></thead>
     <tbody>{shown.map(row=><tr key={String(row.id)} onClick={()=>edit(row)} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')edit(row);}}>
      <td><div className="za-cell-main">{image(row)&&<img src={image(row)} alt="" className="za-thumb"/>}<span><b>{primary(row)}</b>{spec.inbox&&row.email&&primary(row)!==row.email?<small>{String(row.email)}</small>:null}</span></div></td>
      <td className="za-hide-sm za-cell-muted">{secondary(row)}</td>
-     {hasStatus&&<td><Status value={row.status as string}/></td>}
+     {hasStatus&&<td onClick={e=>e.stopPropagation()} className="za-status-cell">{statusField?.options&&!(role==='editor'&&row.status==='published')?<>
+      <button type="button" className="za-status-btn" onClick={()=>setMenu(menu===row.id?null:String(row.id))} aria-haspopup="menu" aria-expanded={menu===row.id}><Status value={row.status as string}/><ChevronDown size={12}/></button>
+      {menu===row.id&&<><button type="button" className="za-menu-scrim" aria-label="Close" onClick={()=>setMenu(null)}/><div className="za-status-menu" role="menu">{statusField.options.filter(o=>!(role==='editor'&&o==='published')).map(o=><button type="button" role="menuitem" key={o} disabled={working===row.id} className={o===row.status?'is-current':''} onClick={()=>o!==row.status&&quick(row,'save',{status:o},`Status changed to ${o.replace('_',' ')}.`)}><Status value={o}/></button>)}</div></>}
+     </>:<Status value={row.status as string}/>}</td>}
      <td className="za-hide-sm za-cell-muted">{when(row.created_at as string)}</td>
+     <td onClick={e=>e.stopPropagation()}><div className="za-row-actions">
+      {hasFeatured&&role!=='editor'&&<button type="button" title={row.featured?'Remove from homepage':'Feature on homepage'} aria-label="Toggle featured" disabled={working===row.id} className={row.featured?'is-featured':''} onClick={()=>quick(row,'save',{featured:!row.featured},row.featured?'Removed from featured.':'Featured on homepage.')}><Star size={14} fill={row.featured?'currentColor':'none'}/></button>}
+      {publicHref(collection,row)&&<a href={publicHref(collection,row)} target="_blank" rel="noopener noreferrer" title="View on site" aria-label="View on site"><ExternalLink size={14}/></a>}
+      {spec.fields.length>0&&<button type="button" title="Edit" aria-label="Edit" onClick={()=>edit(row)}><Pencil size={14}/></button>}
+      {canDuplicate&&<button type="button" title="Duplicate" aria-label="Duplicate" disabled={working==='new'} onClick={()=>void duplicate(row)}><Copy size={14}/></button>}
+      {canDelete&&<button type="button" title="Delete" aria-label="Delete" className="za-row-danger" onClick={()=>setConfirmDelete(row)}><Trash2 size={14}/></button>}
+     </div></td>
     </tr>)}</tbody>
    </table></div>:<div className="za-empty za-empty-lg"><h3>{search?'No matches':'Nothing here yet'}</h3><p>{search?'Try a different search.':spec.inbox?'New submissions will appear here.':'Create your first record when you’re ready.'}</p></div>}
   </section>
@@ -85,6 +110,13 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
     </form>
    </aside>
   </>}
+  {confirmDelete&&<div className="za-modal-scrim" onClick={()=>setConfirmDelete(null)}>
+   <div className="za-modal" role="alertdialog" aria-label="Delete record" onClick={e=>e.stopPropagation()}>
+    <div className="za-modal-head"><span className="za-modal-icon"><Trash2 size={18}/></span><div><strong>Delete {spec.label.toLowerCase().replace(/s$/,'')}?</strong><small>{primary(confirmDelete)}</small></div></div>
+    <p>This permanently deletes it and can’t be undone.</p>
+    <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setConfirmDelete(null)}>Cancel</button><button type="button" className="za-btn za-btn-danger" disabled={working===confirmDelete.id} onClick={async()=>{if(await quick(confirmDelete,'delete',{},'Record deleted.'))setConfirmDelete(null);}}>{working===confirmDelete.id?'Deleting…':'Delete'}</button></div>
+   </div>
+  </div>}
   <MediaPicker open={!!pickFor} onClose={()=>setPickFor(null)} onPick={([url])=>{if(pickFor&&url){setValues(v=>({...v,[pickFor]:url}));setMessage('Image selected. Save the record to attach it.');}}}/>
  </>;
 }

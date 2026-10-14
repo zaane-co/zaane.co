@@ -213,3 +213,26 @@
 .za-admin .ProseMirror{outline:none}
 .za-admin .ProseMirror p.is-editor-empty:first-child::before{content:attr(data-placeholder);float:left;pointer-events:none;height:0;opacity:.3}
 .za-inline-create{display:flex;gap:8px}.za-field .za-inline-create input{flex:1;min-width:0;width:auto}
+/* Row actions */
+.za-table th.za-th-actions{text-align:right}
+.za-row-actions{display:flex;justify-content:flex-end;gap:2px}
+.za-row-actions>a,.za-row-actions>button{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:none;border:0;color:var(--a-faint);transition:background .12s,color .12s}
+.za-row-actions>a:hover,.za-row-actions>button:hover{background:var(--a-panel-2);color:var(--a-fg)}
+.za-row-actions>button.is-featured{background:#f59e0b;color:#fff}
+.za-row-actions>button.za-row-danger:hover{background:#dc2626;color:#fff}
+.za-status-cell{position:relative}
+.za-status-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:0;color:var(--a-faint)}
+.za-status-btn:hover .za-status{filter:brightness(1.1)}
+.za-menu-scrim{position:fixed;inset:0;z-index:40;background:none;border:0;cursor:default}
+.za-status-menu{position:absolute;z-index:41;top:calc(100% - 6px);left:16px;min-width:150px;padding:6px;border-radius:12px;background:var(--a-panel);border:1px solid var(--a-border);box-shadow:0 12px 32px rgba(0,0,0,.28);display:flex;flex-direction:column;gap:2px}
+.za-status-menu button{display:flex;align-items:center;padding:7px 8px;border-radius:8px;background:none;border:0;text-align:left}
+.za-status-menu button:hover{background:var(--a-hover)}
+.za-status-menu button.is-current{background:var(--a-panel-2)}
+.za-modal-scrim{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px}
+.za-modal{width:100%;max-width:380px;padding:24px;border-radius:18px;background:var(--a-panel);border:1px solid var(--a-border);box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.za-modal-head{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.za-modal-head strong{display:block;font-size:14px}
+.za-modal-head small{display:block;font-size:12px;color:var(--a-muted);margin-top:2px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.za-modal-icon{width:42px;height:42px;border-radius:50%;background:#dc2626;color:#fff;display:grid;place-items:center;flex-shrink:0}
+.za-modal>p{font-size:13px;color:var(--a-muted);line-height:1.5;margin-bottom:18px}
+.za-modal-foot{display:flex;gap:8px}.za-modal-foot .za-btn{flex:1;justify-content:center}
