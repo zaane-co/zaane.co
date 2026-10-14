@@ -8,13 +8,15 @@ import {F} from './NewLead';
 import ProjectPanel from './ProjectPanel';
 import MaterialsPanel from './MaterialsPanel';
 import InvoiceList from './InvoiceList';
+import LeadFiles,{type LeadFile} from '@/components/files/LeadFiles';
+import {MessagesSquare} from 'lucide-react';
 
 type Tab='note'|'call'|'meeting'|'email';
 const tabs:{key:Tab;label:string;icon:LucideIcon}[]=[{key:'note',label:'Note',icon:StickyNote},{key:'call',label:'Log call',icon:Phone},{key:'meeting',label:'Log meeting',icon:Users},{key:'email',label:'Email',icon:Mail}];
 const kindIcon:Record<Activity['kind'],LucideIcon>={note:StickyNote,call:Phone,meeting:Users,email:Mail,stage:ArrowRight,task:CheckSquare};
 const local=(d:Date)=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
 
-export default function LeadDetail({canInvoice,stages,categories,materials,invoices,lead,activities,tasks,team,me,emailReady}:{canInvoice:boolean;stages:PipelineStage[];categories:string[];materials:Material[];invoices:Invoice[];lead:Lead;activities:Activity[];tasks:Task[];team:Staff[];me:string;emailReady:boolean}){
+export default function LeadDetail({files,hasSpace,canInvoice,stages,categories,materials,invoices,lead,activities,tasks,team,me,emailReady}:{files:LeadFile[];hasSpace:boolean;canInvoice:boolean;stages:PipelineStage[];categories:string[];materials:Material[];invoices:Invoice[];lead:Lead;activities:Activity[];tasks:Task[];team:Staff[];me:string;emailReady:boolean}){
  const router=useRouter(),[pending,start]=useTransition();
  const refresh=()=>start(()=>router.refresh());
  const [flash,setFlash]=useState(''),[busy,setBusy]=useState<string|null>(null);
@@ -78,15 +80,20 @@ export default function LeadDetail({canInvoice,stages,categories,materials,invoi
     <p>{lead.company&&<span><Building2 size={13}/>{lead.company}</span>}<button type="button" onClick={()=>copy(lead.email)} data-tip="Copy email"><Mail size={13}/>{lead.email}<Copy size={11}/></button>{lead.phone&&<a href={`tel:${lead.phone}`}><Phone size={13}/>{lead.phone}</a>}</p>
    </div>
    <div className="za-toolbar-actions">
+    <button type="button" className="za-btn za-btn-ghost" disabled={busy==='zarn'} data-tip={hasSpace?'Open this client’s ZARN space':'Create a private ZARN space for this client'} onClick={async()=>{setBusy('zarn');try{const r=await fetch('/api/zarn/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'open',lead_id:lead.id})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Could not open the client space.');window.open(`/zarn/clients/${lead.id}`,'_blank');refresh();}catch(e){setFlash(e instanceof Error?e.message:'Could not open the client space. Join ZARN first (Admin → ZARN).');}finally{setBusy(null);}}}><MessagesSquare size={14}/>{hasSpace?'Open in ZARN':'Add to ZARN'}</button>
     <button type="button" className="za-btn za-btn-ghost" onClick={emailTab}><Send size={14}/>Email</button>
     <button type="button" className="za-btn za-btn-ghost za-btn-danger-text" onClick={()=>setConfirmDelete(true)} aria-label="Delete lead" data-tip="Delete lead"><Trash2 size={14}/></button>
    </div>
   </div>
 
-  <div className="za-stagebar" role="group" aria-label="Pipeline stage">
-   {path.map((s,i)=>{const on=lead.status===s.key,past=!isLost&&i<at;
-    return <button key={s.key} type="button" disabled={busy==='stage'} className={`${on?'is-on':''}${past?' is-past':''}`} style={on||past?{background:s.color}:undefined} aria-pressed={on} onClick={()=>!on&&setStage(s.key,{lost_reason:''})}>{past&&<Check size={13}/>}{s.label}</button>;})}
-   {lostStage&&<button type="button" disabled={busy==='stage'} className={`za-stage-lost${isLost?' is-on':''}`} style={isLost?{background:lostStage.color}:undefined} aria-pressed={isLost} onClick={()=>setLostOpen(true)}><X size={13}/>{lostStage.label}</button>}
+  {/* Pipeline path: connected arrow steps (done = check, current = stage colour), Lost as a separate exit. */}
+  <div className="za-path-row">
+   <ol className={`za-path${isLost?' is-lost':''}`} aria-label="Pipeline stage">
+    {path.map((s,i)=>{const on=lead.status===s.key,past=!isLost&&i<at;
+     return <li key={s.key}><button type="button" disabled={busy==='stage'} className={`za-path-step${on?' is-on':''}${past?' is-past':''}`} style={on?{background:s.color}:undefined} aria-current={on?'step':undefined} onClick={()=>!on&&setStage(s.key,{lost_reason:''})} title={on?`Current stage: ${s.label}`:`Move to ${s.label}`}>
+      <span className="za-path-dot">{past?<Check size={12} strokeWidth={3}/>:i+1}</span><span className="za-path-label">{s.label}</span></button></li>;})}
+   </ol>
+   {lostStage&&<button type="button" disabled={busy==='stage'} className={`za-path-lost${isLost?' is-on':''}`} style={isLost?{background:lostStage.color,borderColor:lostStage.color}:undefined} aria-pressed={isLost} onClick={()=>setLostOpen(true)}><X size={14}/>{isLost?lostStage.label:`Mark ${lostStage.label.toLowerCase()}`}</button>}
   </div>
   {lostStage&&(lostOpen||isLost)&&<form className="za-lost" onSubmit={e=>{e.preventDefault();void setStage(lostStage.key,{lost_reason:lostReason}).then(()=>setLostOpen(false));}}>
    <label htmlFor="lost-reason">{isLost?'Lost because':'Why was it lost?'}</label>
@@ -96,9 +103,9 @@ export default function LeadDetail({canInvoice,stages,categories,materials,invoi
   </form>}
   {flash&&<p role="status" className="za-flash">{flash}</p>}
 
-  <div className="za-pagetabs" role="tablist" aria-label="Lead sections">{([['activity','Activity',activities.length],['project','Project',lead.categories.length||null],['materials','Materials',materials.length?`${materials.filter(m=>m.received_at).length}/${materials.length}`:null],['invoices','Invoices',invoices.length||null]] as const).map(([k,l,n])=><button key={k} type="button" role="tab" aria-selected={section===k} className={section===k?'is-on':''} onClick={()=>setSection(k)}>{l}{n!=null&&<span>{n}</span>}</button>)}</div>
+  <div className="za-pagetabs" role="tablist" aria-label="Lead sections">{([['activity','Activity',activities.length],['project','Project',lead.categories.length||null],['materials','Files',files.length||null],['invoices','Invoices',invoices.length||null]] as const).map(([k,l,n])=><button key={k} type="button" role="tab" aria-selected={section===k} className={section===k?'is-on':''} onClick={()=>setSection(k)}>{l}{n!=null&&<span>{n}</span>}</button>)}</div>
   <div className="za-lead-grid">
-   {section==='project'?<ProjectPanel lead={lead} categories={categories}/>:section==='materials'?<MaterialsPanel leadId={lead.id} materials={materials}/>:section==='invoices'?<InvoiceList compact readOnly={!canInvoice} leadId={lead.id} invoices={invoices.map(i=>({...i,client:''}))}/>:
+   {section==='project'?<ProjectPanel lead={lead} categories={categories}/>:section==='materials'?<div className="za-lead-main"><section className="za-card"><div className="za-card-head"><h2>Files</h2><small className="za-date">{hasSpace?'Shared with this client’s ZARN team':'Staff only until you open a ZARN client space'}</small></div><div className="za-card-pad"><LeadFiles endpoint="/api/admin/crm/files" leadId={lead.id} initial={files} names={Object.fromEntries(team.map(t=>[t.id,t.name||t.email]))} me={me}/></div></section><MaterialsPanel leadId={lead.id} materials={materials}/></div>:section==='invoices'?<InvoiceList compact readOnly={!canInvoice} leadId={lead.id} invoices={invoices.map(i=>({...i,client:''}))}/>:
    <div className="za-lead-main">
     <section className="za-card">
      <div className="za-tabs" role="tablist">{tabs.map(t=><button key={t.key} type="button" role="tab" aria-selected={tab===t.key} className={tab===t.key?'is-on':''} onClick={()=>setTab(t.key)}><t.icon size={14}/>{t.label}</button>)}</div>
@@ -118,13 +125,13 @@ export default function LeadDetail({canInvoice,stages,categories,materials,invoi
       {activities.map(a=>{const Icon=kindIcon[a.kind];return <li key={a.id} className={`za-tl-${a.kind}`}>
        <span className="za-tl-icon" style={a.kind==='stage'&&a.meta.to?{background:byKey[a.meta.to]?.color??'#52525b'}:undefined}><Icon size={13}/></span>
        <div className="za-tl-body">
-        <p className="za-tl-meta"><b>{who(a.author_id)}</b>{a.kind==='stage'?<> moved this from <em>{label(a.meta.from)}</em> to <em>{label(a.meta.to)}</em></>:a.kind==='email'?' sent an email':a.kind==='call'?<> logged a call{a.meta.outcome&&<span className="za-tl-tag">{a.meta.outcome}</span>}</>:a.kind==='meeting'?' logged a meeting':a.kind==='task'?' completed a task':' added a note'}<time dateTime={a.created_at} title={new Date(a.created_at).toLocaleString('en-GB')}>{ago(a.created_at)}</time>
+        <p className="za-tl-meta"><b>{who(a.author_id)}</b>{a.kind==='stage'?<> moved this from <em>{label(a.meta.from)}</em> to <em>{label(a.meta.to)}</em></>:a.kind==='email'?' sent an email':a.kind==='call'?<> logged a call{a.meta.outcome&&<span className="za-tl-tag">{a.meta.outcome}</span>}</>:a.kind==='meeting'?' logged a meeting':a.kind==='task'?' completed a task':' added a note'}<time suppressHydrationWarning dateTime={a.created_at} title={new Date(a.created_at).toLocaleString('en-GB')}>{ago(a.created_at)}</time>
          {['note','call','meeting'].includes(a.kind)&&<button type="button" className="za-tl-del" aria-label="Delete entry" data-tip="Delete" onClick={()=>void run(`del-${a.id}`,{action:'delete_activity',id:a.id})}><Trash2 size={12}/></button>}</p>
         {a.kind==='email'&&<p className="za-tl-subject">{a.meta.subject}</p>}
         {a.body&&a.kind!=='stage'&&<div className={`za-tl-text${a.kind==='task'?' is-task':''}`}>{a.body}</div>}
        </div>
       </li>;})}
-      <li className="za-tl-created"><span className="za-tl-icon"><Sparkles size={13}/></span><div className="za-tl-body"><p className="za-tl-meta"><b>Lead created</b>{lead.source==='website'||lead.source==='partnership'?' from the website form':` · ${lead.source}`}<time dateTime={lead.created_at}>{new Date(lead.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</time></p></div></li>
+      <li className="za-tl-created"><span className="za-tl-icon"><Sparkles size={13}/></span><div className="za-tl-body"><p className="za-tl-meta"><b>Lead created</b>{lead.source==='website'||lead.source==='partnership'?' from the website form':` · ${lead.source}`}<time suppressHydrationWarning dateTime={lead.created_at}>{new Date(lead.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</time></p></div></li>
      </ol>
     </section>
    </div>}

@@ -10,7 +10,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
  const me=await zarnMember();if(!me)redirect('/zarn/login');
  const {db,channel,allowed}=await clientAccess(me,id);
  if(!channel||!allowed)notFound();
- const [{data:lead},{data:stages},{data:team},{data:tasks},{data:materials},{data:activities},invoices,{data:staff}]=await Promise.all([
+ const [{data:lead},{data:stages},{data:team},{data:tasks},{data:materials},{data:activities},invoices,{data:staff},{data:files}]=await Promise.all([
   db.from('leads').select('id,name,company,email,phone,website,service_interested,budget_range,message,project_description,status,deal_value,currency,categories,owner_id,created_at,last_activity_at').eq('id',id).single(),
   db.from('pipeline_stages').select('key,label,color,kind,position'),
   db.from('zarn_channel_members').select('user_id').eq('channel_id',channel.id),
@@ -19,8 +19,9 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
   db.from('lead_activities').select('id,kind,body,meta,author_id,created_at').eq('lead_id',id).order('created_at',{ascending:false}).limit(60),
   canSeeInvoices(me)?db.from('invoices').select('id,number,status,total,amount_paid,currency,due_date').eq('lead_id',id).order('created_at',{ascending:false}):Promise.resolve({data:null}),
   db.from('users').select('id,name,email'),
+  db.from('lead_files').select('id,name,size,type,uploaded_by,created_at').eq('lead_id',id).order('created_at',{ascending:false}),
  ]);
  if(!lead)notFound();
- const data:SpaceData={lead,channelId:channel.id,stages:(stages??[]).sort((a,b)=>(a.kind==='lost'?1:0)-(b.kind==='lost'?1:0)||a.position-b.position),team:(team??[]).map(t=>t.user_id),tasks:tasks??[],materials:materials??[],activities:activities??[],invoices:invoices.data,names:Object.fromEntries((staff??[]).map(u=>[u.id,u.name||u.email])),canManage:canManageTeams(me),canStudio:me.staffRole==='super_admin'||me.staffRole==='admin'||me.staffRole==='sales'};
+ const data:SpaceData={files:files??[],me:me.user_id,lead,channelId:channel.id,stages:(stages??[]).sort((a,b)=>(a.kind==='lost'?1:0)-(b.kind==='lost'?1:0)||a.position-b.position),team:(team??[]).map(t=>t.user_id),tasks:tasks??[],materials:materials??[],activities:activities??[],invoices:invoices.data,names:Object.fromEntries((staff??[]).map(u=>[u.id,u.name||u.email])),canManage:canManageTeams(me),canStudio:me.staffRole==='super_admin'||me.staffRole==='admin'||me.staffRole==='sales'};
  return <ClientSpace key={id} data={data}/>;
 }

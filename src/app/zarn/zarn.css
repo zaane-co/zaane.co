@@ -675,3 +675,4 @@ html:has(.zarn.is-light),body:has(.zarn.is-light),html:has(.zarn-auth.is-light),
 .zn-skel-head i{width:160px;height:26px}
 .zn-skel-row{display:flex;gap:12px;align-items:center}.zn-skel-row b{width:36px;height:36px;border-radius:10px;flex-shrink:0}
 .zn-skel-row span{flex:1;display:flex;flex-direction:column;gap:6px}.zn-skel-row span i:first-child{width:40%;height:12px}.zn-skel-row span i:last-child{width:75%;height:12px}
+.zn-files-sub{font-size:13px;font-weight:800;margin-top:6px}

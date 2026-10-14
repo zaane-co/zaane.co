@@ -565,3 +565,23 @@
 .za-skel-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.za-skel-row i{height:86px;border-radius:14px}
 .za-skel-card{display:flex;flex-direction:column;gap:10px}.za-skel-card i{height:52px}
 @media(max-width:860px){.za-skel-row{grid-template-columns:1fr 1fr}}
+/* Pipeline path (lead stage) */
+.za-path-row{display:flex;align-items:center;gap:10px}
+.za-path{flex:1;min-width:0;display:flex;list-style:none;margin:0;padding:0;overflow-x:auto;scrollbar-width:none}
+.za-path li{flex:1;min-width:120px}
+.za-path li+li{margin-left:-10px}
+.za-path-step{position:relative;width:100%;height:44px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 22px 0 26px;border:0;background:var(--a-panel-2);color:var(--a-muted);font-size:13px;font-weight:600;clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%,14px 50%);transition:background .15s,color .15s}
+.za-path li:first-child .za-path-step{clip-path:polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%);border-radius:12px 0 0 12px;padding-left:16px}
+.za-path li:last-child .za-path-step{clip-path:polygon(0 0,100% 0,100% 100%,0 100%,14px 50%);border-radius:0 12px 12px 0}
+.za-path-step:hover:not(:disabled):not(.is-on){background:var(--a-hover);color:var(--a-fg)}
+.za-path-step.is-past{background:var(--a-border);color:var(--a-fg)}
+.za-path-step.is-on{color:#fff}
+.za-path-dot{width:20px;height:20px;flex-shrink:0;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;background:var(--a-panel);color:var(--a-faint);border:1px solid var(--a-border)}
+.za-path-step.is-past .za-path-dot{background:#16a34a;border-color:#16a34a;color:#fff}
+.za-path-step.is-on .za-path-dot{background:#fff;border-color:#fff;color:#111}
+.za-path-label{white-space:nowrap}
+.za-path.is-lost .za-path-step{opacity:.55}
+.za-path-lost{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--a-border);background:var(--a-panel);color:var(--a-muted);font-size:13px;font-weight:600;white-space:nowrap}
+.za-path-lost:hover:not(:disabled){color:#fff;background:#52525b;border-color:#52525b}
+.za-path-lost.is-on{color:#fff}
+@media(max-width:860px){.za-path-row{flex-direction:column;align-items:stretch}.za-path li{min-width:110px}.za-path-lost{justify-content:center}}

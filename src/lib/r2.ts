@@ -1,8 +1,10 @@
 import 'server-only';
-import {S3Client,PutObjectCommand,GetObjectCommand,ListObjectsV2Command,DeleteObjectCommand,type _Object} from '@aws-sdk/client-s3';
+import {S3Client,PutObjectCommand,GetObjectCommand,HeadObjectCommand,ListObjectsV2Command,DeleteObjectCommand,type _Object} from '@aws-sdk/client-s3';
+import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
 // Cloudflare R2 holds every admin upload; files are served from R2_PUBLIC_URL.
 let client:S3Client|null=null;
-const s3=()=>client??=new S3Client({region:'auto',endpoint:process.env.R2_ENDPOINT,credentials:{accessKeyId:process.env.R2_ACCESS_KEY_ID!,secretAccessKey:process.env.R2_SECRET_ACCESS_KEY!}});
+// Checksums only when required: otherwise signed upload links carry a checksum of an empty body and R2 rejects real uploads.
+const s3=()=>client??=new S3Client({region:'auto',endpoint:process.env.R2_ENDPOINT,credentials:{accessKeyId:process.env.R2_ACCESS_KEY_ID!,secretAccessKey:process.env.R2_SECRET_ACCESS_KEY!},requestChecksumCalculation:'WHEN_REQUIRED',responseChecksumValidation:'WHEN_REQUIRED'});
 export const r2Configured=()=>!!(process.env.R2_ENDPOINT&&process.env.R2_ACCESS_KEY_ID&&process.env.R2_SECRET_ACCESS_KEY&&process.env.R2_BUCKET&&process.env.R2_PUBLIC_URL);
 export const publicUrl=(key:string)=>`${process.env.R2_PUBLIC_URL!.replace(/\/$/,'')}/${key}`;
 export const keyFromUrl=(url:string)=>{const base=process.env.R2_PUBLIC_URL!.replace(/\/$/,'')+'/';return url.startsWith(base)?decodeURIComponent(url.slice(base.length)):null;};
@@ -35,3 +37,7 @@ export async function getPrivate(key:string){
  const r=await s3().send(new GetObjectCommand({Bucket:process.env.R2_BUCKET,Key:key}));
  return {body:r.Body!.transformToWebStream(),type:r.ContentType??'application/octet-stream',size:r.ContentLength};
 }
+// Short-lived signed links so big files go browser <-> R2 directly (Vercel caps request bodies at 4.5 MB).
+export async function signPut(key:string,type:string){return getSignedUrl(s3(),new PutObjectCommand({Bucket:process.env.R2_BUCKET,Key:key,ContentType:type}),{expiresIn:600});}
+export async function signGet(key:string,filename:string){return getSignedUrl(s3(),new GetObjectCommand({Bucket:process.env.R2_BUCKET,Key:key,ResponseContentDisposition:`attachment; filename="${filename.replace(/["\\\r\n]/g,'')}"`}),{expiresIn:300});}
+export async function headPrivate(key:string){try{const r=await s3().send(new HeadObjectCommand({Bucket:process.env.R2_BUCKET,Key:key}));return {size:r.ContentLength??0,type:r.ContentType??''};}catch{return null;}}

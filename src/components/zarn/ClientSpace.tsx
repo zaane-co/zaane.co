@@ -6,11 +6,13 @@ import {money,ago,dueLabel,dueState,invoiceState,invoiceStateStyle,fmtDate,type 
 import {zarnApi} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {useShell} from './nav';
+import LeadFiles,{type LeadFile} from '@/components/files/LeadFiles';
 import ChannelView from './ChannelView';
 import {Avatar} from './format';
 
 type Lead={id:string;name:string;company:string;email:string;phone:string;website:string;service_interested:string;budget_range:string;message:string;project_description:string;status:string;deal_value:number|null;currency:string;categories:string[];owner_id:string|null;created_at:string;last_activity_at:string};
 export type SpaceData={
+ files:LeadFile[];me:string;
  lead:Lead;channelId:string;stages:{key:string;label:string;color:string;kind:string;position:number}[];team:string[];
  tasks:{id:string;title:string;due_at:string|null;done_at:string|null;assignee_id:string|null;created_at:string}[];
  materials:{id:string;title:string;note:string;link:string;file_key:string|null;file_name:string;received_at:string|null}[];
@@ -31,7 +33,7 @@ export default function ClientSpace({data}:{data:SpaceData}){
   try{await zarnApi('/api/zarn/clients',{lead_id:lead.id,...body});if(msg)setFlash(msg);start(()=>router.refresh());return true;}
   catch(e){setFlash(e instanceof Error?e.message:'Something went wrong.');return false;}
  }
- const tabs:[Tab,string,React.ReactNode,number?][]=[['chat','Chat',<MessageSquare key="c" size={15}/>,z.unread[data.channelId]?.unread],['overview','Overview',<LayoutGrid key="o" size={15}/>],['tasks','Tasks',<ListChecks key="t" size={15}/>,openTasks.length],['files','Files',<FileText key="f" size={15}/>,data.materials.length],['activity','Activity',<History key="a" size={15}/>]];
+ const tabs:[Tab,string,React.ReactNode,number?][]=[['chat','Chat',<MessageSquare key="c" size={15}/>,z.unread[data.channelId]?.unread],['overview','Overview',<LayoutGrid key="o" size={15}/>],['tasks','Tasks',<ListChecks key="t" size={15}/>,openTasks.length],['files','Files',<FileText key="f" size={15}/>,data.files.length],['activity','Activity',<History key="a" size={15}/>]];
  if(data.invoices)tabs.push(['invoices','Invoices',<Receipt key="i" size={15}/>,data.invoices.length]);
  const name=lead.company||lead.name;
  return <div className="zn-client">
@@ -151,11 +153,13 @@ function Tasks({data,onAct}:{data:SpaceData;onAct:(b:object,m?:string)=>Promise<
 function Files({data}:{data:SpaceData}){
  const got=data.materials.filter(m=>m.received_at).length;
  return <div className="zn-pane"><div className="zn-pane-inner">
+  <section className="zn-card"><div className="zn-card-head"><h3>Files</h3><small className="zn-muted">Shared with the team and staff</small></div>
+   <LeadFiles endpoint="/api/zarn/clients/files" leadId={data.lead.id} initial={data.files} names={data.names} me={data.me}/></section>
+  <h3 className="zn-files-sub">Materials checklist</h3>
   <p className="zn-note">Materials from the client: {got} of {data.materials.length} received.{data.canStudio?' Add or tick items off in the Studio admin (Leads → Materials).':''}</p>
   {data.materials.length?<ul className="zn-rows">{data.materials.map(m=><li key={m.id}><span className={`zn-tick${m.received_at?' is-on':''}`}>{m.received_at?<Check size={13}/>:null}</span><span><b>{m.title}</b>{m.note&&<small>{m.note}</small>}</span>
    {m.link&&<a href={m.link} target="_blank" rel="noopener noreferrer"><Link2 size={14}/>Link</a>}
    {m.file_key&&<a href={`/api/zarn/clients/file?id=${m.id}`}><FileText size={14}/>{m.file_name||'File'}</a>}</li>)}</ul>:<p className="zn-note">No materials tracked yet.</p>}
-  <p className="zn-note">Files shared in the Chat tab stay in this client’s private conversation.</p>
  </div></div>;
 }
 
