@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {emailBase} from '@/lib/site';
 import {sessionClient,serviceClient,configured} from '@/lib/supabase/server';
 export async function POST(request:Request){
  const origin=new URL(request.url).origin;
@@ -21,7 +22,7 @@ export async function POST(request:Request){
   if(!member?.role)return Response.json({ok:true});
   const {data:link,error}=await admin.auth.admin.generateLink({type:'recovery',email});
   if(error||!link.properties?.hashed_token)return Response.json({ok:true});
-  const url=`${origin}/admin/auth/callback?token_hash=${encodeURIComponent(link.properties.hashed_token)}&type=recovery&next=/admin/reset-password`;
+  const url=`${emailBase()}/admin/auth/callback?token_hash=${encodeURIComponent(link.properties.hashed_token)}&type=recovery&next=/admin/reset-password`;
   const sent=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.RESEND_FROM,to:[email],subject:'Reset your Zaane admin password',text:`Someone asked to reset the password for your Zaane admin account.\n\nSet a new password here (the link expires in 1 hour):\n${url}\n\nIf this wasn't you, you can ignore this email.`,html:`<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#111"><p style="font-size:20px;font-weight:600;margin:0 0 16px">Reset your password</p><p style="margin:0 0 24px;line-height:1.5">Someone asked to reset the password for your Zaane admin account. The link expires in 1 hour.</p><a href="${url}" style="display:inline-block;background:#f10c45;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600">Set a new password</a><p style="margin:24px 0 0;font-size:13px;color:#666;line-height:1.5">If this wasn't you, you can ignore this email.</p></div>`})}).catch(()=>null);
   if(!sent?.ok)return Response.json({error:'We could not send the email. Try again shortly.'},{status:502});
   return Response.json({ok:true});

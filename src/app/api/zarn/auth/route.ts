@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {emailBase} from '@/lib/site';
 import {z} from 'zod';
 import {sessionClient,serviceClient,configured} from '@/lib/supabase/server';
 // ZARN's own sign-in. Only active ZARN members get in; staff admin access is separate.
@@ -39,7 +40,7 @@ export async function POST(request:Request){
    if(!m||m.deactivated_at)return Response.json({ok:true});
    const {data:link}=await admin.auth.admin.generateLink({type:'recovery',email});
    if(!link?.properties?.hashed_token)return Response.json({ok:true});
-   const url=`${origin}/admin/auth/callback?token_hash=${encodeURIComponent(link.properties.hashed_token)}&type=recovery&next=/zarn/password`;
+   const url=`${emailBase()}/admin/auth/callback?token_hash=${encodeURIComponent(link.properties.hashed_token)}&type=recovery&next=/zarn/password`;
    const sent=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.RESEND_FROM,to:[email],subject:'Reset your ZARN password',text:`Set a new ZARN password here (expires in 1 hour):\n${url}\n\nIf this wasn't you, ignore this email.`,html:`<div style="font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#111"><p style="font-size:20px;font-weight:700;margin:0 0 16px">Reset your ZARN password</p><p style="margin:0 0 24px;line-height:1.5">The link expires in 1 hour.</p><a href="${url}" style="display:inline-block;background:#f10c45;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600">Set a new password</a><p style="margin:24px 0 0;font-size:13px;color:#666">If this wasn't you, ignore this email.</p></div>`})}).catch(()=>null);
    return sent?.ok?Response.json({ok:true}):fail('We couldn’t send the email. Try again shortly.',502);
   }

@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {emailBase} from '@/lib/site';
 import {staff,sessionClient} from '@/lib/supabase/server';
 import {allowed} from '@/lib/cms';
 import {settings} from '@/lib/content';
@@ -71,7 +72,7 @@ export async function POST(request:Request){
    if(!lead.email)return fail('This client has no email address. Add one on their lead page first.');
    const key=process.env.RESEND_API_KEY,inbox=process.env.CRM_FROM_EMAIL||process.env.LEAD_NOTIFICATION_EMAIL;
    if(!key||!inbox)return fail('Email isn’t configured. Set RESEND_API_KEY and LEAD_NOTIFICATION_EMAIL.',503);
-   const link=`${new URL(request.url).origin}/invoice/${inv.public_token}`;
+   const link=`${emailBase()}/invoice/${inv.public_token}`;
    const total=money(Number(inv.total)-Number(inv.amount_paid),inv.currency),from=(await settings()).invoice_from?.split('\n')[0]||'Zaane';
    const intro=b.message||`Hi ${lead.name.split(' ')[0]},\n\nPlease find invoice ${inv.number} for ${total}, due ${fmtDate(inv.due_date)}.`;
    const rows=(inv.items as {description:string;qty:number;unit_price:number}[]).map(i=>`<tr><td style="padding:8px 0;border-bottom:1px solid #eee">${esc(i.description)}</td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;white-space:nowrap">${i.qty} × ${esc(money(i.unit_price,inv.currency))}</td></tr>`).join('');

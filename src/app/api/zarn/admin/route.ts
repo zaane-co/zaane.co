@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {emailBase} from '@/lib/site';
 import {staff,serviceClient} from '@/lib/supabase/server';
 import {isAdmin} from '@/lib/cms';
 import {channelSlug} from '@/lib/zarn';
@@ -50,7 +51,7 @@ export async function POST(request:Request){
  const invite=async(email:string,first:string,type:'invite'|'magiclink')=>{
   const {data:link,error}=await db.auth.admin.generateLink({type,email,options:type==='invite'?{data:{name:first}}:undefined});
   if(error||!link.user||!link.properties?.hashed_token)return null;
-  const url=`${origin}/admin/auth/callback?token_hash=${encodeURIComponent(link.properties.hashed_token)}&type=${type}&next=/zarn/welcome`;
+  const url=`${emailBase()}/admin/auth/callback?token_hash=${encodeURIComponent(link.properties.hashed_token)}&type=${type}&next=/zarn/welcome`;
   const sent=await mail(email,me.email,'You’re invited to ZARN','Join the Zaane team on ZARN',[`Hi ${first.split(' ')[0]}, ${me.name||'the Zaane team'} invited you to ZARN, our team chat.`,'Set your password to get started. The link expires in 24 hours.'],'Accept invite',url);
   return {userId:link.user.id,sent};
  };
@@ -65,7 +66,7 @@ export async function POST(request:Request){
     const {error}=await db.from('zarn_members').insert({user_id:existing.id,email,display_name:b.name,title:b.title,invited_by:me.id,joined_at:new Date().toISOString(),...accessRow(b)});
     if(error)return fail('Could not add them.');
     await setChannels(existing.id,b.channels,b.account_type,false);
-    const sent=await mail(email,me.email,'You’ve been added to ZARN','You’re on ZARN',[`Hi ${b.name.split(' ')[0]}, ${me.name||'the Zaane team'} added you to ZARN, our team chat.`,'Sign in with the same email and password you already use for Zaane.'],'Open ZARN',`${origin}/zarn/login`);
+    const sent=await mail(email,me.email,'You’ve been added to ZARN','You’re on ZARN',[`Hi ${b.name.split(' ')[0]}, ${me.name||'the Zaane team'} added you to ZARN, our team chat.`,'Sign in with the same email and password you already use for Zaane.'],'Open ZARN',`${emailBase()}/zarn/login`);
     return Response.json({ok:true,existing:true,emailed:sent});
    }
    const r=await invite(email,b.name,'invite');if(!r)return fail('Could not create the invite.');
