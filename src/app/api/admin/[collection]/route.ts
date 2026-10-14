@@ -32,7 +32,7 @@ export async function POST(request:Request,{params}:{params:Promise<{collection:
   const {error}=await db.from(collection).delete().eq('id',body.id);
   if(error)return Response.json({error:'Could not delete this record.'},{status:400});
  }else{
-  if(spec.inbox&&!body.id)return Response.json({error:'Create staff accounts in Supabase Auth; submissions are collected by the public forms.'},{status:400});
+  if(spec.inbox&&!spec.creatable&&!body.id)return Response.json({error:'Create staff accounts in Supabase Auth; submissions are collected by the public forms.'},{status:400});
   const input=body.values;if(!input||typeof input!=='object')return Response.json({error:'Invalid fields'},{status:400});
   const values:Record<string,unknown>={};
   for(const f of spec.fields){
@@ -43,6 +43,7 @@ export async function POST(request:Request,{params}:{params:Promise<{collection:
    if(String(v).length>(f.type==='markdown'?100000:10000))return Response.json({error:`${f.label} is too long`},{status:400});
    if(f.options&&!f.options.includes(String(v)))return Response.json({error:`Invalid ${f.label}`},{status:400});
    if(f.taxonomy&&String(v).length>80)return Response.json({error:`${f.label} is too long`},{status:400});
+   if(f.key==='email'&&v&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v)))return Response.json({error:'Enter a valid email address.'},{status:400});
    if(f.key==='slug'&&!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(v)))return Response.json({error:'Use lowercase letters, numbers and hyphens in the slug.'},{status:400});
    if((f.type==='url'||f.type==='image')&&v&&!safeUrl(v))return Response.json({error:`Use a valid URL for ${f.label}`},{status:400});
    if(f.key.endsWith('_id')&&v&&!uuid.test(String(v)))return Response.json({error:`Select a valid ${f.label}`},{status:400});
@@ -60,6 +61,7 @@ export async function POST(request:Request,{params}:{params:Promise<{collection:
    values.published_at=old?.published_at||new Date().toISOString();
   }
   if(collection==='blog_posts'&&!body.id)values.author_id=user.id;
+  if(collection==='contact_submissions'&&!body.id)values.source='manual';
   // New project category names typed into a dropdown are added to the managed list.
   if(collection==='projects'&&user.role!=='editor'){const add=spec.fields.filter(f=>f.taxonomy&&values[f.key]).map(f=>({kind:f.key,name:String(values[f.key])}));if(add.length)await db.from('project_categories').upsert(add,{onConflict:'kind,name',ignoreDuplicates:true});}
   const result=body.id?await db.from(collection).update(values).eq('id',body.id).select('id'):await db.from(collection).insert(values).select('id');

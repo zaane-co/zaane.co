@@ -2,7 +2,7 @@
 import {useEffect,useState,useRef} from 'react';
 import {useRouter} from 'next/navigation';
 import Markdown from 'react-markdown';
-import {ChevronDown,Copy,Download,ExternalLink,ImagePlus,Pencil,Plus,Search,Star,X,Upload,Trash2} from 'lucide-react';
+import {ChevronDown,Copy,Download,ExternalLink,ImagePlus,Pencil,Plus,Search,Star,X,Upload,Trash2,UserPlus} from 'lucide-react';
 import MediaPicker from '@/components/admin/MediaPicker';
 import ProjectGallery from '@/components/admin/ProjectGallery';
 import {uploadImage} from '@/components/admin/blog/shared';
@@ -56,6 +56,12 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
  }
  async function upload(f:Field,file?:File){if(!file)return;setBusy(true);setMessage('Uploading…');try{const url=await uploadImage(file);setValues(v=>({...v,[f.key]:url}));setMessage('Image uploaded. Save the record to attach it.');}catch(e){setMessage(e instanceof Error?e.message:'Upload failed.');}finally{setBusy(false);}}
  function insert(before:string,after=''){const node=bodyRef.current;if(!node)return;const start=node.selectionStart,end=node.selectionEnd;const text=String(values.content||'');setValues(v=>({...v,content:text.slice(0,start)+before+text.slice(start,end)+after+text.slice(end)}));node.focus();}
+ // Contact messages that turn into real work become CRM leads.
+ async function convert(row:Row){
+  setWorking(String(row.id));setMessage('');
+  try{const r=await fetch('/api/admin/crm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'convert_contact',id:row.id})});const d=await r.json();if(!r.ok)throw new Error(d.error);router.push(`/admin/leads/${d.id}`);}
+  catch(e){setMessage(e instanceof Error?e.message:'Could not convert.');setWorking(null);}
+ }
  const shown=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
  const hasStatus=rows.some(r=>r.status)||spec.fields.some(f=>f.key==='status');
  const image=(r:Row)=>safeUrl(r.cover_image||r.image_url||r.photo_url);
@@ -65,7 +71,7 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
    <div className="za-search za-search-wide"><Search size={14}/><input placeholder="Search this page…" value={search} onChange={e=>setSearch(e.target.value)} aria-label="Search records"/></div>
    <div className="za-toolbar-actions">
     {['leads','contact_submissions','subscribers'].includes(collection)&&<a className="za-btn za-btn-ghost" href={`/api/admin/${collection}`}><Download size={15}/>Export CSV</a>}
-    {!spec.inbox&&<button className="za-btn za-btn-primary" onClick={()=>edit({})}><Plus size={15}/>New {spec.label.toLowerCase().replace(/s$/,'')}</button>}
+    {(!spec.inbox||spec.creatable)&&<button className="za-btn za-btn-primary" onClick={()=>edit({})}><Plus size={15}/>New {spec.noun??spec.label.toLowerCase().replace(/s$/,'')}</button>}
    </div>
   </div>
   {collection==='users'&&<p className="za-notice">Create or invite an account in Supabase Authentication, then assign its staff role here. Unassigned accounts have no admin access.</p>}
@@ -91,20 +97,21 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
      <td onClick={e=>e.stopPropagation()}><div className="za-row-actions">
       {hasFeatured&&role!=='editor'&&<button type="button" data-tip={row.featured?'Remove from homepage':'Feature on homepage'} aria-label="Toggle featured" disabled={working===row.id} className={row.featured?'is-featured':''} onClick={()=>quick(row,'save',{featured:!row.featured},row.featured?'Removed from featured.':'Featured on homepage.')}><Star size={14} fill={row.featured?'currentColor':'none'}/></button>}
       {publicHref(collection,row)&&<a href={publicHref(collection,row)} target="_blank" rel="noopener noreferrer" data-tip="View on site" aria-label="View on site"><ExternalLink size={14}/></a>}
+      {collection==='contact_submissions'&&<button type="button" data-tip="Convert to lead" aria-label="Convert to lead" disabled={working===row.id} onClick={()=>void convert(row)}><UserPlus size={14}/></button>}
       {spec.fields.length>0&&<button type="button" data-tip="Edit" aria-label="Edit" onClick={()=>edit(row)}><Pencil size={14}/></button>}
       {canDuplicate&&<button type="button" data-tip="Duplicate" aria-label="Duplicate" disabled={working==='new'} onClick={()=>void duplicate(row)}><Copy size={14}/></button>}
       {canDelete&&<button type="button" data-tip="Delete" aria-label="Delete" className="za-row-danger" onClick={()=>setConfirmDelete(row)}><Trash2 size={14}/></button>}
      </div></td>
     </tr>)}</tbody>
-   </table></div>:<div className="za-empty za-empty-lg"><h3>{search?'No matches':'Nothing here yet'}</h3><p>{search?'Try a different search.':spec.inbox?'New submissions will appear here.':'Create your first record when you’re ready.'}</p></div>}
+   </table></div>:<div className="za-empty za-empty-lg"><h3>{search?'No matches':'Nothing here yet'}</h3><p>{search?'Try a different search.':spec.creatable?'Form messages land here, or add a contact yourself.':spec.inbox?'New submissions will appear here.':'Create your first record when you’re ready.'}</p></div>}
   </section>
 
   {selected&&<>
    <button className="za-drawer-scrim" aria-label="Close editor" onClick={close}/>
    <aside className="za-drawer" role="dialog" aria-label={selected.id?'Edit record':'New record'}>
-    <div className="za-drawer-head"><div><p>{spec.label}</p><h2>{selected.id?primary(selected):'New record'}</h2></div><button className="za-icon-btn" onClick={close} aria-label="Close" data-tip="Close"><X size={18}/></button></div>
+    <div className="za-drawer-head"><div><p>{spec.label}</p><h2>{selected.id?primary(selected):`New ${spec.noun??'record'}`}</h2></div><button className="za-icon-btn" onClick={close} aria-label="Close" data-tip="Close"><X size={18}/></button></div>
     <form onSubmit={e=>{e.preventDefault();void save('save');}} className="za-drawer-body" data-lenis-prevent>
-     {spec.inbox&&<dl className="za-details">{Object.entries(selected).filter(([k])=>!['id','status','role'].includes(k)).map(([k,v])=><div key={k} className={k==='message'?'za-details-wide':''}><dt>{k.replaceAll('_',' ')}</dt><dd>{k==='created_at'?when(String(v)):String(v??'-')||'-'}</dd></div>)}</dl>}
+     {spec.inbox&&!!selected.id&&<dl className="za-details">{Object.entries(selected).filter(([k])=>!['id','status','role'].includes(k)&&!spec.fields.some(f=>f.key===k)).map(([k,v])=><div key={k} className={k==='message'?'za-details-wide':''}><dt>{k.replaceAll('_',' ')}</dt><dd>{k==='created_at'?when(String(v)):String(v??'-')||'-'}</dd></div>)}</dl>}
      {spec.fields.map(f=><div className="za-field" key={f.key}>
       <div className="za-field-label"><label htmlFor={`field-${f.key}`}>{f.label}{f.required?' *':''}</label>
        {f.type==='markdown'&&<div className="za-md-tools">{f.key==='content'&&<><button type="button" onClick={()=>insert('**','**')}>Bold</button><button type="button" onClick={()=>insert('## ')}>H2</button><button type="button" onClick={()=>insert('- ')}>List</button><button type="button" onClick={()=>insert('[','](https://)')}>Link</button></>}<button type="button" aria-pressed={preview} className={preview?'is-on':''} onClick={()=>setPreview(!preview)}>{preview?'Write':'Preview'}</button></div>}
@@ -121,6 +128,7 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
      {message&&<p role="status" className="za-flash">{message}</p>}
      <div className="za-drawer-foot">
       {!!selected.id&&role!=='editor'&&collection!=='users'&&(deleting?<div className="za-confirm"><span>Delete permanently?</span><button disabled={busy} type="button" className="za-btn za-btn-danger" onClick={()=>void save('delete')}>Yes, delete</button><button type="button" className="za-btn za-btn-ghost" onClick={()=>setDeleting(false)}>Cancel</button></div>:<button type="button" className="za-btn za-btn-ghost za-btn-danger-text" onClick={()=>setDeleting(true)}><Trash2 size={15}/>Delete</button>)}
+      {collection==='contact_submissions'&&!!selected.id&&!deleting&&<button type="button" className="za-btn za-btn-ghost" disabled={working===selected.id} onClick={()=>void convert(selected)}><UserPlus size={15}/>Convert to lead</button>}
       {!!spec.fields.length&&!deleting&&<button disabled={busy} className="za-btn za-btn-primary za-push">{busy?'Working…':'Save changes'}</button>}
      </div>
     </form>

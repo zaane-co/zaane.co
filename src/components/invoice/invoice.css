@@ -1,0 +1,33 @@
+/* Client-facing invoice: always light, A4-friendly, prints without the action bar. */
+.za-invoice-page{min-height:100dvh;background:#f3f3f5;color:#0a0a0d;padding:32px 16px 64px;font-family:var(--font-geist-sans),system-ui,sans-serif;font-size:14px;line-height:1.55}
+.inv-actions{max-width:820px;margin:0 auto 16px;display:flex;align-items:center;justify-content:flex-end;gap:16px}
+.inv-actions a{margin-right:auto;font-size:13px;font-weight:600;color:#52525b;text-decoration:none}.inv-actions a:hover{color:#0a0a0d}
+.inv-actions button{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 18px;border-radius:999px;background:#0a0a0d;color:#fff;font:inherit;font-weight:600;font-size:13px;border:0;cursor:pointer}
+.inv{position:relative;max-width:820px;margin:0 auto;background:#fff;border:1px solid #e5e5ea;border-radius:18px;padding:48px;overflow:hidden}
+.inv-head{display:flex;justify-content:space-between;gap:32px;flex-wrap:wrap;padding-bottom:32px;border-bottom:1px solid #e5e5ea}
+.inv-logo{height:30px;width:auto;margin-bottom:16px}
+.inv address{font-style:normal;display:flex;flex-direction:column;color:#52525b;white-space:pre-line}
+.inv-strong{color:#0a0a0d;font-weight:700}
+.inv-meta{text-align:right}
+.inv-meta h1{font-size:32px;font-weight:800;letter-spacing:-.03em;margin:0 0 12px}
+.inv-meta dl{display:grid;grid-template-columns:auto auto;gap:4px 18px;margin:0;justify-content:end}
+.inv-meta dt{color:#71717a}.inv-meta dd{margin:0;font-weight:600}
+.inv-to{padding:28px 0}
+.inv-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a1a1aa;margin:0 0 8px}
+.inv-table{width:100%;border-collapse:collapse}
+.inv-table th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#71717a;padding:10px 0;border-bottom:2px solid #0a0a0d}
+.inv-table td{padding:14px 0;border-bottom:1px solid #e5e5ea;vertical-align:top}
+.inv-table th:not(:first-child),.inv-table td:not(:first-child){text-align:right;padding-left:16px;white-space:nowrap}
+.inv-totals{display:flex;flex-direction:column;align-items:flex-end;gap:16px;padding:24px 0}
+.inv-totals dl{display:grid;grid-template-columns:auto auto;gap:6px 32px;margin:0;min-width:260px}
+.inv-totals dt{color:#71717a}.inv-totals dd{margin:0;text-align:right}
+.inv-due{display:flex;align-items:center;justify-content:space-between;gap:32px;min-width:300px;padding:16px 20px;border-radius:12px;background:#f10c45;color:#fff}
+.inv-due span{font-weight:600}.inv-due strong{font-size:22px;letter-spacing:-.02em}
+.inv-notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;padding:24px 0;border-top:1px solid #e5e5ea}
+.inv-notes p:last-child{margin:0;white-space:pre-line;color:#3f3f46}
+.inv-foot{padding-top:24px;border-top:1px solid #e5e5ea;color:#71717a;font-size:13px;text-align:center;white-space:pre-line}
+.inv-stamp{position:absolute;top:28px;right:-44px;transform:rotate(35deg);width:200px;text-align:center;padding:6px 0;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#fff;background:#16a34a}
+.inv-stamp.is-void{background:#52525b}
+.inv-stamp.is-draft{background:#f59e0b;color:#1a1200}
+@media(max-width:640px){.inv{padding:24px 18px;border-radius:14px}.inv-meta{text-align:left}.inv-meta dl{justify-content:start}.inv-table th:nth-child(3),.inv-table td:nth-child(3){display:none}.inv-due,.inv-totals dl{min-width:0;width:100%}}
+@media print{@page{margin:14mm}.za-invoice-page{background:#fff;padding:0}.inv-actions{display:none}.inv{border:0;border-radius:0;padding:0;max-width:none}.inv-due{-webkit-print-color-adjust:exact;print-color-adjust:exact}.inv-stamp{-webkit-print-color-adjust:exact;print-color-adjust:exact}}

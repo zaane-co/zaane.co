@@ -4,7 +4,7 @@ import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import TipLayer from '@/components/admin/TipLayer';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Images,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Search,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
+import {Hash,MessagesSquare,Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Images,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Receipt,Search,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
 
 type User={name:string;email:string;role:string};
 type Item={label:string;href:string;icon:LucideIcon;key?:string;children?:{label:string;href:string;key:string}[]};
@@ -13,13 +13,14 @@ const groups:{label:string;items:Item[]}[]=[
  {label:'Overview',items:[{label:'Dashboard',href:'/admin',icon:LayoutDashboard}]},
  {label:'Inbox',items:[
   {label:'Leads',href:'/admin/leads',key:'leads',icon:Inbox},
+  {label:'Invoices',href:'/admin/invoices',key:'invoices',icon:Receipt},
   {label:'Contacts',href:'/admin/contact_submissions',key:'contact_submissions',icon:Mail},
   {label:'Subscribers',href:'/admin/subscribers',key:'subscribers',icon:Users},
  ]},
  {label:'Content',items:[
   {label:'Projects',href:'/admin/projects',icon:Briefcase,children:[{label:'All projects',href:'/admin/projects',key:'projects'},{label:'Categories',href:'/admin/project-categories',key:'blog_categories'}]},
   {label:'Blog',href:'/admin/blog',icon:BookOpen,children:[{label:'All Posts',href:'/admin/blog',key:'blog_posts'},{label:'New Post',href:'/admin/blog/new',key:'blog_posts'},{label:'Categories',href:'/admin/blog/categories',key:'blog_categories'},{label:'Archives',href:'/admin/blog/archives',key:'blog_posts'},{label:'Post Metrics',href:'/admin/blog/metrics',key:'blog_posts'},{label:'Comments',href:'/admin/blog/comments',key:'blog_posts'},{label:'Curated',href:'/admin/blog/curated',key:'blog_categories'},{label:'Editors',href:'/admin/editors',key:'users'}]},
-  {label:'Media',href:'/admin/media',icon:Images},
+  {label:'Media',href:'/admin/media',key:'media',icon:Images},
   {label:'Testimonials',href:'/admin/testimonials',key:'testimonials',icon:Quote},
   {label:'Team',href:'/admin/team_members',key:'team_members',icon:UserRound},
   {label:'Resources',href:'/admin/resources',key:'resources',icon:FolderDown},
@@ -32,6 +33,10 @@ const groups:{label:string;items:Item[]}[]=[
  ]},
 ];
 
+// ZARN admin (behind the Studio/ZARN switcher).
+const zarnGroups:{label:string;items:Item[]}[]=[
+ {label:'Overview',items:[{label:'Members',href:'/admin/zarn',icon:Users},{label:'Channels',href:'/admin/zarn/channels',icon:Hash}]},
+];
 
 async function signOut(){try{await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});}finally{window.location.assign('/admin/login');}}
 
@@ -57,8 +62,9 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
  const toggleTheme=()=>writeTheme(!light);
 
  const can=(key?:string)=>!key||allowedKeys.includes(key);
- const visible=groups.map(g=>({...g,items:g.items.map(i=>({...i,children:i.children?.filter(c=>can(c.key))})).filter(i=>i.children?i.children.length>0:can(i.key))})).filter(g=>g.items.length);
- const isActive=(href:string)=>href==='/admin'?pathname==='/admin':pathname===href||pathname.startsWith(href+'/');
+ const admin=user.role==='super_admin'||user.role==='admin',zarnMode=admin&&pathname.startsWith('/admin/zarn');
+ const visible=(zarnMode?zarnGroups:groups).map(g=>({...g,items:g.items.map(i=>({...i,children:i.children?.filter(c=>can(c.key))})).filter(i=>i.children?i.children.length>0:can(i.key))})).filter(g=>g.items.length);
+ const isActive=(href:string)=>href==='/admin'||href==='/admin/zarn'?pathname===href:pathname===href||pathname.startsWith(href+'/');
  const subActive=(href:string)=>pathname===href||(href==='/admin/blog'&&/^\/admin\/blog\/[0-9a-f-]{36}$/.test(pathname));
  const groupActive=(i:Item)=>i.children?i.children.some(c=>isActive(c.href)):isActive(i.href);
  const [expanded,setExpanded]=useState<string|null>(()=>visible.flatMap(g=>g.items).find(i=>i.children&&groupActive(i))?.label??null);
@@ -82,6 +88,7 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
     <button className="za-icon-btn za-mobile-close" onClick={()=>setMobileOpen(false)} aria-label="Close menu"><X size={16}/></button>
    </div>
    <nav className="za-nav" aria-label="Admin navigation" data-lenis-prevent>
+    {admin&&<div className="za-switch" role="tablist" aria-label="Switch admin"><Link href="/admin" role="tab" aria-selected={!zarnMode} className={zarnMode?'':'is-on'}>Studio</Link><Link href="/admin/zarn" role="tab" aria-selected={zarnMode} className={zarnMode?'is-on':''}><MessagesSquare size={13}/>ZARN</Link></div>}
     <div className="za-search">
      <Search size={14}/>
      <input ref={searchRef} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search menu…" aria-label="Search menu"/>
@@ -101,6 +108,7 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
     </div>)}
    </nav>
    <div className="za-sidebar-foot" ref={userRef}>
+    <Link href="/zarn" target="_blank" className="za-nav-item za-nav-muted" title="Open ZARN"><MessagesSquare size={16} strokeWidth={1.8}/><span className="za-nav-text">Open ZARN</span></Link>
     <Link href="/" target="_blank" className="za-nav-item za-nav-muted" title="View website"><ExternalLink size={16} strokeWidth={1.8}/><span className="za-nav-text">View website</span></Link>
     <button className="za-user" onClick={()=>setUserOpen(v=>!v)}>
      <span className="za-avatar">{initial}</span>

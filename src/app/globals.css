@@ -2808,4 +2808,4 @@ select {
 .admin-login-sent{padding:16px 18px;border-radius:10px;background:var(--lp-input);border:1px solid var(--lp-border);font-size:14px;line-height:1.6}
 
 /* No bottom edge blur on admin screens */
-body:has(.za-admin,.admin-login) [data-edge-blur]{display:none}
+body:has(.za-admin,.admin-login,.za-invoice-page,.zarn,.zarn-auth) [data-edge-blur]{display:none}

@@ -1,5 +1,5 @@
 import 'server-only';
-import {S3Client,PutObjectCommand,ListObjectsV2Command,DeleteObjectCommand,type _Object} from '@aws-sdk/client-s3';
+import {S3Client,PutObjectCommand,GetObjectCommand,ListObjectsV2Command,DeleteObjectCommand,type _Object} from '@aws-sdk/client-s3';
 // Cloudflare R2 holds every admin upload; files are served from R2_PUBLIC_URL.
 let client:S3Client|null=null;
 const s3=()=>client??=new S3Client({region:'auto',endpoint:process.env.R2_ENDPOINT,credentials:{accessKeyId:process.env.R2_ACCESS_KEY_ID!,secretAccessKey:process.env.R2_SECRET_ACCESS_KEY!}});
@@ -24,3 +24,14 @@ export async function listFiles(){
  return out.filter(o=>o.Key&&!o.Key.endsWith('/')).map(o=>({key:o.Key!,url:publicUrl(o.Key!),size:o.Size??0,modified:o.LastModified?.toISOString()??''}));
 }
 export async function deleteFile(key:string){await s3().send(new DeleteObjectCommand({Bucket:process.env.R2_BUCKET,Key:key}));}
+// Client files (CRM materials) live under private/ and are only ever served through an admin route, never linked publicly.
+export const PRIVATE_PREFIX='private/';
+export async function putPrivate(key:string,body:Uint8Array,contentType:string,filename:string){
+ await s3().send(new PutObjectCommand({Bucket:process.env.R2_BUCKET,Key:PRIVATE_PREFIX+key,Body:body,ContentType:contentType,ContentDisposition:`attachment; filename="${filename.replace(/["\\\r\n]/g,'')}"`}));
+ return PRIVATE_PREFIX+key;
+}
+export async function getPrivate(key:string){
+ if(!key.startsWith(PRIVATE_PREFIX))throw new Error('Not a private file');
+ const r=await s3().send(new GetObjectCommand({Bucket:process.env.R2_BUCKET,Key:key}));
+ return {body:r.Body!.transformToWebStream(),type:r.ContentType??'application/octet-stream',size:r.ContentLength};
+}

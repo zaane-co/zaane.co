@@ -11,7 +11,7 @@ export default function Callback(){
   if(!url||!key)return fail();
   const db=createBrowserClient(url,key,{auth:{detectSessionInUrl:false}});
   const q=new URLSearchParams(window.location.search),h=new URLSearchParams(window.location.hash.slice(1));
-  const next=q.get('next')?.startsWith('/admin')?q.get('next')!:'/admin/reset-password';
+  const want=q.get('next')??'',next=/^\/(admin|zarn)(\/|$)/.test(want)?want:'/admin/reset-password';
   const code=q.get('code'),tokenHash=q.get('token_hash'),type=q.get('type') as EmailOtpType|null;
   const access=h.get('access_token'),refresh=h.get('refresh_token');
   const {error}=code?await db.auth.exchangeCodeForSession(code)

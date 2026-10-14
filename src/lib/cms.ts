@@ -1,7 +1,8 @@
 export type Field = {key:string;label:string;type?:'text'|'textarea'|'markdown'|'select'|'number'|'image'|'array'|'boolean'|'url';options?:string[];required?:boolean;taxonomy?:boolean};
 // Project dropdowns whose options live in project_categories (managed under Projects > Categories).
 export const projectTaxonomy=['category','sub_category','work_category'] as const;
-export type Collection = {label:string;fields:Field[];management?:boolean;superOnly?:boolean;inbox?:boolean};
+// creatable: an inbox collection staff can also add to by hand. noun: singular name for buttons.
+export type Collection = {label:string;fields:Field[];management?:boolean;superOnly?:boolean;inbox?:boolean;creatable?:boolean;noun?:string};
 const title:Field={key:'title',label:'Title',required:true};
 const slug:Field={key:'slug',label:'URL slug',required:true};
 const status:Field={key:'status',label:'Publishing status',type:'select',options:['draft','review','published']};
@@ -16,11 +17,34 @@ export const collections:Record<string,Collection>={
  pages_content:{label:'Page content',management:true,fields:[{key:'page_key',label:'Page',type:'select',options:['home','about','services','pricing','brand-partnerships','careers','resources','contact','privacy-policy','terms-of-service'],required:true},{key:'section_key',label:'Section key (intro, story, mission, vision, purpose or body)',required:true},{key:'content',label:'Content',type:'markdown',required:true}]},
  resources:{label:'Resources',fields:[title,{key:'description',label:'Description',type:'textarea'},{key:'category',label:'Topic',required:true},{key:'download_url',label:'Download URL',type:'url',required:true},status]},
  jobs:{label:'Careers',fields:[title,{key:'location',label:'Location',required:true},{key:'employment_type',label:'Employment type',type:'select',options:['Full-time','Part-time','Contract','Internship']},{key:'description',label:'Role description',type:'markdown',required:true},status]},
- leads:{label:'Leads',management:true,inbox:true,fields:[{key:'status',label:'Status',type:'select',options:['new','contacted','qualified','won','lost']}]},
- contact_submissions:{label:'Contacts & applications',management:true,inbox:true,fields:[{key:'status',label:'Status',type:'select',options:['new','in_progress','resolved']}]},
+ leads:{label:'Leads',management:true,inbox:true,fields:[{key:'status',label:'Status',type:'select',options:['new','contacted','qualified','proposal','won','lost']}]},
+ contact_submissions:{label:'Contacts & applications',management:true,inbox:true,creatable:true,noun:'contact',fields:[{key:'name',label:'Name',required:true},{key:'email',label:'Email',required:true},{key:'phone',label:'Phone'},{key:'company',label:'Company'},{key:'subject',label:'Subject',required:true},{key:'message',label:'Message / notes',type:'textarea',required:true},{key:'status',label:'Status',type:'select',options:['new','in_progress','resolved']}]},
  subscribers:{label:'Subscribers',management:true,inbox:true,fields:[]},
- users:{label:'Users & roles',superOnly:true,inbox:true,fields:[{key:'name',label:'Name'},{key:'role',label:'Role',type:'select',options:['','editor','admin','super_admin']}]},
- settings:{label:'Settings',superOnly:true,fields:[{key:'key',label:'Setting',type:'select',required:true,options:['site_title','site_description','contact_email','phone','whatsapp_url','instagram_url','linkedin_url','calendly_url']},{key:'value',label:'Value',required:true}]},
+ users:{label:'Users & roles',superOnly:true,inbox:true,fields:[{key:'name',label:'Name'},{key:'role',label:'Role',type:'select',options:['','editor','sales','finance','admin','super_admin']}]},
+ settings:{label:'Settings',superOnly:true,fields:[{key:'key',label:'Setting',type:'select',required:true,options:['site_title','site_description','contact_email','phone','whatsapp_url','instagram_url','linkedin_url','calendly_url','invoice_from','invoice_bank_details','invoice_footer']},{key:'value',label:'Value',type:'textarea',required:true}]},
 };
-export function allowed(key:string,role:string){ const c=collections[key]; return !!c && (!c.superOnly || role==='super_admin') && (!c.management || role!=='editor'); }
+// Staff roles. super_admin/admin see everything (admin minus users + settings); the others are scoped to one area.
+export const roles=['super_admin','admin','editor','sales','finance'] as const;
+export type Role=typeof roles[number];
+export const roleInfo:Record<Role,{label:string;summary:string}>={
+ super_admin:{label:'Super admin',summary:'Everything, including staff accounts and site settings.'},
+ admin:{label:'Admin',summary:'Everything except staff accounts and site settings.'},
+ editor:{label:'Editor',summary:'Blog and site content. Drafts need an admin to publish.'},
+ sales:{label:'Sales & marketing',summary:'Leads CRM, contacts and subscribers. Can view a client’s invoices.'},
+ finance:{label:'Finance',summary:'Invoices and payments, and adding clients to bill.'},
+};
+export const isAdmin=(role?:string|null)=>role==='super_admin'||role==='admin';
+// Non-content areas; everything else in collections is site content.
+const area:Record<string,'crm'|'finance'|'content'>={leads:'crm',contact_submissions:'crm',subscribers:'crm',invoices:'finance',media:'content'};
+export function allowed(key:string,role:string){
+ const c=collections[key];if(!c&&!(key in area))return false;
+ if(role==='super_admin')return true;
+ if(c?.superOnly)return false;
+ if(role==='admin')return true;
+ const a=area[key]??'content';
+ if(role==='editor')return a==='content'&&!c?.management;
+ if(role==='sales')return a==='crm';
+ if(role==='finance')return a==='finance';
+ return false;
+}
 export function safeUrl(value:unknown){if(typeof value!=='string')return '';try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return value.startsWith('/')&&!value.startsWith('//')?value:'';}}

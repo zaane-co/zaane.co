@@ -24,5 +24,5 @@ export async function staff() {
   const {data:{user}} = await db.auth.getUser();
   if (!user) return null;
   const {data} = await db.from('users').select('id,name,email,role').eq('id',user.id).single();
-  return data?.role ? data as {id:string;name:string;email:string;role:'super_admin'|'admin'|'editor'} : null;
+  return data?.role ? data as {id:string;name:string;email:string;role:'super_admin'|'admin'|'editor'|'sales'|'finance'} : null;
 }

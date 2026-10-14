@@ -1,11 +1,12 @@
 import {staff,sessionClient} from '@/lib/supabase/server';
+import {allowed} from '@/lib/cms';
 import {safeUrl} from '@/lib/cms';
 import {revalidatePath} from 'next/cache';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Gallery images edited inside the project drawer: add several, reorder by drag, remove. RLS limits editors to draft/review projects.
 export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
- if(!await staff())return Response.json({error:'Access denied'},{status:403});
+ {const u=await staff();if(!u||!allowed('projects',u.role))return Response.json({error:'Access denied'},{status:403});}
  const body=await request.json().catch(()=>null);
  if(!body||!uuid.test(String(body.project_id)))return Response.json({error:'Invalid request'},{status:400});
  const db=await sessionClient(),project_id=body.project_id as string;

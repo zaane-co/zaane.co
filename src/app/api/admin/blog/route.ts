@@ -1,5 +1,5 @@
 import {staff,sessionClient} from '@/lib/supabase/server';
-import {safeUrl} from '@/lib/cms';
+import {safeUrl,allowed,isAdmin} from '@/lib/cms';
 import {cleanHtml} from '@/lib/blog-html';
 import {revalidatePath} from 'next/cache';
 import {fetchMeta} from '@/lib/link-meta';
@@ -17,10 +17,10 @@ async function publishing(db:Awaited<ReturnType<typeof sessionClient>>,id:string
 }
 export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
- const user=await staff();if(!user)return Response.json({error:'Access denied'},{status:403});
+ const user=await staff();if(!user||!allowed('blog_posts',user.role))return Response.json({error:'Access denied'},{status:403});
  const body=await request.json().catch(()=>null);if(!body||typeof body.action!=='string')return Response.json({error:'Invalid request'},{status:400});
  if(body.id!=null&&!uuid.test(String(body.id)))return Response.json({error:'Invalid request'},{status:400});
- const db=await sessionClient(),admin=user.role!=='editor',done=(data:object={ok:true})=>{revalidatePath('/','layout');return Response.json(data);};
+ const db=await sessionClient(),admin=isAdmin(user.role),done=(data:object={ok:true})=>{revalidatePath('/','layout');return Response.json(data);};
  try{
   switch(body.action){
    case 'save':{
