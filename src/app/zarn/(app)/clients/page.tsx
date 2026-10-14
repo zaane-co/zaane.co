@@ -1,3 +1,3 @@
-import {redirect} from 'next/navigation';
-// /zarn/clients on its own shows the full client list.
-export default function Page(){redirect('/zarn/business/clients');}
+import {ClientsTab} from '@/components/zarn/Tabs';
+// Phone Clients tab (also a plain list on a computer).
+export default function Page(){return <ClientsTab/>;}

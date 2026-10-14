@@ -3,7 +3,7 @@
   "short_name": "ZARN",
   "description": "Zaane team chat, clients and business",
   "id": "/zarn",
-  "start_url": "/zarn",
+  "start_url": "/zarn/home",
   "scope": "/zarn",
   "display": "standalone",
   "orientation": "portrait",
