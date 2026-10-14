@@ -39,11 +39,11 @@ export async function POST(request:Request){
  const setChannels=async(userId:string,picked:string[]|undefined,type:'member'|'guest',replace:boolean)=>{
   let want=picked;
   if(!want){if(type==='guest')want=[];else{const {data:ch}=await db.from('zarn_channels').select('id').eq('is_default',true).is('archived_at',null);want=(ch??[]).map(c=>c.id);}}
-  const {data:valid}=want.length?await db.from('zarn_channels').select('id').in('id',want).neq('kind','dm'):{data:[]};
+  const {data:valid}=want.length?await db.from('zarn_channels').select('id').in('id',want).in('kind',['public','private']):{data:[]};
   const ids=(valid??[]).map(c=>c.id);
   if(ids.length)await db.from('zarn_channel_members').upsert(ids.map(channel_id=>({channel_id,user_id:userId})),{onConflict:'channel_id,user_id',ignoreDuplicates:true});
   if(replace){const {data:cur}=await db.from('zarn_channel_members').select('channel_id,zarn_channels!inner(kind)').eq('user_id',userId);
-   const drop=((cur??[]) as unknown as {channel_id:string;zarn_channels:{kind:string}}[]).filter(r=>r.zarn_channels.kind!=='dm'&&!ids.includes(r.channel_id)).map(r=>r.channel_id);
+   const drop=((cur??[]) as unknown as {channel_id:string;zarn_channels:{kind:string}}[]).filter(r=>(r.zarn_channels.kind==='public'||r.zarn_channels.kind==='private')&&!ids.includes(r.channel_id)).map(r=>r.channel_id);
    if(drop.length)await db.from('zarn_channel_members').delete().eq('user_id',userId).in('channel_id',drop);}
  };
  const accessRow=(a:z.infer<typeof access>)=>({account_type:a.account_type,can_view_crm:a.can_view_crm,can_create_channels:a.account_type==='guest'?false:a.can_create_channels,expires_at:a.expires_at});
@@ -112,15 +112,15 @@ export async function POST(request:Request){
    const patch:Record<string,unknown>={};
    if(b.name!==undefined){const n=channelSlug(b.name);if(!n)return fail('Use letters or numbers in the channel name.');patch.name=n;}
    if(b.topic!==undefined)patch.topic=b.topic;if(b.is_default!==undefined)patch.is_default=b.is_default;if(b.crm_feed!==undefined)patch.crm_feed=b.crm_feed;
-   const {error}=await db.from('zarn_channels').update(patch).eq('id',b.id).neq('kind','dm');
+   const {error}=await db.from('zarn_channels').update(patch).eq('id',b.id).in('kind',['public','private']);
    return error?fail(error.code==='23505'?'A channel with that name already exists.':'Could not update the channel.'):Response.json({ok:true});
   }
   case 'channel_archive':{
-   const {error}=await db.from('zarn_channels').update({archived_at:b.archived?new Date().toISOString():null}).eq('id',b.id).neq('kind','dm');
+   const {error}=await db.from('zarn_channels').update({archived_at:b.archived?new Date().toISOString():null}).eq('id',b.id).in('kind',['public','private']);
    return error?fail('Could not update the channel.'):Response.json({ok:true});
   }
   case 'channel_delete':{
-   const {error}=await db.from('zarn_channels').delete().eq('id',b.id).neq('kind','dm');
+   const {error}=await db.from('zarn_channels').delete().eq('id',b.id).in('kind',['public','private']);
    return error?fail('Could not delete the channel.'):Response.json({ok:true});
   }
   case 'channel_members':{

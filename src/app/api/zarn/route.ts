@@ -33,7 +33,8 @@ export async function POST(request:Request){
   case 'channel_add':{
    if(!await inChannel(b.id))return fail('Join the channel first.',403);
    const {data:ch}=await admin.from('zarn_channels').select('kind,archived_at').eq('id',b.id).single();
-   if(!ch||ch.kind==='dm'||ch.archived_at)return fail('You can’t add people here.');
+   // Client teams are managed from the client space (admins and sales only), DMs are fixed.
+   if(!ch||(ch.kind!=='public'&&ch.kind!=='private')||ch.archived_at)return fail('You can’t add people here.');
    const {data:active}=await admin.from('zarn_members').select('user_id').in('user_id',b.members).is('deactivated_at',null);
    if(active?.length){
     await admin.from('zarn_channel_members').upsert(active.map(m=>({channel_id:b.id,user_id:m.user_id})),{onConflict:'channel_id,user_id',ignoreDuplicates:true});

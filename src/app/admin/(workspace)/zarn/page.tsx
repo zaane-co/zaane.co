@@ -6,7 +6,7 @@ export default async function Page(){
   db.from('zarn_members').select('*').order('created_at'),
   db.auth.admin.listUsers({perPage:1000}),
   db.from('users').select('id,role'),
-  db.from('zarn_channels').select('id,name,kind,is_default,crm_feed').neq('kind','dm').is('archived_at',null).order('name'),
+  db.from('zarn_channels').select('id,name,kind,is_default,crm_feed').in('kind',['public','private']).is('archived_at',null).order('name'),
   db.from('zarn_channel_members').select('channel_id,user_id'),
  ]);
  if(error)return <div className="za-page"><div className="za-notice">ZARN isn’t set up yet. Apply the ZARN migrations.</div></div>;

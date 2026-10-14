@@ -87,7 +87,8 @@ function AccessForm({mode,row,channels,isMe,onClose,onDone}:{mode:'invite'|'edit
   :{account_type:'member',can_view_crm:true,can_create_channels:true,channels:defaults,expiry:'never',custom:''});
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const guest=a.account_type==='guest';
- const setType=(t:'member'|'guest')=>setA(x=>({...x,account_type:t,can_create_channels:t==='guest'?false:x.can_create_channels,can_view_crm:t==='guest'?false:x.can_view_crm,channels:mode==='invite'?(t==='guest'?[]:defaults):x.channels}));
+ // Guests start with nothing; switching back to Member restores the member defaults.
+ const setType=(t:'member'|'guest')=>setA(x=>x.account_type===t?x:({...x,account_type:t,can_create_channels:t==='member',can_view_crm:t==='member',channels:mode==='invite'?(t==='guest'?[]:defaults):x.channels}));
  async function submit(e:React.FormEvent){
   e.preventDefault();setError('');
   if(guest&&!a.channels.length)return setError('Pick at least one channel for a guest.');
