@@ -19,7 +19,8 @@ const lead=z.object({
 });
 const due=z.iso.datetime({offset:true}).nullable();
 const actions=z.discriminatedUnion('action',[
- z.object({action:z.literal('create_lead'),values:lead.partial({status:true,source:true,currency:true,tags:true,deal_value:true,owner_id:true,lost_reason:true,company:true,phone:true,website:true,service_interested:true,budget_range:true,message:true})}),
+ // Only name and email are required to create a lead; every other field is optional (including ones added later).
+ z.object({action:z.literal('create_lead'),values:lead.partial().required({name:true,email:true})}),
  z.object({action:z.literal('update_lead'),id,values:lead.partial()}),
  z.object({action:z.literal('move'),id,status:stage,position:z.number().finite()}),
  z.object({action:z.literal('delete_lead'),id}),
