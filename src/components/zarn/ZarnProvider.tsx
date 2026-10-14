@@ -6,6 +6,7 @@ import type {RealtimePostgresChangesPayload} from '@supabase/supabase-js';
 type Change=RealtimePostgresChangesPayload<Record<string,unknown>>;
 import {channelHref,channelTitle,type ZChannel,type ZLead,type ZMember,type ZMembership,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {plain} from './format';
+import {playChime} from '@/lib/zarn-sound';
 
 export type ZEvent={table:'zarn_messages';type:'INSERT'|'UPDATE'|'DELETE';row:ZMessage}|{table:'zarn_reactions';type:'INSERT'|'DELETE';row:ZReaction};
 type Unread=Record<string,{unread:number;mentions:number}>;
@@ -30,8 +31,8 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  const activeRef=useRef(active);useEffect(()=>{activeRef.current=active;},[active]);
  const people=useMemo(()=>Object.fromEntries(members.map(m=>[m.user_id,m])),[members]);
  const membership=useMemo(()=>Object.fromEntries(membershipRows.map(m=>[m.channel_id,m])),[membershipRows]);
- const peopleRef=useRef(people),channelsRef=useRef(channels);
- useEffect(()=>{peopleRef.current=people;channelsRef.current=channels;},[people,channels]);
+ const peopleRef=useRef(people),channelsRef=useRef(channels),membershipRef=useRef(membership);
+ useEffect(()=>{peopleRef.current=people;channelsRef.current=channels;membershipRef.current=membership;},[people,channels,membership]);
 
  const loadUnread=useCallback(async()=>{const {data}=await db.rpc('zarn_unread');setUnread(Object.fromEntries(((data??[]) as {channel_id:string;unread:number;mentions:number}[]).map(r=>[r.channel_id,{unread:r.unread,mentions:r.mentions}])));},[db]);
  const reload=useCallback(async()=>{
@@ -44,12 +45,11 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
   await loadUnread();
  },[db,me.user_id,loadUnread]);
 
+ // Marks a conversation read on the server clock; this is also what other people see as "Seen".
  const markRead=useCallback((channelId:string)=>{
-  const now=new Date().toISOString();
   setUnread(u=>u[channelId]?.unread||u[channelId]?.mentions?{...u,[channelId]:{unread:0,mentions:0}}:u);
-  void db.from('zarn_channel_members').update({last_read_at:now}).eq('channel_id',channelId).eq('user_id',me.user_id).then(()=>{});
-  void db.from('zarn_mentions').update({read_at:now}).eq('channel_id',channelId).eq('user_id',me.user_id).is('read_at',null).then(()=>{});
- },[db,me.user_id]);
+  void db.rpc('zarn_mark_read',{c:channelId}).then(()=>{});
+ },[db]);
 
  // Lead summaries are fetched once per id (force=true refetches, e.g. after a stage change).
  const requested=useRef(new Set<string>((initial.leads??[]).map(l=>l.id)));
@@ -78,6 +78,8 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
     if(p.eventType!=='INSERT'||row.parent_id||row.user_id===me.user_id)return;
     const mention=row.body.includes(`<@${me.user_id}>`)||row.body.includes('<!channel>');
     if(row.channel_id===activeRef.current&&document.visibilityState==='visible')return;
+    // Sound for DMs, client spaces and @mentions (not every channel message), unless the conversation is muted.
+    {const ch=channelsRef.current.find(x=>x.id===row.channel_id);if((mention||ch?.kind==='dm'||ch?.kind==='client')&&!membershipRef.current[row.channel_id]?.muted)playChime();}
     setUnread(u=>({...u,[row.channel_id]:{unread:(u[row.channel_id]?.unread??0)+1,mentions:(u[row.channel_id]?.mentions??0)+(mention?1:0)}}));
     const c=channelsRef.current.find(x=>x.id===row.channel_id);
     if((mention||c?.kind==='dm')&&document.visibilityState!=='visible'&&'Notification' in window&&Notification.permission==='granted'){

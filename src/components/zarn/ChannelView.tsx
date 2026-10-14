@@ -25,6 +25,8 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  const canPost=joined||(channel?.kind==='client'&&(me.staffRole==='super_admin'||me.staffRole==='admin'));
  useEffect(()=>{if(channel?.kind==='client'&&!embedded&&channel.lead_id)router.replace(`/zarn/clients/${channel.lead_id}`);},[channel,embedded,router]);
  const counted=useRef(new Set<string>());
+ // Read receipts: each member's last_read_at in this channel, kept live.
+ const [reads,setReads]=useState<Record<string,string>>({});
 
  const load=useCallback(async(before?:string)=>{
   let q=db.from('zarn_messages').select('*').eq('channel_id',id).is('parent_id',null).order('created_at',{ascending:false}).limit(PAGE);
@@ -55,6 +57,16 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
    else setReactions(x=>x.filter(y=>!(y.message_id===r.message_id&&y.user_id===r.user_id&&y.emoji===r.emoji)));
   }
  }),[subscribe,id,joined,markRead]);
+ useEffect(()=>{
+  void db.from('zarn_channel_members').select('user_id,last_read_at').eq('channel_id',id).then(({data}:{data:{user_id:string;last_read_at:string}[]|null})=>setReads(Object.fromEntries((data??[]).map(r=>[r.user_id,r.last_read_at]))));
+  const ch=db.channel(`zarn-reads-${id}`).on('postgres_changes',{event:'*',schema:'public',table:'zarn_channel_members',filter:`channel_id=eq.${id}`},(p:{eventType:string;new:Record<string,string>;old:Record<string,string>})=>{
+   if(p.eventType==='DELETE')setReads(r=>{const n={...r};delete n[p.old.user_id!];return n;});
+   else setReads(r=>({...r,[p.new.user_id!]:p.new.last_read_at!}));
+  }).subscribe();
+  return()=>{void db.removeChannel(ch);};
+ },[db,id]);
+ const others=Object.keys(reads).filter(u=>u!==me.user_id);
+ const receipt=(m:ZMessage)=>m.user_id!==me.user_id||m.kind!=='user'||m.deleted_at?undefined:{pending:!!m.pending,seen:others.filter(u=>reads[u]!>=m.created_at).map(u=>({id:u,at:reads[u]!})),unseen:others.filter(u=>!(reads[u]!>=m.created_at))};
  // Typing indicator over a broadcast channel (no database writes).
  useEffect(()=>{
   const ch=db.channel(`zarn-typing-${id}`).on('broadcast',{event:'typing'},({payload}:{payload:{user:string}})=>{if(payload.user!==me.user_id)setTyping(t=>({...t,[payload.user]:Date.now()}));}).subscribe();
@@ -82,7 +94,12 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
   <div className="zn-chan-main">
    {!embedded&&<header className="zn-chan-head">
     <button type="button" className="zn-chan-title" onClick={()=>setDetails(true)}>{channel.kind==='dm'?null:channel.kind==='private'?<Lock size={16}/>:<Hash size={17}/>}<h1>{title(channel)}</h1></button>
-    {channel.topic&&<p className="zn-topic" title={channel.topic}>{channel.topic}</p>}
+    {(()=>{
+     const dmOther=channel.kind==='dm'?(channel.dm_key??'').split(',').find(u=>u!==me.user_id):undefined;
+     if(typers.length)return <p className="zn-topic is-typing">{channel.kind==='dm'?'typing':`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></p>;
+     if(dmOther)return <p className="zn-topic">{z.online.has(dmOther)?<span className="zn-online">online</span>:lastSeen(people[dmOther]?.last_seen_at)}</p>;
+     return channel.topic?<p className="zn-topic" title={channel.topic}>{channel.topic}</p>:null;
+    })()}
     <div className="zn-head-actions">
      {pinned.length>0&&<button type="button" data-tip="Pinned messages" onClick={()=>setDetails(true)}><Pin size={16}/><span>{pinned.length}</span></button>}
      {joined&&<button type="button" aria-label={membership[id]?.starred?'Unstar':'Star'} data-tip={membership[id]?.starred?'Unstar':'Star'} className={membership[id]?.starred?'is-on':''} onClick={async()=>{await db.from('zarn_channel_members').update({starred:!membership[id]?.starred}).eq('channel_id',id).eq('user_id',me.user_id);await z.reload();}}><Star size={16}/></button>}
@@ -94,10 +111,10 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
     {loading&&!messages.length?<div className="zn-loading">Loading messages…</div>:messages.map((m,i)=>{
      const prev=messages[i-1],newDay=!prev||dayOf(prev.created_at)!==dayOf(m.created_at);
      return <Fragment key={m.id}>{newDay&&<div className="zn-day"><span>{dayOf(m.created_at)}</span></div>}
-      <Message m={m} reactions={reactions.filter(r=>r.message_id===m.id)} compact={!newDay&&sameGroup(prev,m)} onThread={setThread}/></Fragment>;
+      <Message m={m} reactions={reactions.filter(r=>r.message_id===m.id)} compact={!newDay&&sameGroup(prev,m)} onThread={setThread} receipt={receipt(m)}/></Fragment>;
     })}
    </div>
-   <div className="zn-typing">{typers.length?`${typers.join(', ')} ${typers.length>1?'are':'is'} typing…`:''}</div>
+   <div className="zn-typing">{typers.length>0&&<>{`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></>}</div>
    {canPost?<Composer channelId={id} placeholder={`Message ${channel.kind==='dm'?title(channel):channel.kind==='client'?`the ${title(channel)} team`:'#'+channel.name}`} onSent={()=>{stick.current=true;}} onTyping={onTyping} disabled={channel.archived_at?'This channel is archived.':undefined}/>
     :<div className="zn-join"><p>You’re previewing <b>#{channel.name}</b>.</p><button type="button" className="zn-btn is-primary" onClick={()=>void join()}>Join channel</button></div>}
   </div>
@@ -165,4 +182,14 @@ function Details({c,pinned,onClose,onJump}:{c:ZChannel;pinned:ZMessage[];onClose
   </div>}
   {adding&&<PeoplePicker title="Add people" exclude={ids} confirm="Add" onClose={()=>setAdding(false)} onPick={async sel=>{await zarnApi('/api/zarn',{action:'channel_add',id:c.id,members:sel});setAdding(false);}}/>}
  </div></div>;
+}
+
+// WhatsApp-style "last seen today at 15:10" / "last seen yesterday" / "last seen 3 Oct".
+function lastSeen(at?:string|null){
+ if(!at)return 'offline';
+ const d=new Date(at),t=new Date(),y=new Date();y.setDate(t.getDate()-1);
+ const time=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+ if(d.toDateString()===t.toDateString())return `last seen today at ${time}`;
+ if(d.toDateString()===y.toDateString())return `last seen yesterday at ${time}`;
+ return `last seen ${d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}`;
 }

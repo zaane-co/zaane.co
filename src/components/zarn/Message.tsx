@@ -1,15 +1,17 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Download,FileText,MessageSquareText,Pencil,Pin,SmilePlus,Trash2,TrendingUp,Receipt,UserPlus} from 'lucide-react';
+import {Check,CheckCheck,ChevronLeft,ChevronRight,Clock3,Download,FileText,MessageSquareText,Pencil,Pin,SmilePlus,Trash2,TrendingUp,Receipt,UserPlus,X} from 'lucide-react';
 import {quickReactions,zarnApi,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {money} from '@/lib/crm';
 import {useZarn} from './ZarnProvider';
 import {Avatar,renderBody,timeOf,tokensToText,textToTokens} from './format';
 
 // One message row. compact = same author as the previous message within a few minutes (no avatar/name).
-export default function Message({m,reactions,compact,inThread,onThread}:{m:ZMessage;reactions:ZReaction[];compact:boolean;inThread?:boolean;onThread?:(m:ZMessage)=>void}){
+export type Receipt={pending:boolean;seen:{id:string;at:string}[];unseen:string[]};
+export default function Message({m,reactions,compact,inThread,onThread,receipt}:{m:ZMessage;reactions:ZReaction[];compact:boolean;inThread?:boolean;onThread?:(m:ZMessage)=>void;receipt?:Receipt}){
  const {me,people,members,db,membership,emit}=useZarn();
+ const [viewer,setViewer]=useState<number|null>(null),[seenOpen,setSeenOpen]=useState(false);
  const [tapped,setTapped]=useState(false),[picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[confirm,setConfirm]=useState(false);
  const author=m.user_id?people[m.user_id]:undefined,mine=m.user_id===me.user_id,canAct=!!membership[m.channel_id];
  const groups=reactions.reduce<Record<string,string[]>>((g,r)=>{(g[r.emoji]??=[]).push(r.user_id);return g;},{});
@@ -43,11 +45,20 @@ export default function Message({m,reactions,compact,inThread,onThread}:{m:ZMess
    {m.kind==='crm'&&<CrmEvent m={m}/>}
    {m.kind!=='crm'&&m.lead_id&&<LeadCard id={m.lead_id}/>}
    {m.attachments.length>0&&<div className="zn-files">{m.attachments.map((a,i)=>a.type.startsWith('image/')&&a.type!=='image/svg+xml'
-    ?<a key={i} href={`/api/zarn/files?m=${m.id}&i=${i}`} target="_blank" rel="noopener noreferrer" className="zn-image"><img src={`/api/zarn/files?m=${m.id}&i=${i}`} alt={a.name} loading="lazy"/></a>
+    ?<button type="button" key={i} className="zn-image" aria-label={`Open ${a.name}`} onClick={()=>setViewer(i)}><img src={`/api/zarn/files?m=${m.id}&i=${i}`} alt={a.name} loading="lazy"/></button>
     :<a key={i} href={`/api/zarn/files?m=${m.id}&i=${i}&download=1`} className="zn-file"><FileText size={18}/><span><b>{a.name}</b><small>{(a.size/1024).toFixed(a.size>1024*1024?0:1)} KB</small></span><Download size={15}/></a>)}</div>}
    {Object.keys(groups).length>0&&<div className="zn-reactions">{Object.entries(groups).map(([e,users])=><button key={e} type="button" className={users.includes(me.user_id)?'is-mine':''} title={users.map(u=>people[u]?.display_name??'Someone').join(', ')} onClick={()=>void toggle(e)}>{e}<span>{users.length}</span></button>)}
     {canAct&&<button type="button" className="zn-react-add" aria-label="Add reaction" onClick={()=>setPicker(v=>!v)}><SmilePlus size={14}/></button>}</div>}
    {!inThread&&m.reply_count>0&&<button type="button" className="zn-thread-link" onClick={()=>onThread?.(m)}><MessageSquareText size={13}/>{m.reply_count} repl{m.reply_count===1?'y':'ies'}{m.last_reply_at&&<span>Last reply {timeOf(m.last_reply_at)}</span>}</button>}
+   {receipt&&<button type="button" className={`zn-ticks${receipt.pending?' is-pending':!receipt.seen.length?' is-sent':receipt.unseen.length?' is-some':' is-all'}`} aria-label={receipt.pending?'Sending':receipt.unseen.length?`Seen by ${receipt.seen.length} of ${receipt.seen.length+receipt.unseen.length}`:'Seen by everyone'} onClick={()=>setSeenOpen(v=>!v)}>
+    {receipt.pending?<Clock3 size={13}/>:receipt.seen.length?<CheckCheck size={15}/>:<Check size={15}/>}
+    {!receipt.pending&&<small>{receipt.seen.length===0?'Sent':receipt.unseen.length===0?(receipt.seen.length===1?`Seen ${timeOf(receipt.seen[0]!.at)}`:'Seen by everyone'):`Seen by ${receipt.seen.length}`}</small>}
+   </button>}
+   {seenOpen&&receipt&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setSeenOpen(false)}/><div className="zn-seen-pop" role="dialog" aria-label="Message info">
+    <p className="zn-seen-title">Seen by {receipt.seen.length}</p>
+    {receipt.seen.sort((a,b)=>a.at.localeCompare(b.at)).map(r=><div key={r.id} className="zn-seen-row"><Avatar m={people[r.id]} size={26}/><span>{people[r.id]?.display_name??'Someone'}</span><time>{timeOf(r.at)}</time></div>)}
+    {receipt.unseen.length>0&&<><p className="zn-seen-title">Not seen yet</p>{receipt.unseen.map(u=><div key={u} className="zn-seen-row is-dim"><Avatar m={people[u]} size={26}/><span>{people[u]?.display_name??'Someone'}</span></div>)}</>}
+   </div></>}
   </div>
   {canAct&&!editing&&m.kind!=='crm'&&<div className="zn-actions" role="toolbar" aria-label="Message actions">
    {quickReactions.slice(0,3).map(e=><button key={e} type="button" aria-label={`React ${e}`} onClick={()=>void toggle(e)}>{e}</button>)}
@@ -59,6 +70,7 @@ export default function Message({m,reactions,compact,inThread,onThread}:{m:ZMess
   </div>}
   {canAct&&m.kind==='crm'&&<div className="zn-actions">{quickReactions.slice(0,3).map(e=><button key={e} type="button" aria-label={`React ${e}`} onClick={()=>void toggle(e)}>{e}</button>)}{!inThread&&<button type="button" aria-label="Reply in thread" onClick={()=>onThread?.(m)}><MessageSquareText size={15}/></button>}</div>}
   {picker&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setPicker(false)}/><div className="zn-picker">{quickReactions.concat(['😮','😢','💯','🚀','👏','🤝','💡','⏳']).map(e=><button key={e} type="button" onClick={()=>void toggle(e)}>{e}</button>)}</div></>}
+  {viewer!==null&&<Viewer m={m} index={viewer} onIndex={setViewer} onClose={()=>setViewer(null)}/>}
   {confirm&&<div className="zn-confirm"><span>Delete this message?</span><button type="button" onClick={()=>setConfirm(false)}>Cancel</button><button type="button" className="is-danger" onClick={()=>void remove()}>Delete</button></div>}
  </div>;
 }
@@ -100,4 +112,22 @@ function CrmEvent({m}:{m:ZMessage}){
   :e==='invoice_sent'?<><Receipt size={14}/> Invoice <b>{String(m.meta.number)}</b> ({money(Number(m.meta.total),String(m.meta.currency))}) sent to <b>{name}</b></>
   :e==='invoice_paid'?<><Receipt size={14}/> Invoice <b>{String(m.meta.number)}</b> paid by <b>{name}</b>: {money(Number(m.meta.total),String(m.meta.currency))}</>:null;
  return <div className="zn-crm"><p>{text}</p>{m.lead_id&&<LeadCard id={m.lead_id} compact/>}</div>;
+}
+
+// In-app photo viewer: full screen, close, download, previous/next across the message's images. Esc and arrow keys work.
+function Viewer({m,index,onIndex,onClose}:{m:ZMessage;index:number;onIndex:(i:number)=>void;onClose:()=>void}){
+ const imgs=m.attachments.map((a,i)=>({a,i})).filter(x=>x.a.type.startsWith('image/')&&x.a.type!=='image/svg+xml');
+ const pos=Math.max(0,imgs.findIndex(x=>x.i===index)),cur=imgs[pos]!;
+ const go=(d:number)=>{const n=imgs[(pos+d+imgs.length)%imgs.length];if(n)onIndex(n.i);};
+ useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();if(e.key==='ArrowRight')go(1);if(e.key==='ArrowLeft')go(-1);};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);});
+ const [start,setStart]=useState<number|null>(null);
+ return <div className="zn-viewer" role="dialog" aria-label={cur.a.name} onClick={onClose} onTouchStart={e=>setStart(e.touches[0]!.clientX)} onTouchEnd={e=>{if(start!==null&&imgs.length>1){const dx=e.changedTouches[0]!.clientX-start;if(Math.abs(dx)>50)go(dx<0?1:-1);}setStart(null);}}>
+  <div className="zn-viewer-bar" onClick={e=>e.stopPropagation()}>
+   <span>{cur.a.name}{imgs.length>1&&<small> · {pos+1} of {imgs.length}</small>}</span>
+   <a href={`/api/zarn/files?m=${m.id}&i=${cur.i}&download=1`} aria-label="Download"><Download size={20}/></a>
+   <button type="button" aria-label="Close" onClick={onClose}><X size={22}/></button>
+  </div>
+  <img src={`/api/zarn/files?m=${m.id}&i=${cur.i}`} alt={cur.a.name} onClick={e=>e.stopPropagation()}/>
+  {imgs.length>1&&<><button type="button" className="zn-viewer-nav is-prev" aria-label="Previous" onClick={e=>{e.stopPropagation();go(-1);}}><ChevronLeft size={26}/></button><button type="button" className="zn-viewer-nav is-next" aria-label="Next" onClick={e=>{e.stopPropagation();go(1);}}><ChevronRight size={26}/></button></>}
+ </div>;
 }
