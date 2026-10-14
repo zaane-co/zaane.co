@@ -1,8 +1,8 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {usePathname} from 'next/navigation';
-import {AtSign,BarChart3,Bell,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {usePathname,useRouter} from 'next/navigation';
+import {Hash,AtSign,BarChart3,Bell,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -24,13 +24,14 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const z=useZarn(),{me,channels}=z,pathname=usePathname(),{light}=useAdminTheme();
  const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,badges}=nav;
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
- const [clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null);
+ const [clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false);
+ const router=useRouter();
  const {mode:installMode,install}=useInstall(),sound=useSound();
  const routeArea=areaOf(pathname);
  const [area,setArea]=useState<Area>(routeArea);
  // Follow the route's area whenever the route changes.
  const [seenPath,setSeenPath]=useState(pathname);
- if(seenPath!==pathname){setSeenPath(pathname);setArea(routeArea);setMenu(false);}
+ if(seenPath!==pathname){setSeenPath(pathname);setArea(routeArea);setMenu(false);setQuick(false);}
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setDialog('search');}};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[]);
 
  const shownClients=clients.filter(c=>z.title(c).toLowerCase().includes(clientQ.toLowerCase()));
@@ -50,7 +51,8 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  </div>;
  const link=(href:string,icon:React.ReactNode,label:string,badge?:number,exact=true)=><Link href={href} className={`zn-nav-item${(exact?pathname===href:pathname.startsWith(href))?' is-active':''}${badge?' is-unread':''}`}>{icon}<span>{label}</span>{badge?<em className="zn-badge">{badge}</em>:null}</Link>;
  const railBtn=(a:Area,icon:React.ReactNode,label:string,badge:number)=><button type="button" className={`zn-rail-btn${area===a?' is-on':''}`} aria-pressed={area===a} onClick={()=>setArea(a)}><span className="zn-rail-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small>{label}</small></button>;
- const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small>{label}</small></Link>;};
+ const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span></Link>;};
+ const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
  return <ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
  <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}`}>
@@ -110,13 +112,28 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
    {!isTab&&<Link href={back} className="zn-icon zn-back" aria-label="Back"><ChevronLeft size={22}/>{(badges.home+badges.dms+badges.clients)>0&&<i className="zn-ping"/>}</Link>}
    {children}
   </main>
-  <nav className="zn-tabbar" aria-label="ZARN">
-   {tab('/zarn/home',<Home size={22}/>,'Home',badges.home)}
-   {tab('/zarn/dms',<MessageSquare size={22}/>,'DMs',badges.dms)}
-   {!guest&&tab('/zarn/clients',<Briefcase size={22}/>,'Clients',badges.clients)}
-   {tab('/zarn/activity',<AtSign size={22}/>,'Activity',badges.activity)}
-   {tab('/zarn/you',<Avatar m={me} size={24}/>,'You',0)}
-  </nav>
+  {/* Phone dock (Slack-style): a floating icon bar plus a + button for quick actions. */}
+  <div className="zn-dock">
+   {quick&&<><button type="button" className="zn-scrim zn-quick-scrim" aria-label="Close" onClick={()=>setQuick(false)}/>
+    <div className="zn-quick" role="menu" aria-label="Quick actions">
+     {quickAction(<MessageSquarePlus size={24}/>,'Message',()=>setDialog('dm'))}
+     {canCreate&&quickAction(<Hash size={24}/>,'Channel',()=>setDialog('channel'))}
+     {canAddClient&&quickAction(<Briefcase size={24}/>,'Client',()=>setDialog('client'))}
+     {quickAction(<Search size={24}/>,'Search',()=>setDialog('search'))}
+     {quickAction(<UserRound size={24}/>,'Status',()=>setDialog('profile'))}
+     {quickAction(<Contact size={24}/>,'People',()=>router.push('/zarn/people'))}
+     {canBusiness&&quickAction(<BarChart3 size={24}/>,'Business',()=>router.push('/zarn/business'))}
+     {staffAdmin&&quickAction(<UserPlus size={24}/>,'Invite',()=>setDialog('invite'))}
+    </div></>}
+   <nav className="zn-tabbar" aria-label="ZARN">
+    {tab('/zarn/home',<Home size={23}/>,'Home',badges.home)}
+    {tab('/zarn/dms',<MessageSquare size={23}/>,'DMs',badges.dms)}
+    {!guest&&tab('/zarn/clients',<Briefcase size={23}/>,'Clients',badges.clients)}
+    {tab('/zarn/activity',<AtSign size={23}/>,'Activity',badges.activity)}
+    {tab('/zarn/you',<Avatar m={me} size={26}/>,'You',0)}
+   </nav>
+   <button type="button" className={`zn-fab${quick?' is-open':''}`} aria-label={quick?'Close quick actions':'Quick actions'} aria-expanded={quick} onClick={()=>setQuick(v=>!v)}><Plus size={26}/></button>
+  </div>
   {profileId&&<ProfileSheet userId={profileId} onClose={()=>setProfileId(null)} onEdit={()=>{setProfileId(null);setDialog('profile');}}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {dialog==='dm'&&<NewDm onClose={()=>setDialog(null)}/>}
