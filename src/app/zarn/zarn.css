@@ -668,3 +668,10 @@ html:has(.zarn.is-light),body:has(.zarn.is-light),html:has(.zarn-auth.is-light),
  .zarn.is-tab .zn-main{padding-bottom:0!important}
 }
 @media(max-width:860px){.zarn{background:var(--z-bg)}.zn-dock{background:var(--z-bg)}}
+/* Loading placeholders */
+.zn-skel{flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.zn-skel i,.zn-skel b{display:block;background:var(--z-panel-2);border-radius:8px;animation:zn-pulse 1.2s ease-in-out infinite}
+@keyframes zn-pulse{50%{opacity:.4}}
+.zn-skel-head i{width:160px;height:26px}
+.zn-skel-row{display:flex;gap:12px;align-items:center}.zn-skel-row b{width:36px;height:36px;border-radius:10px;flex-shrink:0}
+.zn-skel-row span{flex:1;display:flex;flex-direction:column;gap:6px}.zn-skel-row span i:first-child{width:40%;height:12px}.zn-skel-row span i:last-child{width:75%;height:12px}
