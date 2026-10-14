@@ -489,3 +489,8 @@ select.zn-input{appearance:none;padding-right:34px;background-image:url("data:im
 .zarn{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);background:var(--z-side)}
 .zn-steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.5}
 @media(max-width:860px){.zn-nav-wrap{top:env(safe-area-inset-top);bottom:env(safe-area-inset-bottom)}}
+/* Installed iPhone app: the screen can be taller than the layout viewport, so paint the page itself
+   in ZARN's colour (no white strip at the bottom / grey haze under the status bar) and let ZARN fill the full screen. */
+html:has(.zarn),body:has(.zarn),html:has(.zarn-auth),body:has(.zarn-auth){background:#0a0a0c;overscroll-behavior:none}
+html:has(.zarn.is-light),body:has(.zarn.is-light),html:has(.zarn-auth.is-light),body:has(.zarn-auth.is-light){background:#f4f4f6}
+.zarn,.zarn-auth{min-height:100lvh}

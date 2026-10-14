@@ -5,7 +5,9 @@ import {money,dueLabel,dueState} from '@/lib/crm';
 import {useZarn} from './ZarnProvider';
 
 export type Overview={leads:{id:string;name:string;company:string;status:string;stage_label:string|null;stage_color:string|null;stage_kind:string|null;deal_value:number|null;currency:string;last_activity_at:string}[];myLeadIds:string[];spaceLeadIds:string[];tasks:{id:string;lead_id:string;title:string;due_at:string|null}[]};
-const totals=(rows:{deal_value:number|null;currency:string}[])=>{const m:Record<string,number>={};for(const r of rows)if(r.deal_value)m[r.currency]=(m[r.currency]??0)+Number(r.deal_value);return Object.entries(m).map(([c,v])=>money(v,c)).join(' · ')||'-';};
+// Money per currency; when no deal values are set yet, say so instead of a bare dash.
+const totals=(rows:{deal_value:number|null;currency:string}[])=>{const m:Record<string,number>={};for(const r of rows)if(r.deal_value)m[r.currency]=(m[r.currency]??0)+Number(r.deal_value);const t=Object.entries(m).map(([c,v])=>money(v,c)).join(' · ');return t?<>{t}</>:<span className="zn-muted">{rows.length?'No values set':'None yet'}</span>;};
+const plural=(n:number,one:string,many=one+'s')=>`${n} ${n===1?one:many}`;
 
 // Business home inside ZARN.
 export default function BusinessOverview({data}:{data:Overview}){
@@ -16,8 +18,8 @@ export default function BusinessOverview({data}:{data:Overview}){
  return <div className="zn-page"><div className="zn-scroll" data-lenis-prevent>
   <header className="zn-page-head"><div><h1><BarChart3 size={20}/>Business</h1><p>Hi {me.display_name.split(' ')[0]}, here’s where things stand.</p></div></header>
   <div className="zn-crm-stats">
-   <div><small>Open pipeline</small><b>{totals(open)}</b><span>{open.length} open deals</span></div>
-   <div><small>Won</small><b>{totals(won)}</b><span>{won.length} clients</span></div>
+   <div><small>Open pipeline</small><b>{totals(open)}</b><span>{plural(open.length,'open deal')}</span></div>
+   <div><small>Won</small><b>{totals(won)}</b><span>{plural(won.length,'client')}</span></div>
    <div><small>My clients</small><b>{mine.length}</b><span>spaces you’re on</span></div>
    <div><small>My open tasks</small><b>{data.tasks.length}</b><span>{data.tasks.filter(t=>dueState(t.due_at)==='overdue').length} overdue</span></div>
   </div>
