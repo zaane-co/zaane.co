@@ -44,14 +44,14 @@ export default function MediaLibrary({initial,canDelete}:{initial:File_[];canDel
  return <div className="space-y-5">
   <div className="flex flex-wrap items-center justify-between gap-4">
    <div><h1 className={`text-xl font-bold ${t.heading}`}>Media</h1><p className={`text-sm mt-0.5 ${t.sub}`}>{files.length} file{files.length!==1?'s':''} · {size(total)} · stored on Cloudflare R2</p></div>
-   <label className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold cursor-pointer transition-opacity ${t.brandBtn}`}><UploadCloud className="h-4 w-4"/>Upload<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif,image/gif" className="hidden" onChange={e=>{if(e.target.files)void upload(e.target.files);e.target.value='';}}/></label>
+   <label className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold cursor-pointer transition-opacity ${t.brandBtn}`}><UploadCloud className="h-4 w-4"/>Upload<input type="file" multiple accept="image/*" className="hidden" onChange={e=>{if(e.target.files)void upload(e.target.files);e.target.value='';}}/></label>
   </div>
 
   <div onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={e=>{e.preventDefault();setDragging(false);void upload(e.dataTransfer.files);}}
    className={`rounded-xl border-2 border-dashed px-5 py-6 text-center transition-colors ${dragging?'border-[var(--accent)] bg-[var(--a-hover)]':'border-[var(--a-border)]'}`}>
    <UploadCloud className={`h-7 w-7 mx-auto mb-2 ${t.faint}`}/>
    <p className={`text-sm ${t.sub}`}>Drag images here to upload several at once</p>
-   <p className={`text-xs mt-1 ${t.faint}`}>JPG, PNG, WebP, AVIF or GIF · up to 10 MB each</p>
+   <p className={`text-xs mt-1 ${t.faint}`}>Any size · big images are resized to 2560px and saved as WebP · GIFs up to 4 MB</p>
    {queue.length>0&&<div className="mt-4 space-y-1.5 max-w-md mx-auto text-left">{queue.map((q,i)=><div key={i} className="flex items-center gap-2 text-xs">
     {!q.done?<Loader2 className={`h-3.5 w-3.5 animate-spin ${t.sub}`}/>:q.error?<X className="h-3.5 w-3.5 text-[#dc2626]"/>:<Check className="h-3.5 w-3.5 text-[#16a34a]"/>}
     <span className={`truncate flex-1 ${t.heading}`}>{q.name}</span>{q.error&&<span className="text-[#dc2626]">{q.error}</span>}

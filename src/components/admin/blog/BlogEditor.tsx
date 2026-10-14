@@ -216,7 +216,7 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
           </div>
          </div>}
         </div>
-        <label data-tip="Upload image" aria-label="Upload image" onMouseDown={e=>e.preventDefault()} className={`h-7 w-7 rounded flex items-center justify-center transition-colors cursor-pointer ${toolbarBtn} ${imgUploading?'opacity-50 cursor-wait':''}`}>{imgUploading?<Loader2 className={`${ic} animate-spin`}/>:<ImageIcon className={ic}/>}<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={handleEditorImageUpload} className="hidden"/></label>
+        <label data-tip="Upload image" aria-label="Upload image" onMouseDown={e=>e.preventDefault()} className={`h-7 w-7 rounded flex items-center justify-center transition-colors cursor-pointer ${toolbarBtn} ${imgUploading?'opacity-50 cursor-wait':''}`}>{imgUploading?<Loader2 className={`${ic} animate-spin`}/>:<ImageIcon className={ic}/>}<input type="file" accept="image/*" onChange={handleEditorImageUpload} className="hidden"/></label>
         {tb('Insert from media library',()=>setPicker('content'),<Images className={ic}/>)}
         {tb('Code block',()=>editor?.chain().focus().toggleCodeBlock().run(),<Code2 className={ic}/>,editor?.isActive('codeBlock'))}
        </div>
@@ -236,7 +236,7 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
       <div className={`rounded-xl border overflow-hidden ${t.card}`}>
        <div className={`flex items-center justify-between px-5 py-3 border-b ${t.divider}`}>
         <p className={`text-xs font-semibold uppercase tracking-wide ${labelCls}`}>Cover Image</p>
-        <span className={`text-xs ${labelCls}`}>16:9 · PNG, JPG, WEBP</span>
+        <span className={`text-xs ${labelCls}`}>16:9 · any image size</span>
        </div>
        {coverImage?<div className="relative">
         <img src={coverImage} alt="" className="w-full aspect-video object-cover"/>
@@ -245,8 +245,8 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
         onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();void uploadCover(e.dataTransfer.files?.[0]);}}>
         <ImageIcon className={`h-8 w-8 mb-3 ${labelCls}`} strokeWidth={1.2}/>
         <span className={`text-sm font-medium ${labelCls}`}>{uploading?'Uploading…':'Click or drag to upload'}</span>
-        <span className={`text-xs mt-1 ${t.faint}`}>PNG, JPG, WEBP, AVIF · 1280 × 720 recommended</span>
-        <input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" onChange={e=>void uploadCover(e.target.files?.[0])} className="hidden"/>
+        <span className={`text-xs mt-1 ${t.faint}`}>Any size · resized automatically · 1280 × 720 or larger recommended</span>
+        <input type="file" accept="image/*" onChange={e=>void uploadCover(e.target.files?.[0])} className="hidden"/>
        </label>}
        <div className={`flex justify-end px-4 py-2.5 border-t ${t.divider}`}><button type="button" onClick={()=>setPicker('cover')} className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${t.ghostBtn}`}><Images className="h-3.5 w-3.5"/>{coverImage?'Replace from library':'Choose from library'}</button></div>
       </div>

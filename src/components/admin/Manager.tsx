@@ -5,6 +5,7 @@ import Markdown from 'react-markdown';
 import {ChevronDown,Copy,Download,ExternalLink,ImagePlus,Pencil,Plus,Search,Star,X,Upload,Trash2} from 'lucide-react';
 import MediaPicker from '@/components/admin/MediaPicker';
 import ProjectGallery from '@/components/admin/ProjectGallery';
+import {uploadImage} from '@/components/admin/blog/shared';
 import {collections,safeUrl,type Field} from '@/lib/cms';
 import {Status,when} from '@/components/admin/ui';
 type Row=Record<string,unknown>;
@@ -53,7 +54,7 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
  async function save(action:'save'|'delete'){
   setBusy(true);setMessage('');try{const r=await fetch(`/api/admin/${collection}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,id:selected?.id,values})});const data=await r.json();if(!r.ok)throw new Error(data.error);close();setMessage(action==='save'?'Saved successfully.':'Record deleted.');router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Could not save.');}finally{setBusy(false);}
  }
- async function upload(f:Field,file?:File){if(!file)return;setBusy(true);setMessage('Uploading…');try{const data=new FormData();data.set('file',file);const r=await fetch('/api/admin/upload',{method:'POST',body:data});const result=await r.json();if(!r.ok)throw new Error(result.error);setValues(v=>({...v,[f.key]:result.url}));setMessage('Image uploaded. Save the record to attach it.');}catch(e){setMessage(e instanceof Error?e.message:'Upload failed.');}finally{setBusy(false);}}
+ async function upload(f:Field,file?:File){if(!file)return;setBusy(true);setMessage('Uploading…');try{const url=await uploadImage(file);setValues(v=>({...v,[f.key]:url}));setMessage('Image uploaded. Save the record to attach it.');}catch(e){setMessage(e instanceof Error?e.message:'Upload failed.');}finally{setBusy(false);}}
  function insert(before:string,after=''){const node=bodyRef.current;if(!node)return;const start=node.selectionStart,end=node.selectionEnd;const text=String(values.content||'');setValues(v=>({...v,content:text.slice(0,start)+before+text.slice(start,end)+after+text.slice(end)}));node.focus();}
  const shown=rows.filter(r=>JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
  const hasStatus=rows.some(r=>r.status)||spec.fields.some(f=>f.key==='status');
@@ -114,7 +115,7 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
       :f.type==='boolean'?<input id={`field-${f.key}`} type="checkbox" checked={!!values[f.key]} onChange={e=>setValues({...values,[f.key]:e.target.checked})}/>
       :f.type==='textarea'||f.type==='markdown'?(preview&&f.type==='markdown'?<div className="prose za-md-preview"><Markdown>{String(values[f.key]||'Nothing to preview yet.')}</Markdown></div>:<textarea ref={f.key==='content'?bodyRef:undefined} id={`field-${f.key}`} rows={f.type==='markdown'?14:4} required={f.required} value={String(values[f.key]||'')} onChange={e=>setValues({...values,[f.key]:e.target.value})}/>)
       :<input id={`field-${f.key}`} type={f.type==='number'?'number':'text'} required={f.required} value={String(values[f.key]??'')} onChange={e=>setValues({...values,[f.key]:e.target.value})}/>}
-      {f.type==='image'&&<div className="za-upload">{safeUrl(values[f.key])&&<img src={safeUrl(values[f.key])} alt="Selected image preview"/>}<label className="za-btn za-btn-ghost"><Upload size={15}/>Upload image<input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" disabled={busy} onChange={e=>void upload(f,e.target.files?.[0])} hidden/></label><button type="button" className="za-btn za-btn-ghost" onClick={()=>setPickFor(f.key)}><ImagePlus size={15}/>Choose from library</button></div>}
+      {f.type==='image'&&<div className="za-upload">{safeUrl(values[f.key])&&<img src={safeUrl(values[f.key])} alt="Selected image preview"/>}<label className="za-btn za-btn-ghost"><Upload size={15}/>Upload image<input type="file" accept="image/*" disabled={busy} onChange={e=>void upload(f,e.target.files?.[0])} hidden/></label><button type="button" className="za-btn za-btn-ghost" onClick={()=>setPickFor(f.key)}><ImagePlus size={15}/>Choose from library</button></div>}
      </div>)}
      {collection==='projects'&&(selected.id?<ProjectGallery key={String(selected.id)} projectId={String(selected.id)} initial={gallery[String(selected.id)]??[]}/>:<div className="za-field"><div className="za-field-label"><label>Gallery</label></div><p className="za-notice">Save the project first, then reopen it to add gallery images.</p></div>)}
      {message&&<p role="status" className="za-flash">{message}</p>}

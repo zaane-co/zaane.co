@@ -41,7 +41,7 @@ export default function ProjectGallery({projectId,initial}:{projectId:string;ini
    className={`rounded-lg border-2 border-dashed px-4 py-4 flex flex-wrap items-center justify-center gap-2 text-xs transition-colors ${over?'border-[var(--accent)] bg-[var(--a-hover)]':'border-[var(--a-border)]'}`}>
    {busy?<span className={`flex items-center gap-2 ${t.sub}`}><Loader2 className="h-4 w-4 animate-spin"/>Saving…</span>:<>
     <span className={t.sub}>Drop images here or</span>
-    <label className="za-btn za-btn-ghost cursor-pointer"><UploadCloud size={15}/>Upload<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif,image/gif" hidden onChange={e=>{if(e.target.files)void uploadFiles(e.target.files);e.target.value='';}}/></label>
+    <label className="za-btn za-btn-ghost cursor-pointer"><UploadCloud size={15}/>Upload<input type="file" multiple accept="image/*" hidden onChange={e=>{if(e.target.files)void uploadFiles(e.target.files);e.target.value='';}}/></label>
     <button type="button" className="za-btn za-btn-ghost" onClick={()=>setPicker(true)}><ImagePlus size={15}/>Choose from library</button>
    </>}
   </div>

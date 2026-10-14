@@ -19,7 +19,7 @@ export function EditorImageView({node,deleteNode,updateAttributes}:NodeViewProps
  }
 
  return <NodeViewWrapper className="relative inline-block group my-4 w-full">
-  <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif" className="hidden" onChange={handleReplaceFile}/>
+  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleReplaceFile}/>
   <img src={src} alt={node.attrs.alt??''} style={{width:width??'100%'}} className="rounded-xl max-w-full block" onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}/>
   {(hovered||replacing)&&<div className="absolute top-3 right-3 flex items-center gap-1.5" onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)}>
    <button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>fileRef.current?.click()} className="flex items-center gap-1.5 rounded-lg bg-black text-white text-xs px-2.5 py-1.5 hover:bg-[#222] transition-colors">
