@@ -37,14 +37,14 @@ export default function MediaPicker({open,onClose,onPick,multiple=false}:{open:b
     <p className={`text-sm font-bold ${t.heading}`}>Media library</p>
     <div className="relative ml-auto w-48"><Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${t.sub}`}/><input autoFocus placeholder="Search…" value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')e.preventDefault();}} className={`w-full rounded-lg border pl-9 pr-3 py-1.5 text-xs focus:outline-none ${t.input}`}/></div>
     <label className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold cursor-pointer ${t.brandBtn}`}>{uploading?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<UploadCloud className="h-3.5 w-3.5"/>}Upload<input type="file" multiple={multiple} accept="image/jpeg,image/png,image/webp,image/avif,image/gif" className="hidden" onChange={e=>{if(e.target.files?.length)void upload(e.target.files);e.target.value='';}}/></label>
-    <button type="button" onClick={onClose} aria-label="Close" className={`h-7 w-7 rounded-lg flex items-center justify-center ${t.iconBtn}`}><X className="h-4 w-4"/></button>
+    <button type="button" onClick={onClose} aria-label="Close" data-tip="Close" className={`h-7 w-7 rounded-lg flex items-center justify-center ${t.iconBtn}`}><X className="h-4 w-4"/></button>
    </div>
    {error&&<div className="mx-5 mt-4 rounded-lg bg-[#dc2626] px-4 py-2.5 text-xs text-white">{error}</div>}
    <div className="flex-1 overflow-y-auto p-5" data-lenis-prevent>
     {items===null&&!error?<div className={`py-16 flex justify-center ${t.sub}`}><Loader2 className="h-5 w-5 animate-spin"/></div>
     :shown.length===0?<div className={`py-16 text-center text-sm ${t.sub}`}><ImageIcon className={`h-8 w-8 mx-auto mb-3 ${t.faint}`}/>{search?'No files match.':'The library is empty. Upload an image to start.'}</div>
     :<div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-     {shown.map(i=>{const on=chosen.includes(i.url);return <button type="button" key={i.url} onClick={()=>toggle(i.url)} title={name(i.key)} className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-colors ${on?'border-[var(--accent)]':'border-transparent hover:border-[var(--a-muted)]'}`}>
+     {shown.map(i=>{const on=chosen.includes(i.url);return <button type="button" key={i.url} onClick={()=>toggle(i.url)} data-tip={name(i.key)} className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-colors ${on?'border-[var(--accent)]':'border-transparent hover:border-[var(--a-muted)]'}`}>
       <img src={i.url} alt="" loading="lazy" className="h-full w-full object-cover"/>
       {on&&<span className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-[var(--accent)] text-white flex items-center justify-center"><Check className="h-3 w-3" strokeWidth={3}/></span>}
      </button>;})}

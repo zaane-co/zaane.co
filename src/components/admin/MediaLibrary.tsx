@@ -79,7 +79,7 @@ export default function MediaLibrary({initial,canDelete}:{initial:File_[];canDel
 
   {selected&&<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={()=>setSelected(null)}>
    <div className={`w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border shadow-2xl ${t.modal}`} onClick={e=>e.stopPropagation()} data-lenis-prevent>
-    <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}><p className={`text-sm font-bold truncate ${t.heading}`}>{name(selected.key)}</p><button onClick={()=>setSelected(null)} aria-label="Close" className={`h-7 w-7 rounded-lg flex items-center justify-center ${t.iconBtn}`}><X className="h-4 w-4"/></button></div>
+    <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}><p className={`text-sm font-bold truncate ${t.heading}`}>{name(selected.key)}</p><button onClick={()=>setSelected(null)} aria-label="Close" data-tip="Close" className={`h-7 w-7 rounded-lg flex items-center justify-center ${t.iconBtn}`}><X className="h-4 w-4"/></button></div>
     <div className="grid md:grid-cols-[1.4fr_1fr]">
      <div className="bg-[var(--a-panel-2)] flex items-center justify-center p-4 min-h-[260px]"><img src={selected.url} alt="" className="max-h-[60vh] max-w-full rounded-lg object-contain"/></div>
      <div className="p-5 space-y-5">

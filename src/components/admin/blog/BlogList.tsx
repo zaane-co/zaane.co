@@ -22,6 +22,12 @@ export default function BlogList({posts,categories=[],postCats=[],viewCounts=[],
  const [statusAction,setStatusAction]=useState<PostStatus|null>(null);
  const [minSchedule,setMinSchedule]=useState('');
  const [deleteTarget,setDeleteTarget]=useState<Post|null>(null);
+ const [picked,setPicked]=useState<string[]>([]),[bulkDelete,setBulkDelete]=useState(false),[bulkBusy,setBulkBusy]=useState(false);
+ async function bulk(op:'publish'|'draft'|'delete'){
+  setBulkBusy(true);setError('');
+  try{await blogApi({action:'bulk',op,ids:picked});setPicked([]);setBulkDelete(false);router.refresh();}catch(e){setError(e instanceof Error?e.message:'Could not update.');}
+  setBulkBusy(false);
+ }
 
  async function setFeatured(postId:string){
   const isUnset=featuredId===postId,next=isUnset?null:postId,post=posts.find(p=>p.id===postId),prev=featuredId;
@@ -67,6 +73,13 @@ export default function BlogList({posts,categories=[],postCats=[],viewCounts=[],
    </div>
    {error&&<div className="rounded-lg bg-[#f10c45] px-4 py-3 text-xs text-white">{error}</div>}
 
+   {picked.length>0&&canPublish&&<div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-xl px-4 py-2.5 bg-[var(--a-fg)] text-[var(--a-bg)]">
+    <strong className="text-sm mr-auto">{picked.length} selected</strong>
+    <button onClick={()=>bulk('publish')} disabled={bulkBusy} className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-[#16a34a] text-white disabled:opacity-50">Publish</button>
+    <button onClick={()=>bulk('draft')} disabled={bulkBusy} className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-[#52525b] text-white disabled:opacity-50">Move to draft</button>
+    <button onClick={()=>setBulkDelete(true)} disabled={bulkBusy} className="rounded-lg px-3 py-1.5 text-xs font-semibold bg-[#dc2626] text-white disabled:opacity-50 flex items-center gap-1.5"><Trash2 className="h-3.5 w-3.5"/>Delete</button>
+    <button onClick={()=>setPicked([])} className="rounded-lg px-3 py-1.5 text-xs font-medium border border-current">Clear</button>
+   </div>}
    <div className={`rounded-xl border ${t.card}`}>
     <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b ${t.divider}`}>
      <div className="flex flex-wrap items-center gap-1">
@@ -91,11 +104,13 @@ export default function BlogList({posts,categories=[],postCats=[],viewCounts=[],
     {filtered.length===0?<div className={`py-16 text-center text-sm ${t.sub}`}>{search?`No posts matching "${search}"`:filter!=='all'?`No ${filter} posts yet.`:'No posts yet. Create your first one.'}</div>:
     <div className="overflow-x-auto"><table className="w-full text-sm">
      <thead><tr className={`border-b text-xs uppercase tracking-wide ${t.tHead}`}>
+      {canPublish&&<th className="pl-5 py-3 w-8"><input type="checkbox" aria-label="Select all" data-tip={filtered.every(p=>picked.includes(p.id))?'Deselect all':'Select all'} className="h-4 w-4 accent-[var(--accent)] cursor-pointer align-middle" checked={filtered.length>0&&filtered.every(p=>picked.includes(p.id))} ref={el=>{if(el)el.indeterminate=picked.length>0&&!filtered.every(p=>picked.includes(p.id));}} onChange={e=>setPicked(e.target.checked?filtered.map(p=>p.id):[])}/></th>}
       <th className="px-5 py-3 text-left font-medium">Title</th><th className="px-5 py-3 text-left font-medium">Status</th><th className="px-5 py-3 text-left font-medium">Views</th><th className="px-5 py-3 text-left font-medium">Date</th><th className="px-5 py-3 text-right font-medium">Actions</th>
      </tr></thead>
      <tbody>{filtered.map(post=>{
       const status=getStatus(post),style=STATUS_STYLE[status];
-      return <tr key={post.id} className={`border-b last:border-0 transition-colors ${t.tRow}`}>
+      return <tr key={post.id} className={`border-b last:border-0 transition-colors ${t.tRow} ${picked.includes(post.id)?'bg-[var(--a-hover)]':''}`}>
+       {canPublish&&<td className="pl-5 py-4 w-8"><input type="checkbox" aria-label={`Select ${post.title}`} className="h-4 w-4 accent-[var(--accent)] cursor-pointer align-middle" checked={picked.includes(post.id)} onChange={e=>setPicked(p=>e.target.checked?[...p,post.id]:p.filter(x=>x!==post.id))}/></td>}
        <td className="px-5 py-4 max-w-[360px]"><p className={`font-medium ${t.heading} line-clamp-1`}>{post.title}</p>{post.excerpt&&<p className={`text-xs mt-0.5 line-clamp-1 ${t.faint}`}>{post.excerpt}</p>}</td>
        <td className="px-5 py-4">
         <button onClick={()=>{if(!canPublish)return;setStatusTarget(post);setStatusAction(null);setScheduleDate('');}} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all ${canPublish?'hover:opacity-80 cursor-pointer':'cursor-default'} ${style.cls}`}>
@@ -106,10 +121,10 @@ export default function BlogList({posts,categories=[],postCats=[],viewCounts=[],
        <td className={`px-5 py-4 ${t.faint} text-xs whitespace-nowrap`}>{status==='scheduled'&&post.published_at?<>Scheduled for {fmt(post.published_at)}</>:fmt(post.published_at??post.created_at)}</td>
        <td className="px-5 py-4">
         <div className="flex items-center justify-end gap-1">
-         {canPublish&&<button onClick={()=>setFeatured(post.id)} title={featuredId===post.id?'Unset featured':'Set as featured'} className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${featuredId===post.id?'text-white bg-[#f59e0b]':`${t.faint} hover:text-[#f59e0b] hover:bg-[var(--a-hover)]`}`}><Star className="h-3.5 w-3.5" fill={featuredId===post.id?'currentColor':'none'}/></button>}
-         {status==='published'&&<Link href={`/blog/${post.slug}`} target="_blank" title="View post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><ExternalLink className="h-3.5 w-3.5"/></Link>}
-         <Link href={`/admin/blog/${post.id}`} title="Edit post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><Pencil className="h-3.5 w-3.5"/></Link>
-         {canPublish&&<button onClick={()=>setDeleteTarget(post)} disabled={loading===post.id} title="Delete post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.faint} hover:text-white hover:bg-[#dc2626]`}><Trash2 className="h-3.5 w-3.5"/></button>}
+         {canPublish&&<button onClick={()=>setFeatured(post.id)} data-tip={featuredId===post.id?'Unset featured':'Set as featured'} className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${featuredId===post.id?'text-white bg-[#f59e0b]':`${t.faint} hover:text-[#f59e0b] hover:bg-[var(--a-hover)]`}`}><Star className="h-3.5 w-3.5" fill={featuredId===post.id?'currentColor':'none'}/></button>}
+         {status==='published'&&<Link href={`/blog/${post.slug}`} target="_blank" data-tip="View post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><ExternalLink className="h-3.5 w-3.5"/></Link>}
+         <Link href={`/admin/blog/${post.id}`} data-tip="Edit post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><Pencil className="h-3.5 w-3.5"/></Link>
+         {canPublish&&<button onClick={()=>setDeleteTarget(post)} disabled={loading===post.id} data-tip="Delete post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.faint} hover:text-white hover:bg-[#dc2626]`}><Trash2 className="h-3.5 w-3.5"/></button>}
         </div>
        </td>
       </tr>;
@@ -150,6 +165,15 @@ export default function BlogList({posts,categories=[],postCats=[],viewCounts=[],
    </div>
   </div>}
 
+  {bulkDelete&&<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={()=>setBulkDelete(false)}>
+   <div className={`w-full max-w-sm rounded-2xl border shadow-2xl p-6 ${t.modal}`} onClick={e=>e.stopPropagation()}>
+    <div className="flex items-center gap-4 mb-5"><div className="h-11 w-11 rounded-full bg-[#dc2626] flex items-center justify-center flex-none"><Trash2 className="h-5 w-5 text-white"/></div><div><p className={`text-sm font-bold ${t.heading}`}>Delete {picked.length} post{picked.length===1?'':'s'}?</p><p className={`text-xs mt-0.5 ${t.sub}`}>This can’t be undone.</p></div></div>
+    <div className="flex gap-2">
+     <button onClick={()=>setBulkDelete(false)} className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-colors ${t.ghostBtn}`}>Cancel</button>
+     <button onClick={()=>bulk('delete')} disabled={bulkBusy} className="flex-1 py-2.5 rounded-xl bg-[#dc2626] hover:bg-[#b91c1c] text-white text-sm font-semibold transition-colors disabled:opacity-50">{bulkBusy?'Deleting…':`Delete ${picked.length}`}</button>
+    </div>
+   </div>
+  </div>}
   {/* Delete modal */}
   {deleteTarget&&<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={()=>setDeleteTarget(null)}>
    <div className={`w-full max-w-sm rounded-2xl border shadow-2xl p-6 ${t.modal}`} onClick={e=>e.stopPropagation()}>

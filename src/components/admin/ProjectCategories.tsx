@@ -37,13 +37,13 @@ export default function ProjectCategories({initial,usage}:{initial:Cat[];usage:R
      {list.map(c=><div key={c.id} className="flex items-center gap-2 px-5 py-2.5 transition-colors hover:bg-[var(--a-hover)]">
       {editing===c.id?<>
        <input autoFocus value={editName} onChange={e=>setEditName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')rename(c);if(e.key==='Escape')setEditing(null);}} maxLength={80} className={`flex-1 min-w-0 rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none ${t.input}`}/>
-       <button onClick={()=>rename(c)} disabled={busy||!editName.trim()} aria-label="Save" className="h-6 w-6 rounded flex items-center justify-center bg-[#16a34a] text-white disabled:opacity-40"><Check className="h-3.5 w-3.5"/></button>
-       <button onClick={()=>setEditing(null)} aria-label="Cancel" className={`h-6 w-6 rounded flex items-center justify-center ${t.iconBtn}`}><X className="h-3.5 w-3.5"/></button>
+       <button onClick={()=>rename(c)} disabled={busy||!editName.trim()} aria-label="Save" data-tip="Save" className="h-6 w-6 rounded flex items-center justify-center bg-[#16a34a] text-white disabled:opacity-40"><Check className="h-3.5 w-3.5"/></button>
+       <button onClick={()=>setEditing(null)} aria-label="Cancel" data-tip="Cancel" className={`h-6 w-6 rounded flex items-center justify-center ${t.iconBtn}`}><X className="h-3.5 w-3.5"/></button>
       </>:<>
        <span className={`flex-1 text-sm ${t.heading}`}>{c.name}</span>
        {usage[`${c.kind}:${c.name}`]?<span className={`text-xs rounded-full px-2 py-0.5 ${t.soft} ${t.faint}`}>{usage[`${c.kind}:${c.name}`]} project{usage[`${c.kind}:${c.name}`]>1?'s':''}</span>:null}
-       <button onClick={()=>{setEditing(c.id);setEditName(c.name);}} aria-label={`Rename ${c.name}`} className={`h-6 w-6 rounded flex items-center justify-center transition-colors ${t.iconBtn}`}><Pencil className="h-3 w-3"/></button>
-       <button onClick={()=>remove(c)} disabled={busy} aria-label={`Delete ${c.name}`} className={`h-6 w-6 rounded flex items-center justify-center transition-colors ${t.faint} hover:text-white hover:bg-[#dc2626]`}><X className="h-3.5 w-3.5"/></button>
+       <button onClick={()=>{setEditing(c.id);setEditName(c.name);}} aria-label={`Rename ${c.name}`} data-tip={`Rename ${c.name}`} className={`h-6 w-6 rounded flex items-center justify-center transition-colors ${t.iconBtn}`}><Pencil className="h-3 w-3"/></button>
+       <button onClick={()=>remove(c)} disabled={busy} aria-label={`Delete ${c.name}`} data-tip={`Delete ${c.name}`} className={`h-6 w-6 rounded flex items-center justify-center transition-colors ${t.faint} hover:text-white hover:bg-[#dc2626]`}><X className="h-3.5 w-3.5"/></button>
       </>}
      </div>)}
     </div>}

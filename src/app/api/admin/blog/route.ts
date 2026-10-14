@@ -44,6 +44,20 @@ export async function POST(request:Request){
     if(!admin)return Response.json({error:'An admin must change publishing status.'},{status:403});
     const {error}=await db.from('blog_posts').update(await publishing(db,body.id,mode,body.published_at)).eq('id',body.id);if(error)throw error;return done();
    }
+   case 'bulk':{
+    if(!admin)return Response.json({error:'An admin must do this.'},{status:403});
+    const ids=(Array.isArray(body.ids)?body.ids:[]).filter((i:unknown)=>typeof i==='string'&&uuid.test(i)).slice(0,500) as string[];
+    if(!ids.length)return Response.json({error:'Select at least one post.'},{status:400});
+    if(body.op==='delete'){const {error}=await db.from('blog_posts').delete().in('id',ids);if(error)throw error;return done();}
+    if(body.op==='draft'){const {error}=await db.from('blog_posts').update({status:'draft',published_at:null}).in('id',ids);if(error)throw error;return done();}
+    if(body.op==='publish'){
+     // Keep the original date for posts that were already live.
+     const {data}=await db.from('blog_posts').select('id,status,published_at').in('id',ids);const now=new Date();
+     for(const p of data??[]){const live=p.status==='published'&&p.published_at&&new Date(p.published_at)<=now;if(live)continue;const {error}=await db.from('blog_posts').update({status:'published',published_at:now.toISOString()}).eq('id',p.id);if(error)throw error;}
+     return done();
+    }
+    return Response.json({error:'Invalid request'},{status:400});
+   }
    case 'delete':{
     if(!admin||!body.id)return Response.json({error:'Deletion is not permitted.'},{status:403});
     const {error}=await db.from('blog_posts').delete().eq('id',body.id);if(error)throw error;return done();

@@ -144,7 +144,7 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
  const pane='bg-[var(--a-bg)]',headerBg='bg-[var(--a-panel)] border-[var(--a-border)]',labelCls=t.sub;
  const toolbarBtn='text-[var(--a-muted)] hover:text-[var(--a-fg)] hover:bg-[var(--a-hover)] data-[active=true]:bg-[var(--a-fg)] data-[active=true]:text-[var(--a-bg)]';
  const sep=<div className="w-px h-4 mx-1 bg-[var(--a-border)]"/>;
- const tb=(title:string,onClick:()=>void,icon:React.ReactNode,active?:boolean,extra='')=><button type="button" title={title} aria-label={title} onMouseDown={e=>e.preventDefault()} onClick={onClick} data-active={active??false} className={`h-7 w-7 rounded flex items-center justify-center transition-colors disabled:opacity-25 ${toolbarBtn} ${extra}`}>{icon}</button>;
+ const tb=(title:string,onClick:()=>void,icon:React.ReactNode,active?:boolean,extra='')=><button type="button" data-tip={title} aria-label={title} onMouseDown={e=>e.preventDefault()} onClick={onClick} data-active={active??false} className={`h-7 w-7 rounded flex items-center justify-center transition-colors disabled:opacity-25 ${toolbarBtn} ${extra}`}>{icon}</button>;
  const ic='h-3.5 w-3.5';
 
  return <>
@@ -195,7 +195,7 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
         {tb('Underline',()=>editor?.chain().focus().toggleUnderline().run(),<UnderlineIcon className={ic}/>,editor?.isActive('underline'))}
         {tb('Strikethrough',()=>editor?.chain().focus().toggleStrike().run(),<Strikethrough className={ic}/>,editor?.isActive('strike'))}
         {sep}
-        {([1,2,3] as const).map(level=><button key={level} type="button" title={`Heading ${level}`} onMouseDown={e=>e.preventDefault()} onClick={()=>editor?.chain().focus().toggleHeading({level}).run()} data-active={editor?.isActive('heading',{level})??false} className={`h-7 px-2 rounded text-xs font-bold transition-colors ${toolbarBtn}`}>H{level}</button>)}
+        {([1,2,3] as const).map(level=><button key={level} type="button" data-tip={`Heading ${level}`} onMouseDown={e=>e.preventDefault()} onClick={()=>editor?.chain().focus().toggleHeading({level}).run()} data-active={editor?.isActive('heading',{level})??false} className={`h-7 px-2 rounded text-xs font-bold transition-colors ${toolbarBtn}`}>H{level}</button>)}
         {sep}
         {tb('Bullet list',()=>editor?.chain().focus().toggleBulletList().run(),<List className={ic}/>,editor?.isActive('bulletList'))}
         {tb('Ordered list',()=>editor?.chain().focus().toggleOrderedList().run(),<ListOrdered className={ic}/>,editor?.isActive('orderedList'))}
@@ -203,20 +203,20 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
         {sep}
         {tb('Insert link',toggleLinkBar,<Link2 className={ic}/>,editor?.isActive('link'))}
         <div className="relative">
-         <button type="button" title="Text colour" onMouseDown={e=>e.preventDefault()} onClick={()=>setShowColors(v=>!v)} className={`h-7 w-7 rounded flex flex-col items-center justify-center gap-0.5 transition-colors ${toolbarBtn}`}>
+         <button type="button" data-tip="Text colour" onMouseDown={e=>e.preventDefault()} onClick={()=>setShowColors(v=>!v)} className={`h-7 w-7 rounded flex flex-col items-center justify-center gap-0.5 transition-colors ${toolbarBtn}`}>
           <span className="text-xs font-bold leading-none">A</span>
           <span className="w-4 h-1 rounded-full" style={{backgroundColor:editor?.getAttributes('textStyle').color??(dark?'#ffffff':'#111827')}}/>
          </button>
          {showColors&&<div onMouseDown={e=>e.preventDefault()} className={`absolute top-full left-0 mt-1 z-50 rounded-xl border shadow-xl p-3 w-48 ${t.modal}`}>
           <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelCls}`}>Text colour</p>
           <div className="grid grid-cols-5 gap-2">
-           {COLORS.map(c=><button key={c.value} type="button" title={c.label} onMouseDown={e=>e.preventDefault()} onClick={()=>{if(c.value==='inherit')editor?.chain().focus().unsetColor().run();else editor?.chain().focus().setColor(c.value).run();setShowColors(false);}} className="h-7 w-7 rounded-lg border-2 transition-transform hover:scale-110" style={{backgroundColor:c.value==='inherit'?'transparent':c.value,borderColor:c.value==='inherit'?'var(--a-border)':c.value}}>
+           {COLORS.map(c=><button key={c.value} type="button" data-tip={c.label} onMouseDown={e=>e.preventDefault()} onClick={()=>{if(c.value==='inherit')editor?.chain().focus().unsetColor().run();else editor?.chain().focus().setColor(c.value).run();setShowColors(false);}} className="h-7 w-7 rounded-lg border-2 transition-transform hover:scale-110" style={{backgroundColor:c.value==='inherit'?'transparent':c.value,borderColor:c.value==='inherit'?'var(--a-border)':c.value}}>
             {c.value==='inherit'&&<X className={`h-3.5 w-3.5 mx-auto ${labelCls}`}/>}
            </button>)}
           </div>
          </div>}
         </div>
-        <label title="Upload image" aria-label="Upload image" onMouseDown={e=>e.preventDefault()} className={`h-7 w-7 rounded flex items-center justify-center transition-colors cursor-pointer ${toolbarBtn} ${imgUploading?'opacity-50 cursor-wait':''}`}>{imgUploading?<Loader2 className={`${ic} animate-spin`}/>:<ImageIcon className={ic}/>}<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={handleEditorImageUpload} className="hidden"/></label>
+        <label data-tip="Upload image" aria-label="Upload image" onMouseDown={e=>e.preventDefault()} className={`h-7 w-7 rounded flex items-center justify-center transition-colors cursor-pointer ${toolbarBtn} ${imgUploading?'opacity-50 cursor-wait':''}`}>{imgUploading?<Loader2 className={`${ic} animate-spin`}/>:<ImageIcon className={ic}/>}<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={handleEditorImageUpload} className="hidden"/></label>
         {tb('Insert from media library',()=>setPicker('content'),<Images className={ic}/>)}
         {tb('Code block',()=>editor?.chain().focus().toggleCodeBlock().run(),<Code2 className={ic}/>,editor?.isActive('codeBlock'))}
        </div>
@@ -263,7 +263,7 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
          {([{value:'draft',label:'Draft',icon:<PenLine className="h-5 w-5" strokeWidth={1.8}/>},{value:'scheduled',label:'Scheduled',icon:<CalendarDays className="h-5 w-5" strokeWidth={1.8}/>},{value:'published',label:'Publish',icon:<CloudUpload className="h-5 w-5" strokeWidth={1.8}/>}] as const).map(opt=>{
           const active=status===opt.value,locked=!canPublish&&opt.value!=='draft';
           const activeStyle=opt.value==='published'?'bg-[#16a34a] border-[#16a34a] text-white':opt.value==='scheduled'?'bg-[#f59e0b] border-[#f59e0b] text-[#1a1200]':'bg-[#52525b] border-[#52525b] text-white';
-          return <button key={opt.value} type="button" disabled={locked} title={locked?'An admin must publish or schedule posts':undefined} onClick={()=>setStatus(opt.value)} className={`flex flex-col items-center gap-2 rounded-xl border py-3.5 text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${active?activeStyle:`border-[var(--a-border)] ${t.faint} hover:text-[var(--a-fg)] hover:border-[var(--a-muted)]`}`}>{opt.icon}{opt.label}</button>;
+          return <button key={opt.value} type="button" disabled={locked} data-tip={locked?'An admin must publish or schedule posts':undefined} onClick={()=>setStatus(opt.value)} className={`flex flex-col items-center gap-2 rounded-xl border py-3.5 text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${active?activeStyle:`border-[var(--a-border)] ${t.faint} hover:text-[var(--a-fg)] hover:border-[var(--a-muted)]`}`}>{opt.icon}{opt.label}</button>;
          })}
         </div>
         {status==='scheduled'&&<input type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)} min={localInput(new Date())} className={`w-full rounded-lg border px-3 py-2 text-xs focus:outline-none transition-colors ${t.input}`}/>}

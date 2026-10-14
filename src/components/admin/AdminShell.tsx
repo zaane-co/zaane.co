@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
+import TipLayer from '@/components/admin/TipLayer';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Images,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Search,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
@@ -117,8 +118,8 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
      <p>Welcome back, <span>{first}</span></p>
     </div>
     <div className="za-header-right">
-     <button className="za-icon-btn" onClick={toggleTheme} aria-label={light?'Switch to dark mode':'Switch to light mode'} title={light?'Dark mode':'Light mode'}>{light?<Moon size={17}/>:<Sun size={17}/>}</button>
-     {can('leads')&&<Link href="/admin/leads" className="za-icon-btn" aria-label={newLeads?`${newLeads} new leads`:'Leads'} title={newLeads?`${newLeads} new lead${newLeads>1?'s':''}`:'No new leads'}><Bell size={17}/>{newLeads>0&&<span className="za-ping"/>}</Link>}
+     <button className="za-icon-btn" onClick={toggleTheme} aria-label={light?'Switch to dark mode':'Switch to light mode'} data-tip={light?'Dark mode':'Light mode'}>{light?<Moon size={17}/>:<Sun size={17}/>}</button>
+     {can('leads')&&<Link href="/admin/leads" className="za-icon-btn" aria-label={newLeads?`${newLeads} new leads`:'Leads'} data-tip={newLeads?`${newLeads} new lead${newLeads>1?'s':''}`:'No new leads'}><Bell size={17}/>{newLeads>0&&<span className="za-ping"/>}</Link>}
      <span className="za-header-divider"/>
      <div className="za-profile" ref={profileRef}>
       <button className="za-profile-btn" onClick={()=>setProfileOpen(v=>!v)} aria-label="Account menu"><span className="za-avatar">{initial}</span><ChevronDown size={13} className={`za-nav-chev${profileOpen?' is-open':''}`}/></button>
@@ -127,6 +128,7 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
     </div>
    </header>
    <main className="za-main" data-lenis-prevent>{children}</main>
+   <TipLayer/>
   </div>
  </div>;
 }

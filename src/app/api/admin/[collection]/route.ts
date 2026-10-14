@@ -7,8 +7,26 @@ export async function POST(request:Request,{params}:{params:Promise<{collection:
  const user=await staff();const {collection}=await params;
  if(!user||!allowed(collection,user.role))return Response.json({error:'Access denied'},{status:403});
  const spec=collections[collection];const body=await request.json().catch(()=>null);
- if(!body||!['save','delete'].includes(body.action)||body.id&&!uuid.test(body.id))return Response.json({error:'Invalid request'},{status:400});
+ if(!body||!['save','delete','bulk_delete','bulk_status'].includes(body.action)||body.id&&!uuid.test(body.id))return Response.json({error:'Invalid request'},{status:400});
  const db=await sessionClient();
+ // Bulk actions from the table checkboxes.
+ if(body.action==='bulk_delete'||body.action==='bulk_status'){
+  const ids=(Array.isArray(body.ids)?body.ids:[]).filter((i:unknown)=>typeof i==='string'&&uuid.test(i)).slice(0,500) as string[];
+  if(!ids.length)return Response.json({error:'Select at least one record.'},{status:400});
+  if(body.action==='bulk_delete'){
+   if(user.role==='editor'||collection==='users')return Response.json({error:'Deletion is not permitted'},{status:403});
+   const {error,count}=await db.from(collection).delete({count:'exact'}).in('id',ids);
+   if(error)return Response.json({error:'Could not delete these records.'},{status:400});
+   revalidatePath('/','layout');return Response.json({ok:true,count});
+  }
+  const statusField=spec.fields.find(f=>f.key==='status');const status=String(body.status??'');
+  if(!statusField?.options?.includes(status))return Response.json({error:'Invalid status'},{status:400});
+  if(user.role==='editor'&&status==='published')return Response.json({error:'An admin must publish this content.'},{status:403});
+  const patch:Record<string,unknown>={status};
+  const {error,count}=await db.from(collection).update(patch,{count:'exact'}).in('id',ids);
+  if(error)return Response.json({error:'Could not update these records.'},{status:400});
+  revalidatePath('/','layout');return Response.json({ok:true,count});
+ }
  if(body.action==='delete'){
   if(user.role==='editor'||collection==='users'||!body.id)return Response.json({error:'Deletion is not permitted'},{status:403});
   const {error}=await db.from(collection).delete().eq('id',body.id);

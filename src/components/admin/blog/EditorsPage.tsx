@@ -87,7 +87,7 @@ export default function EditorsPage({initialEditors,now}:{initialEditors:Editor[
   {selected&&<div className="fixed inset-0 z-40 bg-black/40" onClick={()=>setSelected(null)}/>}
   <div className={`fixed top-0 right-0 h-full z-50 w-full max-w-96 border-l shadow-2xl flex flex-col transition-transform duration-300 ease-out ${t.card} ${selected?'translate-x-0':'translate-x-full'}`}>
    {selected&&<>
-    <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}><p className={`text-sm font-bold ${t.heading}`}>Editor Profile</p><button onClick={()=>setSelected(null)} aria-label="Close" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><X className="h-4 w-4" strokeWidth={2.5}/></button></div>
+    <div className={`flex items-center justify-between px-5 py-4 border-b ${t.divider}`}><p className={`text-sm font-bold ${t.heading}`}>Editor Profile</p><button onClick={()=>setSelected(null)} aria-label="Close" data-tip="Close" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><X className="h-4 w-4" strokeWidth={2.5}/></button></div>
     <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5" data-lenis-prevent>
      <div className={`rounded-xl border p-4 ${t.soft} ${t.divider}`}>
       <div className="flex items-start gap-4">{avatar(selected,'h-14 w-14 text-xl')}

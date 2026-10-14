@@ -35,8 +35,8 @@ export default function BlogArchives({posts}:{posts:Post[]}){
       <p className={`text-xs mt-0.5 ${t.faint}`}>{fmt(p.published_at??p.created_at)}</p>
      </div>
      <div className="flex items-center gap-1 ml-4 shrink-0">
-      {st==='published'&&<Link href={`/blog/${p.slug}`} target="_blank" title="View post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><ExternalLink className="h-3.5 w-3.5"/></Link>}
-      <Link href={`/admin/blog/${p.id}`} title="Edit post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><Pencil className="h-3.5 w-3.5"/></Link>
+      {st==='published'&&<Link href={`/blog/${p.slug}`} target="_blank" data-tip="View post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><ExternalLink className="h-3.5 w-3.5"/></Link>}
+      <Link href={`/admin/blog/${p.id}`} data-tip="Edit post" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors ${t.iconBtn}`}><Pencil className="h-3.5 w-3.5"/></Link>
      </div>
     </div>;})}
    </div>

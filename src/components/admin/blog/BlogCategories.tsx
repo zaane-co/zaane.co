@@ -37,7 +37,7 @@ export default function BlogCategories({initial,canManage}:{initial:Category[];c
   setCategories(c=>c.filter(x=>x.id!==id&&x.parent_id!==id));
   try{await blogApi({action:'delete_category',id});router.refresh();}catch(e){setCategories(prev);setError(e instanceof Error?e.message:'Could not delete.');}
  }
- const del=(id:string,name:string)=>canManage&&<button onClick={()=>deleteCategory(id)} aria-label={`Delete ${name}`} className={`h-6 w-6 rounded flex items-center justify-center flex-none transition-colors ${t.faint} hover:text-white hover:bg-[#dc2626]`}><X className="h-3.5 w-3.5"/></button>;
+ const del=(id:string,name:string)=>canManage&&<button onClick={()=>deleteCategory(id)} aria-label={`Delete ${name}`} data-tip={`Delete ${name}`} className={`h-6 w-6 rounded flex items-center justify-center flex-none transition-colors ${t.faint} hover:text-white hover:bg-[#dc2626]`}><X className="h-3.5 w-3.5"/></button>;
 
  return <div className="w-full">
   <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -45,7 +45,7 @@ export default function BlogCategories({initial,canManage}:{initial:Category[];c
    <div className="relative w-52">
     <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${t.sub}`}/>
     <input type="text" placeholder="Search categories…" value={search} onChange={e=>setSearch(e.target.value)} className={`w-full rounded-lg border pl-9 pr-3 py-2 text-xs focus:outline-none transition-colors ${t.input}`}/>
-    {search&&<button onClick={()=>setSearch('')} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t.sub} hover:opacity-70`} aria-label="Clear search"><X className="h-3 w-3"/></button>}
+    {search&&<button onClick={()=>setSearch('')} className={`absolute right-3 top-1/2 -translate-y-1/2 ${t.sub} hover:opacity-70`} aria-label="Clear search" data-tip="Clear search"><X className="h-3 w-3"/></button>}
    </div>
   </div>
   {error&&<div className="mb-4 rounded-lg bg-[#dc2626] px-4 py-3 text-xs text-white">{error}</div>}

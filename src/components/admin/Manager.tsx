@@ -42,6 +42,14 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
  const canDelete=role!=='editor'&&collection!=='users';
  const canDuplicate=!spec.inbox&&!['settings','pages_content','users'].includes(collection);
  const hasFeatured=spec.fields.some(f=>f.key==='featured');
+ const [picked,setPicked]=useState<string[]>([]),[bulkDelete,setBulkDelete]=useState(false);
+ const canBulk=canDelete||!!statusField?.options;
+ async function bulk(action:'bulk_delete'|'bulk_status',status?:string){
+  setWorking('bulk');setMessage('');
+  try{const r=await fetch(`/api/admin/${collection}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,ids:picked,status})});const d=await r.json();if(!r.ok)throw new Error(d.error);
+   setMessage(action==='bulk_delete'?`Deleted ${d.count??picked.length} record${(d.count??picked.length)===1?'':'s'}.`:`Updated ${d.count??picked.length} to ${status?.replace('_',' ')}.`);setPicked([]);setBulkDelete(false);router.refresh();}
+  catch(e){setMessage(e instanceof Error?e.message:'Could not update.');}finally{setWorking(null);}
+ }
  async function save(action:'save'|'delete'){
   setBusy(true);setMessage('');try{const r=await fetch(`/api/admin/${collection}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,id:selected?.id,values})});const data=await r.json();if(!r.ok)throw new Error(data.error);close();setMessage(action==='save'?'Saved successfully.':'Record deleted.');router.refresh();}catch(e){setMessage(e instanceof Error?e.message:'Could not save.');}finally{setBusy(false);}
  }
@@ -61,10 +69,17 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
   </div>
   {collection==='users'&&<p className="za-notice">Create or invite an account in Supabase Authentication, then assign its staff role here. Unassigned accounts have no admin access.</p>}
   {message&&!selected&&<p role="status" className="za-flash">{message}</p>}
+  {picked.length>0&&<div className="za-bulkbar" role="region" aria-label="Bulk actions">
+   <strong>{picked.length} selected</strong>
+   {statusField?.options&&<select aria-label="Change status of selected" value="" disabled={working==='bulk'} onChange={e=>{if(e.target.value)void bulk('bulk_status',e.target.value);}}><option value="">Change status…</option>{statusField.options.filter(o=>!(role==='editor'&&o==='published')).map(o=><option key={o} value={o}>{o.replace('_',' ')}</option>)}</select>}
+   {canDelete&&<button type="button" className="za-btn za-btn-danger" disabled={working==='bulk'} onClick={()=>setBulkDelete(true)}><Trash2 size={14}/>Delete</button>}
+   <button type="button" className="za-btn za-btn-ghost" onClick={()=>setPicked([])}>Clear</button>
+  </div>}
   <section className="za-card">
    {shown.length?<div className="za-table-wrap"><table className="za-table za-table-click">
-    <thead><tr><th>{spec.inbox?'From':'Title'}</th><th className="za-hide-sm">Details</th>{hasStatus&&<th>Status</th>}<th className="za-hide-sm">Created</th><th className="za-th-actions">Actions</th></tr></thead>
-    <tbody>{shown.map(row=><tr key={String(row.id)} onClick={()=>edit(row)} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')edit(row);}}>
+    <thead><tr>{canBulk&&<th className="za-th-check"><input type="checkbox" aria-label="Select all" data-tip={shown.every(r=>picked.includes(String(r.id)))?'Deselect all':'Select all'} checked={shown.length>0&&shown.every(r=>picked.includes(String(r.id)))} ref={el=>{if(el)el.indeterminate=picked.length>0&&!shown.every(r=>picked.includes(String(r.id)));}} onChange={e=>setPicked(e.target.checked?shown.map(r=>String(r.id)):[])}/></th>}<th>{spec.inbox?'From':'Title'}</th><th className="za-hide-sm">Details</th>{hasStatus&&<th>Status</th>}<th className="za-hide-sm">Created</th><th className="za-th-actions">Actions</th></tr></thead>
+    <tbody>{shown.map(row=><tr key={String(row.id)} className={picked.includes(String(row.id))?'is-picked':''} onClick={()=>edit(row)} tabIndex={0} onKeyDown={e=>{if(e.key==='Enter')edit(row);}}>
+     {canBulk&&<td className="za-td-check" onClick={e=>e.stopPropagation()}><input type="checkbox" aria-label={`Select ${primary(row)}`} checked={picked.includes(String(row.id))} onChange={e=>setPicked(p=>e.target.checked?[...p,String(row.id)]:p.filter(x=>x!==String(row.id)))}/></td>}
      <td><div className="za-cell-main">{image(row)&&<img src={image(row)} alt="" className="za-thumb"/>}<span><b>{primary(row)}</b>{spec.inbox&&row.email&&primary(row)!==row.email?<small>{String(row.email)}</small>:null}</span></div></td>
      <td className="za-hide-sm za-cell-muted">{secondary(row)}</td>
      {hasStatus&&<td onClick={e=>e.stopPropagation()} className="za-status-cell">{statusField?.options&&!(role==='editor'&&row.status==='published')?<>
@@ -73,11 +88,11 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
      </>:<Status value={row.status as string}/>}</td>}
      <td className="za-hide-sm za-cell-muted">{when(row.created_at as string)}</td>
      <td onClick={e=>e.stopPropagation()}><div className="za-row-actions">
-      {hasFeatured&&role!=='editor'&&<button type="button" title={row.featured?'Remove from homepage':'Feature on homepage'} aria-label="Toggle featured" disabled={working===row.id} className={row.featured?'is-featured':''} onClick={()=>quick(row,'save',{featured:!row.featured},row.featured?'Removed from featured.':'Featured on homepage.')}><Star size={14} fill={row.featured?'currentColor':'none'}/></button>}
-      {publicHref(collection,row)&&<a href={publicHref(collection,row)} target="_blank" rel="noopener noreferrer" title="View on site" aria-label="View on site"><ExternalLink size={14}/></a>}
-      {spec.fields.length>0&&<button type="button" title="Edit" aria-label="Edit" onClick={()=>edit(row)}><Pencil size={14}/></button>}
-      {canDuplicate&&<button type="button" title="Duplicate" aria-label="Duplicate" disabled={working==='new'} onClick={()=>void duplicate(row)}><Copy size={14}/></button>}
-      {canDelete&&<button type="button" title="Delete" aria-label="Delete" className="za-row-danger" onClick={()=>setConfirmDelete(row)}><Trash2 size={14}/></button>}
+      {hasFeatured&&role!=='editor'&&<button type="button" data-tip={row.featured?'Remove from homepage':'Feature on homepage'} aria-label="Toggle featured" disabled={working===row.id} className={row.featured?'is-featured':''} onClick={()=>quick(row,'save',{featured:!row.featured},row.featured?'Removed from featured.':'Featured on homepage.')}><Star size={14} fill={row.featured?'currentColor':'none'}/></button>}
+      {publicHref(collection,row)&&<a href={publicHref(collection,row)} target="_blank" rel="noopener noreferrer" data-tip="View on site" aria-label="View on site"><ExternalLink size={14}/></a>}
+      {spec.fields.length>0&&<button type="button" data-tip="Edit" aria-label="Edit" onClick={()=>edit(row)}><Pencil size={14}/></button>}
+      {canDuplicate&&<button type="button" data-tip="Duplicate" aria-label="Duplicate" disabled={working==='new'} onClick={()=>void duplicate(row)}><Copy size={14}/></button>}
+      {canDelete&&<button type="button" data-tip="Delete" aria-label="Delete" className="za-row-danger" onClick={()=>setConfirmDelete(row)}><Trash2 size={14}/></button>}
      </div></td>
     </tr>)}</tbody>
    </table></div>:<div className="za-empty za-empty-lg"><h3>{search?'No matches':'Nothing here yet'}</h3><p>{search?'Try a different search.':spec.inbox?'New submissions will appear here.':'Create your first record when you’re ready.'}</p></div>}
@@ -86,7 +101,7 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
   {selected&&<>
    <button className="za-drawer-scrim" aria-label="Close editor" onClick={close}/>
    <aside className="za-drawer" role="dialog" aria-label={selected.id?'Edit record':'New record'}>
-    <div className="za-drawer-head"><div><p>{spec.label}</p><h2>{selected.id?primary(selected):'New record'}</h2></div><button className="za-icon-btn" onClick={close} aria-label="Close"><X size={18}/></button></div>
+    <div className="za-drawer-head"><div><p>{spec.label}</p><h2>{selected.id?primary(selected):'New record'}</h2></div><button className="za-icon-btn" onClick={close} aria-label="Close" data-tip="Close"><X size={18}/></button></div>
     <form onSubmit={e=>{e.preventDefault();void save('save');}} className="za-drawer-body" data-lenis-prevent>
      {spec.inbox&&<dl className="za-details">{Object.entries(selected).filter(([k])=>!['id','status','role'].includes(k)).map(([k,v])=><div key={k} className={k==='message'?'za-details-wide':''}><dt>{k.replaceAll('_',' ')}</dt><dd>{k==='created_at'?when(String(v)):String(v??'-')||'-'}</dd></div>)}</dl>}
      {spec.fields.map(f=><div className="za-field" key={f.key}>
@@ -110,6 +125,13 @@ export default function Manager({collection,rows,role,options,gallery={}}:{colle
     </form>
    </aside>
   </>}
+  {bulkDelete&&<div className="za-modal-scrim" onClick={()=>setBulkDelete(false)}>
+   <div className="za-modal" role="alertdialog" aria-label="Delete selected" onClick={e=>e.stopPropagation()}>
+    <div className="za-modal-head"><span className="za-modal-icon"><Trash2 size={18}/></span><div><strong>Delete {picked.length} record{picked.length===1?'':'s'}?</strong><small>{spec.label}</small></div></div>
+    <p>This permanently deletes everything you selected and can’t be undone.</p>
+    <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setBulkDelete(false)}>Cancel</button><button type="button" className="za-btn za-btn-danger" disabled={working==='bulk'} onClick={()=>void bulk('bulk_delete')}>{working==='bulk'?'Deleting…':`Delete ${picked.length}`}</button></div>
+   </div>
+  </div>}
   {confirmDelete&&<div className="za-modal-scrim" onClick={()=>setConfirmDelete(null)}>
    <div className="za-modal" role="alertdialog" aria-label="Delete record" onClick={e=>e.stopPropagation()}>
     <div className="za-modal-head"><span className="za-modal-icon"><Trash2 size={18}/></span><div><strong>Delete {spec.label.toLowerCase().replace(/s$/,'')}?</strong><small>{primary(confirmDelete)}</small></div></div>

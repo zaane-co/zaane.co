@@ -25,7 +25,7 @@ export function EditorImageView({node,deleteNode,updateAttributes}:NodeViewProps
    <button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>fileRef.current?.click()} className="flex items-center gap-1.5 rounded-lg bg-black text-white text-xs px-2.5 py-1.5 hover:bg-[#222] transition-colors">
     {replacing?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<ImageIcon className="h-3.5 w-3.5"/>}Replace
    </button>
-   <button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>deleteNode()} className="flex items-center justify-center h-7 w-7 rounded-lg bg-[#dc2626] text-white hover:bg-[#b91c1c] transition-colors" aria-label="Remove image"><X className="h-3.5 w-3.5" strokeWidth={2.5}/></button>
+   <button type="button" onMouseDown={e=>e.preventDefault()} onClick={()=>deleteNode()} className="flex items-center justify-center h-7 w-7 rounded-lg bg-[#dc2626] text-white hover:bg-[#b91c1c] transition-colors" aria-label="Remove image" data-tip="Remove image"><X className="h-3.5 w-3.5" strokeWidth={2.5}/></button>
   </div>}
  </NodeViewWrapper>;
 }

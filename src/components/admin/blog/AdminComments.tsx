@@ -56,7 +56,7 @@ export default function AdminComments({initialComments,canModerate}:{initialComm
       {!c.approved?<button onClick={()=>approve(c.id,true)} disabled={saving===c.id} className={`${pill} bg-[#16a34a] text-white hover:bg-[#15803d]`}>{saving===c.id?'…':'Approve'}</button>
       :<button onClick={()=>approve(c.id,false)} disabled={saving===c.id} className={`${pill} bg-[var(--a-panel-2)] ${t.sub} hover:text-[var(--a-fg)]`}>Unapprove</button>}
       <button onClick={()=>{setReplyingId(replyingId===c.id?null:c.id);setReplyText(c.admin_reply??'');}} className={`${pill} bg-[#2563eb] text-white hover:bg-[#1d4ed8]`}>{c.admin_reply?'Edit reply':'Reply'}</button>
-      <button onClick={()=>remove(c.id)} disabled={saving===c.id} aria-label="Delete comment" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 ${t.faint} hover:text-white hover:bg-[#dc2626]`}><Trash2 className="h-3.5 w-3.5"/></button>
+      <button onClick={()=>remove(c.id)} disabled={saving===c.id} aria-label="Delete comment" data-tip="Delete comment" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 ${t.faint} hover:text-white hover:bg-[#dc2626]`}><Trash2 className="h-3.5 w-3.5"/></button>
      </div>}
     </div>
     <div className="px-5 py-4 space-y-3">

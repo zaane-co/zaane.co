@@ -236,3 +236,12 @@
 .za-modal-icon{width:42px;height:42px;border-radius:50%;background:#dc2626;color:#fff;display:grid;place-items:center;flex-shrink:0}
 .za-modal>p{font-size:13px;color:var(--a-muted);line-height:1.5;margin-bottom:18px}
 .za-modal-foot{display:flex;gap:8px}.za-modal-foot .za-btn{flex:1;justify-content:center}
+.za-tip{position:fixed;z-index:200;pointer-events:none;padding:5px 9px;border-radius:7px;background:var(--a-fg);color:var(--a-bg);font-size:11.5px;font-weight:500;line-height:1.3;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+/* Bulk select */
+.za-table .za-th-check,.za-table .za-td-check{width:44px;padding-right:0}
+.za-th-check input,.za-td-check input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;vertical-align:middle}
+.za-table tbody tr.is-picked{background:var(--a-hover)}
+.za-bulkbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;margin-bottom:12px;border-radius:12px;background:var(--a-fg);color:var(--a-bg)}
+.za-bulkbar strong{font-size:13px;margin-right:auto}
+.za-bulkbar select{height:34px;padding:0 10px;border-radius:9px;border:0;background:var(--a-bg);color:var(--a-fg);font-size:12.5px;text-transform:capitalize}
+.za-bulkbar .za-btn-ghost{color:var(--a-bg);border-color:var(--a-bg)}

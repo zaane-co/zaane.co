@@ -90,7 +90,7 @@ export default function CuratedLinks({initialLinks}:{initialLinks:Curated[]}){
      <div className="flex items-center gap-1.5 shrink-0">
       <span className={`text-xs ${t.sub}`}>{fmt(link.created_at)}</span>
       <button onClick={()=>togglePublished(link)} className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-colors bg-[var(--a-panel-2)] ${t.sub} hover:text-[var(--a-fg)]`}>{link.published?'Hide':'Show'}</button>
-      <button onClick={()=>handleDelete(link.id)} disabled={deleting===link.id} aria-label="Delete link" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 ${t.faint} hover:text-white hover:bg-[#dc2626]`}><Trash2 className="h-3.5 w-3.5"/></button>
+      <button onClick={()=>handleDelete(link.id)} disabled={deleting===link.id} aria-label="Delete link" data-tip="Delete link" className={`h-7 w-7 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50 ${t.faint} hover:text-white hover:bg-[#dc2626]`}><Trash2 className="h-3.5 w-3.5"/></button>
      </div>
     </div>)}
    </div>}

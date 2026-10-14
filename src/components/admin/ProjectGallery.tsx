@@ -34,7 +34,7 @@ export default function ProjectGallery({projectId,initial}:{projectId:string;ini
     <img src={img.image_url} alt={`Gallery image ${i+1}`} className="h-full w-full object-cover pointer-events-none"/>
     <span className="absolute top-1.5 left-1.5 h-5 min-w-5 px-1 rounded bg-black text-white text-[10px] font-semibold flex items-center justify-center">{i+1}</span>
     <span className="absolute bottom-1.5 left-1.5 h-5 w-5 rounded bg-black text-white flex items-center justify-center opacity-0 group-hover:opacity-100"><GripVertical className="h-3 w-3"/></span>
-    <button type="button" onClick={()=>run({action:'remove',id:img.id})} disabled={busy} aria-label={`Remove image ${i+1}`} className="absolute top-1.5 right-1.5 h-6 w-6 rounded bg-[#dc2626] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100"><X className="h-3.5 w-3.5"/></button>
+    <button type="button" onClick={()=>run({action:'remove',id:img.id})} disabled={busy} aria-label={`Remove image ${i+1}`} data-tip={`Remove image ${i+1}`} className="absolute top-1.5 right-1.5 h-6 w-6 rounded bg-[#dc2626] text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100"><X className="h-3.5 w-3.5"/></button>
    </div>)}
   </div>}
   <div onDragOver={e=>{if(!dragId){e.preventDefault();setOver(true);}}} onDragLeave={()=>setOver(false)} onDrop={e=>{if(dragId)return;e.preventDefault();setOver(false);void uploadFiles(e.dataTransfer.files);}}
