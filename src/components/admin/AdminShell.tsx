@@ -16,7 +16,7 @@ const groups:{label:string;items:Item[]}[]=[
   {label:'Subscribers',href:'/admin/subscribers',key:'subscribers',icon:Users},
  ]},
  {label:'Content',items:[
-  {label:'Projects',href:'/admin/projects',icon:Briefcase,children:[{label:'All projects',href:'/admin/projects',key:'projects'},{label:'Gallery',href:'/admin/project_images',key:'project_images'},{label:'Categories',href:'/admin/project-categories',key:'blog_categories'}]},
+  {label:'Projects',href:'/admin/projects',icon:Briefcase,children:[{label:'All projects',href:'/admin/projects',key:'projects'},{label:'Categories',href:'/admin/project-categories',key:'blog_categories'}]},
   {label:'Blog',href:'/admin/blog',icon:BookOpen,children:[{label:'All Posts',href:'/admin/blog',key:'blog_posts'},{label:'New Post',href:'/admin/blog/new',key:'blog_posts'},{label:'Categories',href:'/admin/blog/categories',key:'blog_categories'},{label:'Archives',href:'/admin/blog/archives',key:'blog_posts'},{label:'Post Metrics',href:'/admin/blog/metrics',key:'blog_posts'},{label:'Comments',href:'/admin/blog/comments',key:'blog_posts'},{label:'Curated',href:'/admin/blog/curated',key:'blog_categories'},{label:'Editors',href:'/admin/editors',key:'users'}]},
   {label:'Media',href:'/admin/media',icon:Images},
   {label:'Testimonials',href:'/admin/testimonials',key:'testimonials',icon:Quote},

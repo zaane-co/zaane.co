@@ -12,8 +12,9 @@ import type {EditorView} from '@tiptap/pm/view';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import NextLink from 'next/link';
-import {Bold,CalendarDays,Check,ChevronLeft,CloudUpload,Code2,FileText,ImageIcon,Italic,Link2,List,ListOrdered,Loader2,PenLine,Quote,Redo2,Search,Strikethrough,Underline as UnderlineIcon,Undo2,X} from 'lucide-react';
+import {Bold,CalendarDays,Images,Check,ChevronLeft,CloudUpload,Code2,FileText,ImageIcon,Italic,Link2,List,ListOrdered,Loader2,PenLine,Quote,Redo2,Search,Strikethrough,Underline as UnderlineIcon,Undo2,X} from 'lucide-react';
 import {EditorImageView} from './EditorImage';
+import MediaPicker from '../MediaPicker';
 import {useAdminTheme} from '@/lib/admin-theme';
 import {t,getStatus,blogApi,uploadImage,type Category,type Post} from './shared';
 
@@ -50,6 +51,7 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
  const [showColors,setShowColors]=useState(false);
  const [toast,setToast]=useState<{title:string;sub:string;color:string}|null>(null);
  const [imgUploading,setImgUploading]=useState(false);
+ const [picker,setPicker]=useState<'cover'|'content'|null>(null);
 
  function insertUploads(view:EditorView,files:File[],pos?:number){
   files.forEach(async file=>{
@@ -156,6 +158,7 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
    </div>
   </div>}
 
+  <MediaPicker open={!!picker} multiple={picker==='content'} onClose={()=>setPicker(null)} onPick={urls=>{if(picker==='cover')setCoverImage(urls[0]);else urls.forEach(src=>editor?.chain().focus().setImage({src}).run());}}/>
   <div className="za-editor-bleed flex overflow-hidden">
    {/* LEFT: editor */}
    <div className={`w-full lg:w-1/2 flex flex-col overflow-hidden lg:border-r border-[var(--a-border)] ${pane}`}>
@@ -214,6 +217,7 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
          </div>}
         </div>
         <label title="Upload image" aria-label="Upload image" onMouseDown={e=>e.preventDefault()} className={`h-7 w-7 rounded flex items-center justify-center transition-colors cursor-pointer ${toolbarBtn} ${imgUploading?'opacity-50 cursor-wait':''}`}>{imgUploading?<Loader2 className={`${ic} animate-spin`}/>:<ImageIcon className={ic}/>}<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={handleEditorImageUpload} className="hidden"/></label>
+        {tb('Insert from media library',()=>setPicker('content'),<Images className={ic}/>)}
         {tb('Code block',()=>editor?.chain().focus().toggleCodeBlock().run(),<Code2 className={ic}/>,editor?.isActive('codeBlock'))}
        </div>
 
@@ -242,8 +246,9 @@ export default function BlogEditor({initialData,categories,initialCats=[],canPub
         <ImageIcon className={`h-8 w-8 mb-3 ${labelCls}`} strokeWidth={1.2}/>
         <span className={`text-sm font-medium ${labelCls}`}>{uploading?'Uploading…':'Click or drag to upload'}</span>
         <span className={`text-xs mt-1 ${t.faint}`}>PNG, JPG, WEBP, AVIF · 1280 × 720 recommended</span>
-        <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" onChange={e=>void uploadCover(e.target.files?.[0])} className="hidden"/>
+        <input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" onChange={e=>void uploadCover(e.target.files?.[0])} className="hidden"/>
        </label>}
+       <div className={`flex justify-end px-4 py-2.5 border-t ${t.divider}`}><button type="button" onClick={()=>setPicker('cover')} className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${t.ghostBtn}`}><Images className="h-3.5 w-3.5"/>{coverImage?'Replace from library':'Choose from library'}</button></div>
       </div>
 
       {/* Slug + status */}

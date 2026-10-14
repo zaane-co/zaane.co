@@ -4,7 +4,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 const sources:{table:string;fields:string[];label:(r:Record<string,unknown>)=>string;href:(r:Record<string,unknown>)=>string}[]=[
  {table:'blog_posts',fields:['cover_image','content'],label:r=>`Post: ${r.title}`,href:r=>`/admin/blog/${r.id}`},
  {table:'projects',fields:['cover_image','what_was_achieved'],label:r=>`Project: ${r.title}`,href:()=>'/admin/projects'},
- {table:'project_images',fields:['image_url'],label:()=>'Project gallery',href:()=>'/admin/project_images'},
+ {table:'project_images',fields:['image_url'],label:()=>'Project gallery',href:()=>'/admin/projects'},
  {table:'testimonials',fields:['photo_url'],label:r=>`Testimonial: ${r.client_name}`,href:()=>'/admin/testimonials'},
  {table:'team_members',fields:['photo_url'],label:r=>`Team: ${r.name}`,href:()=>'/admin/team_members'},
  {table:'pages_content',fields:['content'],label:r=>`Page: ${r.page_key}`,href:()=>'/admin/pages_content'},

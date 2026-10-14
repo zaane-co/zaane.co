@@ -2,17 +2,20 @@
 import {useEffect,useState,useRef} from 'react';
 import {useRouter} from 'next/navigation';
 import Markdown from 'react-markdown';
-import {Download,Plus,Search,X,Upload,Trash2} from 'lucide-react';
+import {Download,ImagePlus,Plus,Search,X,Upload,Trash2} from 'lucide-react';
+import MediaPicker from '@/components/admin/MediaPicker';
+import ProjectGallery from '@/components/admin/ProjectGallery';
 import {collections,safeUrl,type Field} from '@/lib/cms';
 import {Status,when} from '@/components/admin/ui';
 type Row=Record<string,unknown>;
 const primary=(r:Row)=>String(r.title||r.name||r.client_name||r.email||r.key||r.page_key||'Gallery image');
 const secondary=(r:Row)=>String(r.excerpt||r.subject||r.service_interested||r.slug||r.role||r.client_role||r.section_key||r.value||r.location||'');
 
-export default function Manager({collection,rows,role,options}:{collection:string;rows:Row[];role:string;options:Record<string,{value:string;label:string}[]>}){
+export default function Manager({collection,rows,role,options,gallery={}}:{collection:string;rows:Row[];role:string;options:Record<string,{value:string;label:string}[]>;gallery?:Record<string,{id:string;image_url:string;order:number}[]>}){
  const spec=collections[collection],router=useRouter();
  const [selected,setSelected]=useState<Row|null>(null),[values,setValues]=useState<Row>({}),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[search,setSearch]=useState(''),[preview,setPreview]=useState(false),[deleting,setDeleting]=useState(false);
  const bodyRef=useRef<HTMLTextAreaElement>(null);
+ const [pickFor,setPickFor]=useState<string|null>(null);
  const [added,setAdded]=useState<Record<string,{value:string;label:string}[]>>({}),[creating,setCreating]=useState<string|null>(null),[newName,setNewName]=useState('');
  const choices=(f:Field)=>{const list=[...(options[f.key]||[]),...(added[f.key]||[])],cur=String(values[f.key]??'');return cur&&!list.some(o=>o.value===cur)?[{value:cur,label:cur},...list]:list;};
  async function createOption(f:Field){
@@ -71,8 +74,9 @@ export default function Manager({collection,rows,role,options}:{collection:strin
       :f.type==='boolean'?<input id={`field-${f.key}`} type="checkbox" checked={!!values[f.key]} onChange={e=>setValues({...values,[f.key]:e.target.checked})}/>
       :f.type==='textarea'||f.type==='markdown'?(preview&&f.type==='markdown'?<div className="prose za-md-preview"><Markdown>{String(values[f.key]||'Nothing to preview yet.')}</Markdown></div>:<textarea ref={f.key==='content'?bodyRef:undefined} id={`field-${f.key}`} rows={f.type==='markdown'?14:4} required={f.required} value={String(values[f.key]||'')} onChange={e=>setValues({...values,[f.key]:e.target.value})}/>)
       :<input id={`field-${f.key}`} type={f.type==='number'?'number':'text'} required={f.required} value={String(values[f.key]??'')} onChange={e=>setValues({...values,[f.key]:e.target.value})}/>}
-      {f.type==='image'&&<div className="za-upload">{safeUrl(values[f.key])&&<img src={safeUrl(values[f.key])} alt="Selected image preview"/>}<label className="za-btn za-btn-ghost"><Upload size={15}/>Upload image<input type="file" accept="image/jpeg,image/png,image/webp,image/avif" disabled={busy} onChange={e=>void upload(f,e.target.files?.[0])} hidden/></label></div>}
+      {f.type==='image'&&<div className="za-upload">{safeUrl(values[f.key])&&<img src={safeUrl(values[f.key])} alt="Selected image preview"/>}<label className="za-btn za-btn-ghost"><Upload size={15}/>Upload image<input type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif" disabled={busy} onChange={e=>void upload(f,e.target.files?.[0])} hidden/></label><button type="button" className="za-btn za-btn-ghost" onClick={()=>setPickFor(f.key)}><ImagePlus size={15}/>Choose from library</button></div>}
      </div>)}
+     {collection==='projects'&&(selected.id?<ProjectGallery key={String(selected.id)} projectId={String(selected.id)} initial={gallery[String(selected.id)]??[]}/>:<div className="za-field"><div className="za-field-label"><label>Gallery</label></div><p className="za-notice">Save the project first, then reopen it to add gallery images.</p></div>)}
      {message&&<p role="status" className="za-flash">{message}</p>}
      <div className="za-drawer-foot">
       {!!selected.id&&role!=='editor'&&collection!=='users'&&(deleting?<div className="za-confirm"><span>Delete permanently?</span><button disabled={busy} type="button" className="za-btn za-btn-danger" onClick={()=>void save('delete')}>Yes, delete</button><button type="button" className="za-btn za-btn-ghost" onClick={()=>setDeleting(false)}>Cancel</button></div>:<button type="button" className="za-btn za-btn-ghost za-btn-danger-text" onClick={()=>setDeleting(true)}><Trash2 size={15}/>Delete</button>)}
@@ -81,5 +85,6 @@ export default function Manager({collection,rows,role,options}:{collection:strin
     </form>
    </aside>
   </>}
+  <MediaPicker open={!!pickFor} onClose={()=>setPickFor(null)} onPick={([url])=>{if(pickFor&&url){setValues(v=>({...v,[pickFor]:url}));setMessage('Image selected. Save the record to attach it.');}}}/>
  </>;
 }

@@ -1,6 +1,12 @@
 import {staff,sessionClient} from '@/lib/supabase/server';
-import {deleteFile,keyFromUrl,MEDIA_PREFIX,r2Configured} from '@/lib/r2';
+import {deleteFile,keyFromUrl,listFiles,MEDIA_PREFIX,r2Configured} from '@/lib/r2';
 import {mediaUsage} from '@/lib/media-usage';
+// Library listing for the "Choose from library" picker.
+export async function GET(){
+ if(!await staff())return Response.json({error:'Access denied'},{status:403});
+ if(!r2Configured())return Response.json([]);
+ try{return Response.json((await listFiles()).sort((a,b)=>b.modified.localeCompare(a.modified)),{headers:{'Cache-Control':'no-store'}});}catch{return Response.json({error:'Could not load media.'},{status:502});}
+}
 // Uploads go through /api/admin/upload; this route deletes from the library.
 export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
