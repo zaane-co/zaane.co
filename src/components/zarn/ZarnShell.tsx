@@ -14,6 +14,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const z=useZarn(),{me,channels,membership,unread,online,people,title}=z,pathname=usePathname(),{light}=useAdminTheme();
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[open,setOpen]=useState(false),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const staffAdmin=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const guest=me.account_type==='guest',canCreate=!guest&&me.can_create_channels;
  // Close the mobile drawer whenever the route changes.
  const [seenPath,setSeenPath]=useState(pathname);
  if(seenPath!==pathname){setSeenPath(pathname);setOpen(false);}
@@ -40,7 +41,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
   {open&&<button type="button" className="zn-scrim zn-mobile-scrim" aria-label="Close menu" onClick={()=>setOpen(false)}/>}
   <aside className={`zn-sidebar${open?' is-open':''}`}>
    <div className="zn-workspace">
-    <button type="button" className="zn-ws-btn" onClick={()=>setMenu(v=>!v)} aria-expanded={menu}><span className="zn-logo">Z</span><b>ZARN</b><ChevronDown size={14}/></button>
+    <button type="button" className="zn-ws-btn" onClick={()=>setMenu(v=>!v)} aria-expanded={menu}><span className="zn-logo">Z</span><b>ZARN</b>{guest&&<span className="zn-guest-tag">Guest</span>}<ChevronDown size={14}/></button>
     <button type="button" className="zn-icon" aria-label="New message" data-tip="New message" onClick={()=>setDialog('dm')}><MessageSquarePlus size={17}/></button>
     <button type="button" className="zn-icon zn-only-mobile" aria-label="Close menu" onClick={()=>setOpen(false)}><X size={17}/></button>
     {menu&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setMenu(false)}/><div className="zn-menu">
@@ -60,9 +61,10 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
    <nav className="zn-nav" data-lenis-prevent>
     <button type="button" className="zn-nav-item zn-search-btn" onClick={()=>setDialog('search')}><Search size={15}/><span>Search</span><kbd>⌘K</kbd></button>
     <Link href="/zarn/activity" className={`zn-nav-item${pathname==='/zarn/activity'?' is-active':''}${mentions?' is-unread':''}`}><AtSign size={15}/><span>Mentions</span>{mentions>0&&<em className="zn-badge">{mentions}</em>}</Link>
-    <Link href="/zarn/crm" className={`zn-nav-item${pathname.startsWith('/zarn/crm')?' is-active':''}`}><Briefcase size={15}/><span>CRM</span></Link>
+    {me.can_view_crm&&<Link href="/zarn/crm" className={`zn-nav-item${pathname.startsWith('/zarn/crm')?' is-active':''}`}><Briefcase size={15}/><span>CRM</span></Link>}
+    {staffAdmin&&<Link href="/admin/zarn" className="zn-nav-item"><Settings2 size={15}/><span>ZARN admin</span></Link>}
     {starred.length>0&&section('starred','Starred',starred.map(row))}
-    {section('channels','Channels',<>{rooms.map(row)}<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('browse')}><Plus size={15}/><span>Browse channels</span></button></>,()=>setDialog('channel'))}
+    {section('channels','Channels',<>{rooms.map(row)}{!guest&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('browse')}><Plus size={15}/><span>Browse channels</span></button>}</>,canCreate?()=>setDialog('channel'):undefined)}
     {section('dms','Direct messages',<>{dms.map(row)}{staffAdmin&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('invite')}><UserPlus size={15}/><span>Invite people</span></button>}</>,()=>setDialog('dm'))}
    </nav>
    <button type="button" className="zn-me" onClick={()=>setDialog('profile')}><Avatar m={me} size={30} online/><span><b>{me.display_name}</b><small>{me.status_text||'Active'}</small></span></button>

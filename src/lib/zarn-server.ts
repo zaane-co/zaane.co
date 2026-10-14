@@ -10,6 +10,6 @@ export async function zarnMember(){
   db.from('zarn_members').select('*').eq('user_id',user.id).maybeSingle(),
   db.from('users').select('role').eq('id',user.id).maybeSingle(),
  ]);
- if(!m||m.deactivated_at)return null;
+ if(!m||m.deactivated_at||(m.expires_at&&new Date(m.expires_at)<=new Date()))return null;
  return {...(m as ZMember),staffRole:(s?.role as string|null)??null,db};
 }

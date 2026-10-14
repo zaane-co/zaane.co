@@ -9,7 +9,7 @@ import {Avatar,textToTokens} from './format';
 type Upload=ZAttachment&{uploading?:boolean;error?:string;tmp:string};
 // Message box: @mentions with autocomplete, file attachments, a CRM lead card, Enter to send.
 export default function Composer({channelId,parentId,placeholder,onSent,onTyping,disabled}:{channelId:string;parentId?:string;placeholder:string;onSent?:()=>void;onTyping?:()=>void;disabled?:string}){
- const {me,members,db,lead,emit}=useZarn();
+ const {me,members,db,lead,emit,people}=useZarn();
  const [text,setText]=useState(''),[files,setFiles]=useState<Upload[]>([]),[leadId,setLeadId]=useState<string|null>(null);
  const [mention,setMention]=useState<{q:string;start:number}|null>(null),[pick,setPick]=useState(0);
  const [leadPicker,setLeadPicker]=useState(false),[error,setError]=useState(''),[sending,setSending]=useState(false);
@@ -20,7 +20,8 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
  useEffect(()=>{const el=box.current;if(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,240)+'px';}},[text]);
  useEffect(()=>{box.current?.focus();},[channelId,parentId]);
 
- const active=members.filter(m=>!m.deactivated_at&&m.user_id!==me.user_id);
+ // Guests only see people they share a channel with (RLS), so `members` is already scoped for them.
+ const active=members.filter(m=>!m.deactivated_at&&m.user_id!==me.user_id&&people[m.user_id]);
  const options:({id:string;label:string;m?:ZMember})[]=mention?[...(('channel'.startsWith(mention.q.toLowerCase()))?[{id:'channel',label:'channel'}]:[]),...active.filter(m=>m.display_name.toLowerCase().includes(mention.q.toLowerCase())).slice(0,7).map(m=>({id:m.user_id,label:m.display_name,m}))]:[];
  function onChange(v:string,caret:number){
   setText(v);onTyping?.();
@@ -81,7 +82,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
    <button type="button" aria-label="Attach files" data-tip="Attach files (4 MB each)" onClick={()=>fileInput.current?.click()}><Paperclip size={17}/></button>
    <input ref={fileInput} type="file" multiple hidden onChange={e=>{void addFiles(e.target.files);e.target.value='';}}/>
    <button type="button" aria-label="Mention someone" data-tip="Mention someone" onClick={()=>{const el=box.current!;const pos=el.selectionStart;const v=text.slice(0,pos)+(pos&&!/\s$/.test(text.slice(0,pos))?' @':'@')+text.slice(pos);onChange(v,v.length-(text.length-pos));el.focus();}}><AtSign size={17}/></button>
-   <button type="button" aria-label="Attach a CRM lead" data-tip="Share a CRM lead" onClick={()=>setLeadPicker(true)}><Briefcase size={17}/></button>
+   {me.can_view_crm&&<button type="button" aria-label="Attach a CRM lead" data-tip="Share a CRM lead" onClick={()=>setLeadPicker(true)}><Briefcase size={17}/></button>}
    <small className="zn-hint">*bold* _italic_ `code` · Shift+Enter for a new line</small>
    <button type="button" className="zn-send" aria-label="Send" disabled={sending||(!text.trim()&&!files.length&&!leadId)} onClick={()=>void send()}><Send size={16}/></button>
   </div>

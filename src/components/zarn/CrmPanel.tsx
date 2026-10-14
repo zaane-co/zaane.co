@@ -18,6 +18,7 @@ export default function CrmPanel(){
  const shown=rows.filter(r=>(stage==='all'||r.status===stage)&&(!q||`${r.name} ${r.company} ${r.categories.join(' ')} ${r.owner_name??''}`.toLowerCase().includes(q.toLowerCase())));
  const openTotals=useMemo(()=>{const m:Record<string,number>={};for(const r of rows)if(r.stage_kind==='open'&&r.deal_value)m[r.currency]=(m[r.currency]??0)+Number(r.deal_value);return Object.entries(m).map(([c,v])=>money(v,c)).join(' · ')||'-';},[rows]);
  const staff=me.staffRole&&['super_admin','admin','sales'].includes(me.staffRole);
+ if(!me.can_view_crm)return <div className="zn-empty-state"><h2>No CRM access</h2><p>Ask a ZARN admin to turn on CRM access for your account.</p></div>;
  const targets=channels.filter(c=>membership[c.id]&&!c.archived_at);
  async function share(){
   if(!open||!target)return;

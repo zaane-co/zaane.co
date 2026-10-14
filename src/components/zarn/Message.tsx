@@ -10,7 +10,7 @@ import {Avatar,renderBody,timeOf,tokensToText,textToTokens} from './format';
 // One message row. compact = same author as the previous message within a few minutes (no avatar/name).
 export default function Message({m,reactions,compact,inThread,onThread}:{m:ZMessage;reactions:ZReaction[];compact:boolean;inThread?:boolean;onThread?:(m:ZMessage)=>void}){
  const {me,people,members,db,membership,emit}=useZarn();
- const [picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[confirm,setConfirm]=useState(false);
+ const [tapped,setTapped]=useState(false),[picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[confirm,setConfirm]=useState(false);
  const author=m.user_id?people[m.user_id]:undefined,mine=m.user_id===me.user_id,canAct=!!membership[m.channel_id];
  const groups=reactions.reduce<Record<string,string[]>>((g,r)=>{(g[r.emoji]??=[]).push(r.user_id);return g;},{});
  async function toggle(emoji:string){
@@ -32,7 +32,9 @@ export default function Message({m,reactions,compact,inThread,onThread}:{m:ZMess
  if(m.kind==='system')return <div className="zn-system">{systemText(m,people)}</div>;
  if(m.deleted_at)return <div className={`zn-msg${compact?' is-compact':''}`}><div className="zn-gutter">{!compact&&<Avatar m={author}/>}</div><div className="zn-msg-main"><p className="zn-deleted">This message was deleted.</p></div></div>;
 
- return <div className={`zn-msg${compact?' is-compact':''}${m.pinned_at?' is-pinned':''}${m.pending?' is-pending':''}`} id={`m-${m.id}`}>
+ // Touch screens have no hover: tapping a message (not a link or button) shows its action bar.
+ const onTap=(e:React.MouseEvent)=>{if(!window.matchMedia('(hover: none)').matches)return;if((e.target as HTMLElement).closest('a,button,textarea,input'))return;setTapped(v=>!v);};
+ return <div className={`zn-msg${compact?' is-compact':''}${m.pinned_at?' is-pinned':''}${m.pending?' is-pending':''}${tapped?' is-tapped':''}`} id={`m-${m.id}`} onClick={onTap}>
   <div className="zn-gutter">{compact?<time className="zn-hover-time">{timeOf(m.created_at)}</time>:m.kind==='crm'?<span className="zn-bot"><TrendingUp size={16}/></span>:<Avatar m={author}/>}</div>
   <div className="zn-msg-main">
    {!compact&&<p className="zn-msg-head"><b>{m.kind==='crm'?'CRM':author?.display_name??'Former member'}</b>{m.kind==='crm'&&<span className="zn-app-tag">APP</span>}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time>{m.pinned_at&&<span className="zn-pin-tag"><Pin size={11}/>Pinned</span>}</p>}
@@ -74,7 +76,8 @@ function systemText(m:ZMessage,people:Record<string,{display_name:string}>){
 // Live summary of a CRM lead (read-only fields from the zarn_leads view).
 export function LeadCard({id,compact}:{id:string;compact?:boolean}){
  const {lead,loadLead,me}=useZarn();const l=lead(id);
- useEffect(()=>{loadLead(id);},[id,loadLead]);
+ useEffect(()=>{if(me.can_view_crm)loadLead(id);},[id,loadLead,me.can_view_crm]);
+ if(!me.can_view_crm)return <div className="zn-lead is-loading">A CRM lead was shared here. Ask an admin for CRM access to see it.</div>;
  const staff=me.staffRole&&['super_admin','admin','sales'].includes(me.staffRole);
  if(!l)return <div className="zn-lead is-loading">Loading lead…</div>;
  return <div className={`zn-lead${compact?' is-compact':''}`}>

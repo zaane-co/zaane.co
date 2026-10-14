@@ -310,3 +310,12 @@ select.zn-input{appearance:none;padding-right:34px;background-image:url("data:im
  .zn-image img{max-width:100%}
 }
 @media(max-width:520px){.zn-choice{grid-template-columns:1fr}.zn-picker{grid-template-columns:repeat(6,34px);right:10px}}
+.zn-guest-tag{padding:1px 6px;border-radius:5px;background:#f59e0b;color:#1a1200;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+/* Touch: no hover, so a tapped message shows its actions; bigger tap targets */
+@media(hover:none){
+ .zn-msg:hover{background:none}.zn-msg.is-tapped{background:var(--z-hover)}
+ .zn-msg:hover .zn-actions{display:none}.zn-msg.is-tapped .zn-actions{display:flex}
+ .zn-actions{top:-18px}.zn-actions button{width:38px;height:36px}
+ .zn-nav-item{height:40px}.zn-reactions button{height:30px}
+ .zn-composer textarea{font-size:16px}
+}

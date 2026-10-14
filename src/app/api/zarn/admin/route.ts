@@ -4,8 +4,11 @@ import {isAdmin} from '@/lib/cms';
 import {channelSlug} from '@/lib/zarn';
 // ZARN administration. Only staff admins and super admins can invite people or manage channels.
 const id=z.uuid();
+// Who gets what: account type, CRM + channel-creation toggles, the channels they're in, and an optional expiry (guests).
+const access=z.object({account_type:z.enum(['member','guest']).default('member'),can_view_crm:z.boolean().default(true),can_create_channels:z.boolean().default(true),channels:z.array(id).max(500).optional(),expires_at:z.iso.datetime({offset:true}).nullable().default(null)});
 const actions=z.discriminatedUnion('action',[
- z.object({action:z.literal('invite'),name:z.string().trim().min(1,'Enter their name.').max(80),email:z.email('Enter a valid email.').max(254),title:z.string().trim().max(80).default('')}),
+ z.object({action:z.literal('invite'),name:z.string().trim().min(1,'Enter their name.').max(80),email:z.email('Enter a valid email.').max(254),title:z.string().trim().max(80).default(''),...access.shape}),
+ z.object({action:z.literal('update_access'),user_id:id,...access.shape}),
  z.object({action:z.literal('resend'),user_id:id}),
  z.object({action:z.literal('deactivate'),user_id:id}),
  z.object({action:z.literal('reactivate'),user_id:id}),
@@ -32,7 +35,18 @@ export async function POST(request:Request){
  const parsed=actions.safeParse(await request.json().catch(()=>null));
  if(!parsed.success)return fail(parsed.error.issues[0]?.message||'Invalid request');
  const b=parsed.data,db=serviceClient();
- const joinDefaults=async(userId:string)=>{const {data:ch}=await db.from('zarn_channels').select('id').eq('is_default',true).is('archived_at',null);if(ch?.length)await db.from('zarn_channel_members').upsert(ch.map(c=>({channel_id:c.id,user_id:userId})),{onConflict:'channel_id,user_id',ignoreDuplicates:true});};
+ // Channel membership: an explicit list from the form wins; otherwise members get the auto-join channels and guests get nothing.
+ const setChannels=async(userId:string,picked:string[]|undefined,type:'member'|'guest',replace:boolean)=>{
+  let want=picked;
+  if(!want){if(type==='guest')want=[];else{const {data:ch}=await db.from('zarn_channels').select('id').eq('is_default',true).is('archived_at',null);want=(ch??[]).map(c=>c.id);}}
+  const {data:valid}=want.length?await db.from('zarn_channels').select('id').in('id',want).neq('kind','dm'):{data:[]};
+  const ids=(valid??[]).map(c=>c.id);
+  if(ids.length)await db.from('zarn_channel_members').upsert(ids.map(channel_id=>({channel_id,user_id:userId})),{onConflict:'channel_id,user_id',ignoreDuplicates:true});
+  if(replace){const {data:cur}=await db.from('zarn_channel_members').select('channel_id,zarn_channels!inner(kind)').eq('user_id',userId);
+   const drop=((cur??[]) as unknown as {channel_id:string;zarn_channels:{kind:string}}[]).filter(r=>r.zarn_channels.kind!=='dm'&&!ids.includes(r.channel_id)).map(r=>r.channel_id);
+   if(drop.length)await db.from('zarn_channel_members').delete().eq('user_id',userId).in('channel_id',drop);}
+ };
+ const accessRow=(a:z.infer<typeof access>)=>({account_type:a.account_type,can_view_crm:a.can_view_crm,can_create_channels:a.account_type==='guest'?false:a.can_create_channels,expires_at:a.expires_at});
  const invite=async(email:string,first:string,type:'invite'|'magiclink')=>{
   const {data:link,error}=await db.auth.admin.generateLink({type,email,options:type==='invite'?{data:{name:first}}:undefined});
   if(error||!link.user||!link.properties?.hashed_token)return null;
@@ -48,17 +62,23 @@ export async function POST(request:Request){
    // Existing account (e.g. staff): add them and tell them to sign in with their current password.
    const {data:existing}=await db.from('users').select('id,name').eq('email',email).maybeSingle();
    if(existing){
-    const {error}=await db.from('zarn_members').insert({user_id:existing.id,email,display_name:b.name,title:b.title,invited_by:me.id,joined_at:new Date().toISOString()});
+    const {error}=await db.from('zarn_members').insert({user_id:existing.id,email,display_name:b.name,title:b.title,invited_by:me.id,joined_at:new Date().toISOString(),...accessRow(b)});
     if(error)return fail('Could not add them.');
-    await joinDefaults(existing.id);
+    await setChannels(existing.id,b.channels,b.account_type,false);
     const sent=await mail(email,me.email,'You’ve been added to ZARN','You’re on ZARN',[`Hi ${b.name.split(' ')[0]}, ${me.name||'the Zaane team'} added you to ZARN, our team chat.`,'Sign in with the same email and password you already use for Zaane.'],'Open ZARN',`${origin}/zarn/login`);
     return Response.json({ok:true,existing:true,emailed:sent});
    }
    const r=await invite(email,b.name,'invite');if(!r)return fail('Could not create the invite.');
-   const {error}=await db.from('zarn_members').insert({user_id:r.userId,email,display_name:b.name,title:b.title,invited_by:me.id});
+   const {error}=await db.from('zarn_members').insert({user_id:r.userId,email,display_name:b.name,title:b.title,invited_by:me.id,...accessRow(b)});
    if(error){await db.auth.admin.deleteUser(r.userId);return fail('Could not add them.');}
-   await joinDefaults(r.userId);
+   await setChannels(r.userId,b.channels,b.account_type,false);
    return Response.json({ok:true,emailed:r.sent});
+  }
+  case 'update_access':{
+   const {error}=await db.from('zarn_members').update(accessRow(b)).eq('user_id',b.user_id);
+   if(error)return fail('Could not update their access.');
+   if(b.channels)await setChannels(b.user_id,b.channels,b.account_type,true);
+   return Response.json({ok:true});
   }
   case 'resend':{
    const {data:m}=await db.from('zarn_members').select('email,display_name,joined_at').eq('user_id',b.user_id).single();

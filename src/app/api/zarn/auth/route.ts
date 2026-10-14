@@ -23,8 +23,9 @@ export async function POST(request:Request){
    const {error}=await db.auth.signInWithPassword({email:b.email.trim().toLowerCase(),password:b.password});
    if(error)return fail('Sign-in failed. Check your email and password.',401);
    const {data:{user}}=await db.auth.getUser();
-   const {data:m}=await db.from('zarn_members').select('deactivated_at').eq('user_id',user!.id).maybeSingle();
-   if(!m||m.deactivated_at){await db.auth.signOut();return fail(m?'Your ZARN access has been turned off. Ask an admin.':'You’re not a member of ZARN yet. Ask an admin to invite you.',403);}
+   const {data:m}=await db.from('zarn_members').select('deactivated_at,expires_at').eq('user_id',user!.id).maybeSingle();
+   const expired=!!m?.expires_at&&new Date(m.expires_at)<=new Date();
+   if(!m||m.deactivated_at||expired){await db.auth.signOut();return fail(!m?'You’re not a member of ZARN yet. Ask an admin to invite you.':expired?'Your guest access has expired. Ask an admin to extend it.':'Your ZARN access has been turned off. Ask an admin.',403);}
    await db.from('zarn_members').update({last_seen_at:new Date().toISOString()}).eq('user_id',user!.id);
    return Response.json({ok:true});
   }

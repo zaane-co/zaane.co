@@ -1,5 +1,5 @@
 // ZARN (team chat) shared types and helpers for the client and the API routes.
-export type ZMember={user_id:string;email:string;display_name:string;title:string;status_text:string;avatar_url:string|null;joined_at:string|null;deactivated_at:string|null;last_seen_at:string|null;created_at:string};
+export type ZMember={user_id:string;email:string;display_name:string;title:string;status_text:string;avatar_url:string|null;joined_at:string|null;deactivated_at:string|null;last_seen_at:string|null;created_at:string;account_type:'member'|'guest';can_view_crm:boolean;can_create_channels:boolean;expires_at:string|null};
 export type ZChannel={id:string;kind:'public'|'private'|'dm';name:string|null;topic:string;crm_feed:string|null;dm_key:string|null;is_default:boolean;archived_at:string|null;created_at:string};
 export type ZMembership={channel_id:string;user_id:string;last_read_at:string;muted:boolean;starred:boolean};
 export type ZAttachment={key:string;name:string;size:number;type:string};

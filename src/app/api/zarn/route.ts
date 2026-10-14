@@ -21,6 +21,7 @@ export async function POST(request:Request){
  const inChannel=async(c:string)=>!!(await me.db.from('zarn_channel_members').select('channel_id').eq('channel_id',c).eq('user_id',me.user_id).maybeSingle()).data;
  switch(b.action){
   case 'channel_create':{
+   if(me.account_type==='guest'||!me.can_create_channels)return fail('You don’t have permission to create channels. Ask an admin.',403);
    const name=channelSlug(b.name);if(!name)return fail('Use letters or numbers in the channel name.');
    const {data:c,error}=await admin.from('zarn_channels').insert({name,kind:b.kind,topic:b.topic,created_by:me.user_id}).select('id').single();
    if(error)return fail(error.code==='23505'?'A channel with that name already exists.':'Could not create the channel.');
