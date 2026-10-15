@@ -2,9 +2,10 @@
 import {useMemo,useState,useSyncExternalStore} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {AlarmClock,CalendarCheck,Columns3,Download,Plus,Rows3,Search,SlidersHorizontal,Trophy,Wallet} from 'lucide-react';
+import {AlarmClock,CalendarCheck,Globe,Tag,UserRound,Columns3,Download,Plus,Rows3,Search,SlidersHorizontal,Trophy,Wallet} from 'lucide-react';
 import {stageMap,sources,totals,money,ago,dueState,dueLabel,initials,crmApi,type Lead,type PipelineStage,type Stage,type Staff,type Task} from '@/lib/crm';
 import NewLead from './NewLead';
+import FilterSelect from '../FilterSelect';
 import StageManager,{StageBadge} from './StageManager';
 
 type View='board'|'table';
@@ -91,9 +92,9 @@ export default function CrmBoard({stages,leads,tasks,team,me,startNew}:{startNew
   <div className="za-toolbar">
    <div className="za-search za-search-wide"><Search size={14}/><input placeholder="Search name, company, tag…" value={search} onChange={e=>setSearch(e.target.value)} aria-label="Search leads"/></div>
    <div className="za-toolbar-actions">
-    <select className="za-select" value={owner} onChange={e=>setOwner(e.target.value)} aria-label="Filter by owner"><option value="all">All owners</option><option value="mine">My leads</option><option value="none">Unassigned</option>{team.filter(s=>s.id!==me).map(s=><option key={s.id} value={s.id}>{s.name||s.email}</option>)}</select>
-    <select className="za-select" value={source} onChange={e=>setSource(e.target.value)} aria-label="Filter by source"><option value="all">All sources</option>{sources.map(s=><option key={s} value={s}>{s[0]!.toUpperCase()+s.slice(1)}</option>)}</select>
-    {allCats.length>0&&<select className="za-select" value={category} onChange={e=>setCategory(e.target.value)} aria-label="Filter by category"><option value="all">All categories</option>{allCats.map(c=><option key={c}>{c}</option>)}</select>}
+    <FilterSelect label="Filter by owner" icon={<UserRound size={14}/>} value={owner} onChange={setOwner} options={[{value:'all',label:'All owners'},{value:'mine',label:'My leads'},{value:'none',label:'Unassigned'},...team.filter(s=>s.id!==me).map(s=>({value:s.id,label:s.name||s.email,group:'Team',avatar:true}))]}/>
+    <FilterSelect label="Filter by source" icon={<Globe size={14}/>} value={source} onChange={setSource} options={[{value:'all',label:'All sources'},...sources.map(s=>({value:s,label:s[0]!.toUpperCase()+s.slice(1)}))]}/>
+    {allCats.length>0&&<FilterSelect label="Filter by category" icon={<Tag size={14}/>} value={category} onChange={setCategory} options={[{value:'all',label:'All categories'},...allCats.map(c=>({value:c,label:c}))]}/>}
    </div>
   </div>
   {flash&&<p role="status" className="za-flash">{flash}</p>}
