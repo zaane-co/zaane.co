@@ -14,8 +14,8 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('deactivate'),user_id:id}),
  z.object({action:z.literal('reactivate'),user_id:id}),
  z.object({action:z.literal('remove'),user_id:id}),
- z.object({action:z.literal('channel_create'),name:z.string().trim().min(1).max(80),kind:z.enum(['public','private']),topic:z.string().trim().max(250).default(''),is_default:z.boolean().default(false),crm_feed:z.enum(['leads','invoices']).nullable().default(null),members:z.array(id).max(200).default([])}),
- z.object({action:z.literal('channel_update'),id,name:z.string().trim().min(1).max(80).optional(),topic:z.string().trim().max(250).optional(),is_default:z.boolean().optional(),crm_feed:z.enum(['leads','invoices']).nullable().optional()}),
+ z.object({action:z.literal('channel_create'),name:z.string().trim().min(1).max(80),kind:z.enum(['public','private']),topic:z.string().trim().max(250).default(''),is_default:z.boolean().default(false),members:z.array(id).max(200).default([])}),
+ z.object({action:z.literal('channel_update'),id,name:z.string().trim().min(1).max(80).optional(),topic:z.string().trim().max(250).optional(),is_default:z.boolean().optional()}),
  z.object({action:z.literal('channel_archive'),id,archived:z.boolean()}),
  z.object({action:z.literal('channel_delete'),id}),
  z.object({action:z.literal('channel_members'),id,add:z.array(id).max(200).default([]),remove:z.array(id).max(200).default([])}),
@@ -105,7 +105,7 @@ export async function POST(request:Request){
   }
   case 'channel_create':{
    const name=channelSlug(b.name);if(!name)return fail('Use letters or numbers in the channel name.');
-   const {data:c,error}=await db.from('zarn_channels').insert({name,kind:b.kind,topic:b.topic,is_default:b.kind==='public'&&b.is_default,crm_feed:b.crm_feed,created_by:me.id}).select('id').single();
+   const {data:c,error}=await db.from('zarn_channels').insert({name,kind:b.kind,topic:b.topic,is_default:b.kind==='public'&&b.is_default,created_by:me.id}).select('id').single();
    if(error)return fail(error.code==='23505'?'A channel with that name already exists.':'Could not create the channel.');
    const members=[...new Set(b.members)];
    if(b.is_default&&b.kind==='public'){const {data:all}=await db.from('zarn_members').select('user_id').is('deactivated_at',null);members.push(...(all??[]).map(m=>m.user_id));}
@@ -115,7 +115,7 @@ export async function POST(request:Request){
   case 'channel_update':{
    const patch:Record<string,unknown>={};
    if(b.name!==undefined){const n=channelSlug(b.name);if(!n)return fail('Use letters or numbers in the channel name.');patch.name=n;}
-   if(b.topic!==undefined)patch.topic=b.topic;if(b.is_default!==undefined)patch.is_default=b.is_default;if(b.crm_feed!==undefined)patch.crm_feed=b.crm_feed;
+   if(b.topic!==undefined)patch.topic=b.topic;if(b.is_default!==undefined)patch.is_default=b.is_default;
    const {error}=await db.from('zarn_channels').update(patch).eq('id',b.id).in('kind',['public','private']);
    return error?fail(error.code==='23505'?'A channel with that name already exists.':'Could not update the channel.'):Response.json({ok:true});
   }

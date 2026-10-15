@@ -13,9 +13,36 @@ export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return fail('Invalid origin',403);
  const user=await staff();if(!user||!allowed('newsletter',user.role))return fail('Access denied',403);
  const b=await request.json().catch(()=>null);
- if(!b||!['save','delete','test','send'].includes(b.action)||(b.id&&!uuid.test(b.id)))return fail('Invalid request');
+ if(!b||!['save','delete','test','send','template_save','template_delete','template_duplicate'].includes(b.action)||(b.id&&!uuid.test(b.id)))return fail('Invalid request');
  const db=await sessionClient();
  const subject=String(b.subject??'').trim().slice(0,200),body=String(b.body??'').slice(0,50000);
+
+ if(b.action.startsWith('template_')){
+  const name=String(b.name??'').trim().slice(0,120);
+  if(b.action==='template_delete'){
+   if(!b.id)return fail('Invalid request');
+   const {error}=await db.from('newsletter_templates').delete().eq('id',b.id);
+   if(error)return fail('Could not delete this template.');
+   revalidatePath('/admin/newsletter/templates');return Response.json({ok:true});
+  }
+  if(b.action==='template_duplicate'){
+   if(!b.id)return fail('Invalid request');
+   const {data:src}=await db.from('newsletter_templates').select('name,body').eq('id',b.id).single();
+   if(!src)return fail('Template not found.',404);
+   const {data,error}=await db.from('newsletter_templates').insert({name:`${src.name} copy`.slice(0,120),body:src.body,created_by:user.id}).select('id').single();
+   if(error)return fail('Could not duplicate this template.');
+   revalidatePath('/admin/newsletter/templates');return Response.json({ok:true,id:data.id});
+  }
+  if(!name)return fail('Give the template a name.');
+  if(b.id){
+   const {data,error}=await db.from('newsletter_templates').update({name,body,updated_at:new Date().toISOString()}).eq('id',b.id).select('id').maybeSingle();
+   if(error||!data)return fail('Could not save this template.');
+   revalidatePath('/admin/newsletter/templates');return Response.json({ok:true,id:data.id});
+  }
+  const {data,error}=await db.from('newsletter_templates').insert({name,body,created_by:user.id}).select('id').single();
+  if(error)return fail('Could not save this template.');
+  revalidatePath('/admin/newsletter/templates');return Response.json({ok:true,id:data.id});
+ }
 
  if(b.action==='save'){
   if(b.id){

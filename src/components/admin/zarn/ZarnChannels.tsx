@@ -9,27 +9,26 @@ import {F} from '../crm/NewLead';
 
 export type ChannelRow=ZChannel&{member_ids:string[];messages:number};
 type Person={user_id:string;display_name:string;email:string};
-const feedLabel={leads:'New leads + stage changes',invoices:'Invoices sent + paid'} as const;
 // ZARN channels: create, rename, set topic/default/CRM feed, manage members, archive, delete.
 export default function ZarnChannels({rows,members}:{rows:ChannelRow[];members:Person[]}){
  const router=useRouter();
  const [edit,setEdit]=useState<ChannelRow|'new'|null>(null),[people,setPeople]=useState<ChannelRow|null>(null),[removing,setRemoving]=useState<ChannelRow|null>(null);
  const [busy,setBusy]=useState(false),[flash,setFlash]=useState(''),[error,setError]=useState('');
- const blank={name:'',kind:'public' as 'public'|'private',topic:'',is_default:false,crm_feed:'' as ''|'leads'|'invoices'};
+ const blank={name:'',kind:'public' as 'public'|'private',topic:'',is_default:false};
  const [v,setV]=useState(blank),[sel,setSel]=useState<string[]>([]);
  async function run(body:object,msg:string){setBusy(true);setError('');try{const r=await zarnApi('/api/zarn/admin',body);setFlash(msg);router.refresh();return r;}catch(e){setError(e instanceof Error?e.message:'Something went wrong.');setFlash(e instanceof Error?e.message:'');return null;}finally{setBusy(false);}}
- const open=(c:ChannelRow|'new')=>{setEdit(c);setError('');setV(c==='new'?blank:{name:c.name??'',kind:c.kind as 'public'|'private',topic:c.topic,is_default:c.is_default,crm_feed:(c.crm_feed??'') as ''|'leads'|'invoices'});};
+ const open=(c:ChannelRow|'new')=>{setEdit(c);setError('');setV(c==='new'?blank:{name:c.name??'',kind:c.kind as 'public'|'private',topic:c.topic,is_default:c.is_default});};
  async function save(e:React.FormEvent){
-  e.preventDefault();const feed=v.crm_feed||null;
-  const ok=edit==='new'?await run({action:'channel_create',name:v.name,kind:v.kind,topic:v.topic,is_default:v.is_default,crm_feed:feed},`#${v.name} created.`)
-   :await run({action:'channel_update',id:(edit as ChannelRow).id,name:v.name,topic:v.topic,is_default:v.is_default,crm_feed:feed},'Channel updated.');
+  e.preventDefault();
+  const ok=edit==='new'?await run({action:'channel_create',name:v.name,kind:v.kind,topic:v.topic,is_default:v.is_default},`#${v.name} created.`)
+   :await run({action:'channel_update',id:(edit as ChannelRow).id,name:v.name,topic:v.topic,is_default:v.is_default},'Channel updated.');
   if(ok)setEdit(null);
  }
  const active=rows.filter(r=>!r.archived_at),archived=rows.filter(r=>r.archived_at);
  const table=(list:ChannelRow[])=><div className="za-table-wrap"><table className="za-table"><thead><tr><th>Channel</th><th className="za-hide-sm">Members</th><th className="za-hide-sm">Messages</th><th className="za-hide-sm">Settings</th><th className="za-th-actions"><span className="sr-only">Actions</span></th></tr></thead><tbody>{list.map(c=><tr key={c.id}>
   <td><div className="za-cell-main"><span className="za-crm-avatar" style={{background:c.kind==='private'?'#52525b':'var(--accent)'}}>{c.kind==='private'?<Lock size={14}/>:<Hash size={15}/>}</span><span><b>{c.name}</b><small>{c.topic||'No topic'}</small></span></div></td>
   <td className="za-hide-sm">{c.member_ids.length}</td><td className="za-hide-sm">{c.messages}</td>
-  <td className="za-hide-sm"><div className="za-tags">{c.is_default&&<span className="is-cat">Auto-join</span>}{c.crm_feed&&<span>CRM: {feedLabel[c.crm_feed as 'leads'|'invoices']}</span>}{c.kind==='private'&&<span>Private</span>}</div></td>
+  <td className="za-hide-sm"><div className="za-tags">{c.is_default&&<span className="is-cat">Auto-join</span>}{c.kind==='private'&&<span>Private</span>}</div></td>
   <td><div className="za-row-actions">
    <button type="button" data-tip="Members" aria-label="Members" onClick={()=>{setPeople(c);setSel(c.member_ids);}}><Users size={14}/></button>
    <button type="button" data-tip="Edit" aria-label="Edit" onClick={()=>open(c)}><Pencil size={14}/></button>
@@ -47,7 +46,6 @@ export default function ZarnChannels({rows,members}:{rows:ChannelRow[];members:P
    <div className="za-form-grid">
     <F label="Name *" wide><input required maxLength={80} value={v.name} onChange={e=>setV({...v,name:e.target.value})}/></F>
     {edit==='new'&&<F label="Visibility"><Dropdown label="Visibility" value={v.kind} onChange={x=>setV({...v,kind:x as 'public'|'private',is_default:x==='private'?false:v.is_default})} options={[{value:'public',label:'Public',hint:'Any member can find and join'},{value:'private',label:'Private',hint:'Invite only'}]}/></F>}
-    <F label="CRM updates" wide={edit!=='new'}><Dropdown label="CRM updates" value={v.crm_feed} onChange={x=>setV({...v,crm_feed:x as ''|'leads'|'invoices'})} options={[{value:'',label:'None'},{value:'leads',label:feedLabel.leads},{value:'invoices',label:feedLabel.invoices}]}/></F>
     <F label="Topic" wide><input maxLength={250} value={v.topic} onChange={e=>setV({...v,topic:e.target.value})}/></F>
    </div>
    {v.kind==='public'&&<label className="za-check-row"><input type="checkbox" checked={v.is_default} onChange={e=>setV({...v,is_default:e.target.checked})}/>Everyone joins automatically (new members too)</label>}

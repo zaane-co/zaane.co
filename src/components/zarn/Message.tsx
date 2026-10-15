@@ -38,9 +38,9 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
  // Touch screens have no hover: tapping a message (not a link or button) shows its action bar.
  const onTap=(e:React.MouseEvent)=>{if(!window.matchMedia('(hover: none)').matches)return;if((e.target as HTMLElement).closest('a,button,textarea,input'))return;setTapped(v=>!v);};
  return <div className={`zn-msg${compact?' is-compact':''}${m.pinned_at?' is-pinned':''}${m.pending?' is-pending':''}${tapped?' is-tapped':''}`} id={`m-${m.id}`} onClick={onTap}>
-  <div className="zn-gutter">{compact?<time className="zn-hover-time">{timeOf(m.created_at)}</time>:m.kind==='crm'?<span className="zn-bot"><TrendingUp size={16}/></span>:<button type="button" className="zn-author-btn" aria-label={`${author?.display_name??'Member'}’s profile`} onClick={()=>m.user_id&&profile(m.user_id)}><Avatar m={author}/></button>}</div>
+  <div className="zn-gutter">{compact?<time className="zn-hover-time">{timeOf(m.created_at)}</time>:m.kind==='crm'?<span className="zn-crm-ico"><TrendingUp size={14}/></span>:<button type="button" className="zn-author-btn" aria-label={`${author?.display_name??'Member'}’s profile`} onClick={()=>m.user_id&&profile(m.user_id)}><Avatar m={author}/></button>}</div>
   <div className="zn-msg-main">
-   {!compact&&<p className="zn-msg-head">{m.kind==='crm'?<b>CRM</b>:<button type="button" className="zn-author-name" onClick={()=>m.user_id&&profile(m.user_id)}>{author?.display_name??'Former member'}</button>}{m.kind!=='crm'&&<StatusMark m={author}/>}{m.kind==='crm'&&<span className="zn-app-tag">APP</span>}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time>{m.pinned_at&&<span className="zn-pin-tag"><Pin size={11}/>Pinned</span>}</p>}
+   {!compact&&<p className={`zn-msg-head${m.kind==='crm'?' is-crm':''}`}>{m.kind==='crm'?<b>CRM</b>:<button type="button" className="zn-author-name" onClick={()=>m.user_id&&profile(m.user_id)}>{author?.display_name??'Former member'}</button>}{m.kind!=='crm'&&<StatusMark m={author}/>}{m.kind==='crm'&&<span className="zn-app-tag">APP</span>}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time>{m.pinned_at&&<span className="zn-pin-tag"><Pin size={11}/>Pinned</span>}</p>}
    {editing?<div className="zn-edit"><textarea autoFocus value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void saveEdit();}if(e.key==='Escape')setEditing(false);}}/><div><button type="button" onClick={()=>setEditing(false)}>Cancel</button><button type="button" className="is-primary" onClick={()=>void saveEdit()}>Save</button></div></div>
     :m.body&&<div className="zn-body">{renderBody(m.body,people,me.user_id)}{m.edited_at&&<span className="zn-edited"> (edited)</span>}</div>}
    {m.kind==='crm'&&<CrmEvent m={m}/>}
@@ -104,15 +104,24 @@ export function LeadCard({id,compact}:{id:string;compact?:boolean}){
 }
 
 function CrmEvent({m}:{m:ZMessage}){
- const {lead,loadLead}=useZarn();const l=m.lead_id?lead(m.lead_id):undefined;
+ const {lead,loadLead,me}=useZarn();const l=m.lead_id?lead(m.lead_id):undefined;
  useEffect(()=>{if(m.lead_id)loadLead(m.lead_id);},[m.lead_id,loadLead]);
  const e=String(m.meta.event);const name=l?.company||l?.name||'a lead';
  const src=String(m.meta.source??'');
- const text=e==='lead_created'?<><UserPlus size={14}/> {src==='website'||src==='partnership'?<>New lead from the website: </>:src==='other'?<>New client added: </>:<>New lead ({src}): </>}<b>{name}</b></>
-  :e==='stage'?<><TrendingUp size={14}/> <b>{name}</b> moved to <b>{l?.stage_label&&l.status===m.meta.to?l.stage_label:String(m.meta.to)}</b></>
-  :e==='invoice_sent'?<><Receipt size={14}/> Invoice <b>{String(m.meta.number)}</b> ({money(Number(m.meta.total),String(m.meta.currency))}) sent to <b>{name}</b></>
-  :e==='invoice_paid'?<><Receipt size={14}/> Invoice <b>{String(m.meta.number)}</b> paid by <b>{name}</b>: {money(Number(m.meta.total),String(m.meta.currency))}</>:null;
- return <div className="zn-crm"><p>{text}</p>{m.lead_id&&<LeadCard id={m.lead_id} compact/>}</div>;
+ const to=String(m.meta.to??'');
+ const current=!!l&&l.status===m.meta.to;
+ const stage=<span className="zn-crm-stage"><i style={{background:current?l?.stage_color??'#71717a':'#71717a'}}/>{current&&l?.stage_label?l.stage_label:to.charAt(0).toUpperCase()+to.slice(1)}</span>;
+ const Icon=e==='lead_created'?UserPlus:e==='stage'?TrendingUp:Receipt;
+ const text=e==='lead_created'?<>{src==='website'||src==='partnership'?'New website lead':src==='other'?'New client added':`New lead (${src})`} <b>{name}</b></>
+  :e==='stage'?<><b>{name}</b> moved to {stage}</>
+  :e==='invoice_sent'?<>Invoice <b>{String(m.meta.number)}</b> sent to <b>{name}</b> <span className="zn-crm-amt">{money(Number(m.meta.total),String(m.meta.currency))}</span></>
+  :e==='invoice_paid'?<>Invoice <b>{String(m.meta.number)}</b> paid by <b>{name}</b> <span className="zn-crm-amt is-paid">{money(Number(m.meta.total),String(m.meta.currency))}</span></>:null;
+ const staff=!!me.staffRole&&['super_admin','admin','sales'].includes(me.staffRole);
+ const sub=l?[l.company?l.name:null,l.service_interested,l.deal_value!=null?money(Number(l.deal_value),l.currency):null,l.owner_name].filter(Boolean):[];
+ return <div className="zn-crm"><div className="zn-crm-body">
+  <p><Icon size={13} className="zn-crm-mini"/>{text}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time></p>
+  {me.can_view_crm&&m.lead_id&&<div className="zn-crm-sub">{sub.length>0&&<span>{sub.join(' · ')}</span>}<Link href={`/zarn/crm?lead=${m.lead_id}`}>View in CRM</Link>{staff&&<a href={`/admin/leads/${m.lead_id}`} target="_blank" rel="noopener noreferrer">Open in admin</a>}</div>}
+ </div></div>;
 }
 
 // In-app photo viewer: full screen, close, download, previous/next across the message's images. Esc and arrow keys work.

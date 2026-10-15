@@ -13,17 +13,17 @@ function Modal({title,onClose,children,wide}:{title:string;onClose:()=>void;chil
   <div className="zn-modal-head"><h2>{title}</h2><button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>{children}</div></div>;
 }
 
-export function PeoplePicker({title,exclude=[],confirm,onClose,onPick,max=50}:{title:string;exclude?:string[];confirm:string;onClose:()=>void;onPick:(ids:string[])=>Promise<void>|void;max?:number}){
+export function PeoplePicker({title,exclude=[],confirm,onClose,onPick,max=50,instant=false}:{title:string;exclude?:string[];confirm:string;onClose:()=>void;onPick:(ids:string[])=>Promise<void>|void;max?:number;instant?:boolean}){
  const {members,me,online}=useZarn();
  const [q,setQ]=useState(''),[sel,setSel]=useState<string[]>([]),[busy,setBusy]=useState(false),[err,setErr]=useState('');
  const list=members.filter(m=>!m.deactivated_at&&m.user_id!==me.user_id&&!exclude.includes(m.user_id)&&`${m.display_name} ${m.title} ${m.email}`.toLowerCase().includes(q.toLowerCase()));
  return <Modal title={title} onClose={onClose}>
   <input className="zn-input" autoFocus placeholder="Search people" value={q} onChange={e=>setQ(e.target.value)}/>
-  <ul className="zn-list zn-list-scroll">{list.map(m=><li key={m.user_id}><button type="button" className={sel.includes(m.user_id)?'is-on':''} onClick={()=>setSel(s=>s.includes(m.user_id)?s.filter(x=>x!==m.user_id):s.length<max?[...s,m.user_id]:s)}>
+  <ul className="zn-list zn-list-scroll">{list.map(m=><li key={m.user_id}><button type="button" className={sel.includes(m.user_id)?'is-on':''} onClick={instant?async()=>{if(busy)return;setBusy(true);setErr('');try{await onPick([m.user_id]);}catch(e){setErr(e instanceof Error?e.message:'Something went wrong.');setBusy(false);}}:()=>setSel(s=>s.includes(m.user_id)?s.filter(x=>x!==m.user_id):s.length<max?[...s,m.user_id]:s)}>
    <Avatar m={m} size={30} online={online.has(m.user_id)}/><span><b>{m.display_name}</b><small>{m.title||m.email}</small></span>{sel.includes(m.user_id)&&<Check size={16} className="zn-check"/>}</button></li>)}
    {!list.length&&<li className="zn-empty-row">No one to add.</li>}</ul>
   {err&&<p className="zn-error">{err}</p>}
-  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button type="button" className="zn-btn is-primary" disabled={!sel.length||busy} onClick={async()=>{setBusy(true);setErr('');try{await onPick(sel);}catch(e){setErr(e instanceof Error?e.message:'Something went wrong.');}finally{setBusy(false);}}}>{busy?'Working…':`${confirm}${sel.length?` (${sel.length})`:''}`}</button></div>
+  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button>{!instant&&<button type="button" className="zn-btn is-primary" disabled={!sel.length||busy} onClick={async()=>{setBusy(true);setErr('');try{await onPick(sel);}catch(e){setErr(e instanceof Error?e.message:'Something went wrong.');}finally{setBusy(false);}}}>{busy?'Working…':`${confirm}${sel.length?` (${sel.length})`:''}`}</button>}</div>
  </Modal>;
 }
 
@@ -46,7 +46,7 @@ export function NewChannel({onClose}:{onClose:()=>void}){
 
 export function NewDm({onClose}:{onClose:()=>void}){
  const {openDm}=useZarn();
- return <PeoplePicker title="New message" confirm="Start conversation" max={8} onClose={onClose} onPick={async ids=>{await openDm(ids);onClose();}}/>;
+ return <PeoplePicker title="New message" confirm="Start conversation" instant onClose={onClose} onPick={async ids=>{await openDm(ids);onClose();}}/>;
 }
 
 export function Browse({onClose}:{onClose:()=>void}){

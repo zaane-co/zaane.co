@@ -15,7 +15,7 @@ const groups:{label:string;items:Item[]}[]=[
   {label:'Leads',href:'/admin/leads',key:'leads',icon:Inbox},
   {label:'Invoices',href:'/admin/invoices',key:'invoices',icon:Receipt},
   {label:'Contacts',href:'/admin/contacts',key:'contact_submissions',icon:Mail},
-  {label:'Newsletter',href:'/admin/subscribers',icon:Send,children:[{label:'Subscribers',href:'/admin/subscribers',key:'subscribers'},{label:'Campaigns',href:'/admin/newsletter',key:'newsletter'},{label:'Unsubscribed',href:'/admin/subscribers/unsubscribed',key:'subscribers'}]},
+  {label:'Newsletter',href:'/admin/subscribers',icon:Send,children:[{label:'Subscribers',href:'/admin/subscribers',key:'subscribers'},{label:'Campaigns',href:'/admin/newsletter',key:'newsletter'},{label:'Templates',href:'/admin/newsletter/templates',key:'newsletter'},{label:'Unsubscribed',href:'/admin/subscribers/unsubscribed',key:'subscribers'}]},
  ]},
  {label:'Content',items:[
   {label:'Projects',href:'/admin/projects',icon:Briefcase,children:[{label:'All projects',href:'/admin/projects',key:'projects'},{label:'Categories',href:'/admin/project-categories',key:'blog_categories'}]},
@@ -64,7 +64,7 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
  const can=(key?:string)=>!key||allowedKeys.includes(key);
  const admin=user.role==='super_admin'||user.role==='admin',zarnMode=admin&&pathname.startsWith('/admin/zarn');
  const visible=(zarnMode?zarnGroups:groups).map(g=>({...g,items:g.items.map(i=>({...i,children:i.children?.filter(c=>can(c.key))})).filter(i=>i.children?i.children.length>0:can(i.key))})).filter(g=>g.items.length);
- const isActive=(href:string)=>href==='/admin'||href==='/admin/zarn'||href==='/admin/subscribers'?pathname===href:pathname===href||pathname.startsWith(href+'/');
+ const isActive=(href:string)=>href==='/admin'||href==='/admin/zarn'||href==='/admin/subscribers'?pathname===href:href==='/admin/newsletter'?pathname===href||(pathname.startsWith(href+'/')&&!pathname.startsWith('/admin/newsletter/templates')):pathname===href||pathname.startsWith(href+'/');
  const subActive=(href:string)=>pathname===href||(href==='/admin/blog'&&/^\/admin\/blog\/[0-9a-f-]{36}$/.test(pathname));
  const groupActive=(i:Item)=>i.children?i.children.some(c=>isActive(c.href)):isActive(i.href);
  const [expanded,setExpanded]=useState<string|null>(()=>visible.flatMap(g=>g.items).find(i=>i.children&&groupActive(i))?.label??null);

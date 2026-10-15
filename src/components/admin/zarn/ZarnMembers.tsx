@@ -118,7 +118,7 @@ function AccessForm({mode,row,channels,isMe,onClose,onDone}:{mode:'invite'|'edit
    <Toggle on={!guest&&a.can_create_channels} disabled={guest} onChange={v=>setA({...a,can_create_channels:v})} label="Create channels" hint={guest?'Guests can’t create channels.':'Start new public or private channels.'}/>
    <p className="za-access-label">Channels {guest?'(required)':''}<span>{a.channels.length} selected</span></p>
    <div className="za-zarn-pick za-access-channels">{channels.map(c=><label key={c.id} className="za-check-row"><input type="checkbox" checked={a.channels.includes(c.id)} onChange={e=>setA({...a,channels:e.target.checked?[...a.channels,c.id]:a.channels.filter(x=>x!==c.id)})}/>
-    <span><b>{c.kind==='private'?<Lock size={12}/>:<Hash size={12}/>} {c.name}</b><small>{[c.is_default&&'Everyone joins',c.crm_feed&&'CRM updates',c.kind==='private'&&'Private'].filter(Boolean).join(' · ')||'Public'}</small></span></label>)}</div>
+    <span><b>{c.kind==='private'?<Lock size={12}/>:<Hash size={12}/>} {c.name}</b><small>{[c.is_default&&'Everyone joins',c.kind==='private'&&'Private'].filter(Boolean).join(' · ')||'Public'}</small></span></label>)}</div>
    {guest&&<><p className="za-access-label">Time limit</p>
     <div className="za-chips za-expiry">{expiryOptions.map(([k,l])=><button key={k} type="button" className={a.expiry===k?'is-on':''} onClick={()=>setA({...a,expiry:k})}>{l}</button>)}
      {a.expiry==='custom'&&<input type="date" aria-label="End date" min={new Date().toISOString().slice(0,10)} value={a.custom} onChange={e=>setA({...a,custom:e.target.value})}/>}</div>
