@@ -10,9 +10,11 @@ export const publicUrl=(key:string)=>`${process.env.R2_PUBLIC_URL!.replace(/\/$/
 export const keyFromUrl=(url:string)=>{const base=process.env.R2_PUBLIC_URL!.replace(/\/$/,'')+'/';return url.startsWith(base)?decodeURIComponent(url.slice(base.length)):null;};
 export const MEDIA_PREFIX='media/';
 export const imageTypes:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/avif':'avif','image/gif':'gif','image/svg+xml':'svg'};
-export async function putFile(file:File,name?:string){
+// Non-library uploads (e.g. ZARN profile photos) pass another prefix so they never show up in Admin > Media.
+export const AVATAR_PREFIX='avatars/';
+export async function putFile(file:File,name?:string,prefix=MEDIA_PREFIX){
  const slug=(name??file.name).toLowerCase().replace(/\.[a-z0-9]+$/,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,60)||'image';
- const key=`${MEDIA_PREFIX}${new Date().toISOString().slice(0,7)}/${slug}-${crypto.randomUUID().slice(0,8)}.${imageTypes[file.type]}`;
+ const key=`${prefix}${new Date().toISOString().slice(0,7)}/${slug}-${crypto.randomUUID().slice(0,8)}.${imageTypes[file.type]}`;
  await s3().send(new PutObjectCommand({Bucket:process.env.R2_BUCKET,Key:key,Body:new Uint8Array(await file.arrayBuffer()),ContentType:file.type,CacheControl:'public, max-age=31536000, immutable'}));
  return {key,url:publicUrl(key)};
 }
