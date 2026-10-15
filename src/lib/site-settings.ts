@@ -18,20 +18,6 @@ export const settingGroups:SettingGroup[]=[
   {key:'facebook_url',label:'Facebook',type:'url',placeholder:'https://facebook.com/zaane'},
   {key:'whatsapp_url',label:'WhatsApp',type:'url',placeholder:'https://wa.me/2348000000000'},
  ]},
- {id:'bank1',title:'Bank account',summary:'Printed on invoices and shown in the invoice email, so clients know exactly where to pay.',fields:[
-  {key:'bank_1_currency',label:'Currency',type:'currency',hint:'The invoice currency this account receives. Leave on Any currency to use it for all.'},
-  {key:'bank_1_bank',label:'Bank name',type:'text',placeholder:'e.g. Access Bank'},
-  {key:'bank_1_name',label:'Account name',type:'text',placeholder:'e.g. Zaane Studio Ltd'},
-  {key:'bank_1_number',label:'Account number',type:'text',placeholder:'0123456789'},
-  {key:'bank_1_extra',label:'Other details',type:'textarea',placeholder:'SWIFT / IBAN / routing number, if clients pay from abroad'},
- ]},
- {id:'bank2',title:'Second bank account',summary:'Optional. For example a dollar account. Invoices use the account that matches their currency.',fields:[
-  {key:'bank_2_currency',label:'Currency',type:'currency',hint:'The invoice currency this account receives. Leave on Any currency to use it for all.'},
-  {key:'bank_2_bank',label:'Bank name',type:'text',placeholder:'e.g. Access Bank'},
-  {key:'bank_2_name',label:'Account name',type:'text',placeholder:'e.g. Zaane Studio Ltd'},
-  {key:'bank_2_number',label:'Account number',type:'text',placeholder:'0123456789'},
-  {key:'bank_2_extra',label:'Other details',type:'textarea',placeholder:'SWIFT / IBAN / routing number, if clients pay from abroad'},
- ]},
  {id:'invoices',title:'Invoices',summary:'Printed on every invoice you send from the CRM.',fields:[
   {key:'invoice_from',label:'From',type:'textarea',placeholder:'Zaane\nhello@zaane.co\nLagos, Nigeria',hint:'The first line is used as your business name.'},
   {key:'invoice_bank_details',label:'Other payment instructions',type:'textarea',placeholder:'e.g. Please use the invoice number as the payment reference',hint:'Optional. Printed under the bank account.'},

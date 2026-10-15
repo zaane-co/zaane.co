@@ -1,14 +1,14 @@
 import {invoiceTotals,invoiceState,money,fmtDate,type Invoice} from '@/lib/crm';
-import {accountsFor} from '@/lib/bank';
+import {pickAccount,type BankAccount} from '@/lib/bank';
 import PrintButton from './PrintButton';
 import './invoice.css';
 export type InvoiceClient={name:string;email:string;company:string;phone:string}|null;
 // The invoice as the client sees it. Used by the public /invoice/<token> page and the staff print view.
-export default function InvoiceDocument({inv,client,settings,autoPrint,back}:{inv:Invoice;client:InvoiceClient;settings:Record<string,string>;autoPrint?:boolean;back?:string}){
+export default function InvoiceDocument({inv,client,settings,accounts,autoPrint,back}:{inv:Invoice;client:InvoiceClient;settings:Record<string,string>;accounts:BankAccount[];autoPrint?:boolean;back?:string}){
  const {subtotal,tax,total}=invoiceTotals(inv.items,Number(inv.tax_rate),Number(inv.discount));
  const due=Math.max(0,Number(inv.total)-Number(inv.amount_paid)),state=invoiceState(inv);
  const from=(settings.invoice_from||'Zaane\nhello@zaane.co').split('\n');
- const accounts=accountsFor(settings,inv.currency),other=settings.invoice_bank_details;
+ const acct=pickAccount(accounts,inv.currency,inv.bank_account_id),other=settings.invoice_bank_details;
  const stamp=state==='paid'?'Paid':state==='void'?'Void':state==='draft'?'Draft':null;
  return <main className="za-invoice-page">
   <div className="inv-actions">{back&&<a href={back}>← Back to editor</a>}<PrintButton auto={autoPrint}/></div>
@@ -33,11 +33,8 @@ export default function InvoiceDocument({inv,client,settings,autoPrint,back}:{in
     </dl>
     <div className="inv-due"><span>Amount due</span><strong>{money(due,inv.currency)}</strong></div>
    </div>
-   {!!accounts.length&&state!=='paid'&&state!=='void'&&<section className="inv-bank"><p className="inv-label">Pay to</p>
-    <div className="inv-bank-grid">{accounts.map((a,i)=><dl key={i}>
-     {a.bank&&<><dt>Bank</dt><dd>{a.bank}</dd></>}{a.name&&<><dt>Account name</dt><dd>{a.name}</dd></>}{a.number&&<><dt>Account number</dt><dd className="inv-acct">{a.number}</dd></>}
-     {a.extra&&<><dt>Other</dt><dd className="inv-extra">{a.extra}</dd></>}
-    </dl>)}</div>
+   {acct&&state!=='paid'&&state!=='void'&&<section className="inv-bank"><p className="inv-label">Pay to</p>
+    <dl><dt>Bank</dt><dd>{acct.bank}</dd>{acct.account_name&&<><dt>Account name</dt><dd>{acct.account_name}</dd></>}<dt>Account number</dt><dd className="inv-acct">{acct.account_number}</dd>{acct.extra&&<><dt>Other</dt><dd className="inv-extra">{acct.extra}</dd></>}</dl>
     <p className="inv-ref">Please use <b>{inv.number}</b> as the payment reference.</p></section>}
    {((other&&state!=='paid')||inv.notes)&&<section className="inv-notes">
     {other&&state!=='paid'&&<div><p className="inv-label">Payment instructions</p><p>{other}</p></div>}

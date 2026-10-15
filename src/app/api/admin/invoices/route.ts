@@ -3,12 +3,12 @@ import {emailBase} from '@/lib/site';
 import {staff,sessionClient} from '@/lib/supabase/server';
 import {allowed} from '@/lib/cms';
 import {settings} from '@/lib/content';
-import {accountsFor} from '@/lib/bank';
+import {bankColumns,pickAccount,type BankAccount} from '@/lib/bank';
 import {currencies,paymentMethods,invoiceTotals,money,fmtDate} from '@/lib/crm';
 const id=z.uuid();
 const date=z.iso.date();
 const item=z.object({description:z.string().trim().min(1,'Every line needs a description.').max(500),qty:z.number().positive('Quantities must be above zero.').max(1e6),unit_price:z.number().min(0).max(1e12)});
-const values=z.object({lead_id:id,currency:z.enum(currencies),issue_date:date,due_date:date,items:z.array(item).max(100),tax_rate:z.number().min(0).max(100),discount:z.number().min(0).max(1e12),notes:z.string().trim().max(5000)});
+const values=z.object({lead_id:id,currency:z.enum(currencies),issue_date:date,due_date:date,items:z.array(item).max(100),tax_rate:z.number().min(0).max(100),discount:z.number().min(0).max(1e12),notes:z.string().trim().max(5000),bank_account_id:id.nullable().optional()});
 const newClient=z.object({name:z.string().trim().min(1,'Enter the client’s name.').max(120),email:z.email('Enter the client’s email.').max(254),company:z.string().trim().max(200),phone:z.string().trim().max(40)});
 const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('create_full'),client:z.union([z.object({lead_id:id}),z.object({new:newClient})]),stage:z.string().trim().min(1).max(60).optional(),values:values.omit({lead_id:true})}),
@@ -100,10 +100,12 @@ export async function POST(request:Request){
    const key=process.env.RESEND_API_KEY,inbox=process.env.CRM_FROM_EMAIL||process.env.LEAD_NOTIFICATION_EMAIL;
    if(!key||!inbox)return fail('Email isn’t configured. Set RESEND_API_KEY and LEAD_NOTIFICATION_EMAIL.',503);
    const link=`${emailBase()}/invoice/${inv.public_token}`;
-   const cfg=await settings(),total=money(Number(inv.total)-Number(inv.amount_paid),inv.currency),from=cfg.invoice_from?.split('\n')[0]||'Zaane',accts=accountsFor(cfg,inv.currency);
-   const acctLines=(a:ReturnType<typeof accountsFor>[number])=>[['Bank',a.bank],['Account name',a.name],['Account number',a.number],['Other',a.extra]].filter(([,v])=>v) as [string,string][];
-   const bankHtml=accts.length?`<div style="background:#f4f4f5;border-radius:10px;padding:14px 16px;margin:0 0 20px;font-size:14px"><p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#71717a">Pay to</p>${accts.map(a=>acctLines(a).map(([k,v])=>`<div><span style="color:#71717a">${esc(k)}:</span> <b>${esc(v).replace(/\n/g,'<br>')}</b></div>`).join('')).join('<div style="height:10px"></div>')}<div style="margin-top:8px;color:#71717a">Reference: ${esc(inv.number)}</div></div>`:'';
-   const bankText=accts.length?`\n\nPay to:\n${accts.map(a=>acctLines(a).map(([k,v])=>`${k}: ${v}`).join('\n')).join('\n\n')}\nReference: ${inv.number}`:'';
+   const cfg=await settings(),total=money(Number(inv.total)-Number(inv.amount_paid),inv.currency),from=cfg.invoice_from?.split('\n')[0]||'Zaane';
+   const {data:bank}=await db.from('bank_accounts').select(bankColumns);
+   const acct=pickAccount((bank??[]) as BankAccount[],inv.currency,inv.bank_account_id);
+   const acctLines=acct?[['Bank',acct.bank],['Account name',acct.account_name],['Account number',acct.account_number],['Other',acct.extra]].filter(([,v])=>v) as [string,string][]:[];
+   const bankHtml=acct?`<div style="background:#f4f4f5;border-radius:10px;padding:14px 16px;margin:0 0 20px;font-size:14px"><p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#71717a">Pay to</p>${acctLines.map(([k,v])=>`<div><span style="color:#71717a">${esc(k)}:</span> <b>${esc(v).replace(/\n/g,'<br>')}</b></div>`).join('')}<div style="margin-top:8px;color:#71717a">Reference: ${esc(inv.number)}</div></div>`:'';
+   const bankText=acct?`\n\nPay to:\n${acctLines.map(([k,v])=>`${k}: ${v}`).join('\n')}\nReference: ${inv.number}`:'';
    const intro=b.message||`Hi ${lead.name.split(' ')[0]},\n\nPlease find invoice ${inv.number} for ${total}, due ${fmtDate(inv.due_date)}.`;
    const rows=(inv.items as {description:string;qty:number;unit_price:number}[]).map(i=>`<tr><td style="padding:8px 0;border-bottom:1px solid #eee">${esc(i.description)}</td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right;white-space:nowrap">${i.qty} × ${esc(money(i.unit_price,inv.currency))}</td></tr>`).join('');
    const html=`<div style="font-family:system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.6;color:#111;max-width:560px">${esc(intro).replace(/\n/g,'<br>')}<table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">${rows}<tr><td style="padding:12px 0;font-weight:700">Amount due</td><td style="padding:12px 0;text-align:right;font-weight:700">${esc(total)}</td></tr></table>${bankHtml}<p><a href="${link}" style="display:inline-block;background:#f10c45;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;font-weight:600">View invoice ${esc(inv.number)}</a></p><p style="color:#666;font-size:13px">You can print or save it as a PDF from that page.</p></div>`;
@@ -139,7 +141,7 @@ export async function POST(request:Request){
   }
   case 'duplicate':{
    const inv=await load(b.id);if(!inv)return fail('Invoice not found.',404);
-   const {data,error}=await db.from('invoices').insert({lead_id:inv.lead_id,currency:inv.currency,items:inv.items,tax_rate:inv.tax_rate,discount:inv.discount,subtotal:inv.subtotal,total:inv.total,notes:inv.notes,created_by:user.id}).select('id').single();
+   const {data,error}=await db.from('invoices').insert({lead_id:inv.lead_id,currency:inv.currency,items:inv.items,tax_rate:inv.tax_rate,discount:inv.discount,subtotal:inv.subtotal,total:inv.total,notes:inv.notes,bank_account_id:inv.bank_account_id,created_by:user.id}).select('id').single();
    return error?fail('Could not duplicate the invoice.'):Response.json({ok:true,id:data.id});
   }
   case 'payment_add':{

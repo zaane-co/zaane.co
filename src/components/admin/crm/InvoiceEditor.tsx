@@ -7,16 +7,19 @@ import {useRouter} from 'next/navigation';
 import {ArrowLeft,Ban,Check,Copy,CopyPlus,ExternalLink,Plus,Printer,RotateCcw,Send,Trash2,Wallet,X} from 'lucide-react';
 import {currencies,paymentMethods,invoiceTotals,invoiceState,invoiceStateStyle,money,fmtDate,invoiceApi,type Invoice,type InvoiceItem,type Payment} from '@/lib/crm';
 import {F} from './NewLead';
+import BankAccountField from './BankAccountField';
+import {pickAccount,type BankAccount} from '@/lib/bank';
 
 type Client={id:string;name:string;company:string;email:string};
 const today=()=>new Date().toISOString().slice(0,10);
 const plusDays=(from:string,n:number)=>{const d=new Date(from+'T00:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
 
-export default function InvoiceEditor({invoice,payments,clients,emailReady,canCrm=true}:{invoice:Invoice;payments:Payment[];clients:Client[];emailReady:boolean;canCrm?:boolean}){
+export default function InvoiceEditor({invoice,payments,clients,accounts:initialAccounts,emailReady,canCrm=true}:{invoice:Invoice;payments:Payment[];clients:Client[];accounts:BankAccount[];emailReady:boolean;canCrm?:boolean}){
+ const [accounts,setAccounts]=useState(initialAccounts);
  const router=useRouter(),[,start]=useTransition();
  const [flash,setFlash]=useState(''),[busy,setBusy]=useState<string|null>(null);
  const state=invoiceState(invoice),locked=invoice.status==='paid'||invoice.status==='void';
- const initial={lead_id:invoice.lead_id,currency:invoice.currency,issue_date:invoice.issue_date,due_date:invoice.due_date,items:invoice.items,tax_rate:String(invoice.tax_rate),discount:String(invoice.discount),notes:invoice.notes};
+ const initial={lead_id:invoice.lead_id,bank_account_id:invoice.bank_account_id??pickAccount(initialAccounts,invoice.currency)?.id??'',currency:invoice.currency,issue_date:invoice.issue_date,due_date:invoice.due_date,items:invoice.items,tax_rate:String(invoice.tax_rate),discount:String(invoice.discount),notes:invoice.notes};
  const [v,setV]=useState(initial);
  const dirty=JSON.stringify(v)!==JSON.stringify(initial);
  const items=v.items.map(i=>({...i,qty:Number(i.qty)||0,unit_price:Number(i.unit_price)||0}));
@@ -29,7 +32,7 @@ export default function InvoiceEditor({invoice,payments,clients,emailReady,canCr
   catch(e){setFlash(e instanceof Error?e.message:'Something went wrong.');return false;}
   finally{setBusy(null);}
  }
- const save=()=>run('save',{action:'save',id:invoice.id,values:{...v,items,tax_rate:Number(v.tax_rate)||0,discount:Number(v.discount)||0}},'Invoice saved.');
+ const save=()=>run('save',{action:'save',id:invoice.id,values:{...v,bank_account_id:v.bank_account_id||null,items,tax_rate:Number(v.tax_rate)||0,discount:Number(v.discount)||0}},'Invoice saved.');
 
  // Send dialog
  const [sending,setSending]=useState(false);
@@ -81,7 +84,8 @@ export default function InvoiceEditor({invoice,payments,clients,emailReady,canCr
       <F label="Issue date"><input type="date" value={v.issue_date} onChange={e=>setV(s=>({...s,issue_date:e.target.value}))}/></F>
       <F label="Due date"><input type="date" value={v.due_date} min={v.issue_date} onChange={e=>setV(s=>({...s,due_date:e.target.value}))}/></F>
       <div className="za-field-wide za-chips">{[7,14,30].map(n=><button key={n} type="button" onClick={()=>setV(s=>({...s,due_date:plusDays(s.issue_date,n)}))}>Net {n}</button>)}<button type="button" onClick={()=>setV(s=>({...s,due_date:s.issue_date}))}>On receipt</button></div>
-      <F label="Currency"><Dropdown label="Currency" value={v.currency} onChange={x=>setV(s=>({...s,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></F>
+      <F label="Currency"><Dropdown label="Currency" value={v.currency} onChange={x=>setV(s=>({...s,currency:x,bank_account_id:pickAccount(accounts,x)?.id??''}))} options={currencies.map(c=>({value:c,label:c}))}/></F>
+      <F label="Pay to (bank account)" wide><BankAccountField accounts={accounts} onAccounts={setAccounts} value={v.bank_account_id} onChange={x=>setV(s=>({...s,bank_account_id:x}))} currency={v.currency} locked={locked}/></F>
      </fieldset>
     </section>
 

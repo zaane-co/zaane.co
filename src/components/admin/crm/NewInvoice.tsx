@@ -8,13 +8,15 @@ import Flash from '../Flash';
 import {currencies,invoiceTotals,money,invoiceApi,type PipelineStage} from '@/lib/crm';
 import {F} from './NewLead';
 import {InvoiceLines,type LinesValue} from './InvoiceEditor';
+import BankAccountField from './BankAccountField';
+import {pickAccount,type BankAccount} from '@/lib/bank';
 
 type Client={id:string;name:string;company:string;email:string;currency:string;status:string};
 const today=()=>new Date().toISOString().slice(0,10);
 const plusDays=(from:string,n:number)=>{const d=new Date(from+'T00:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
 
 // New invoice as a full page: choose who it's for (or add them), fill in the lines, then create the draft.
-export default function NewInvoice({clients,stages,initialClient}:{clients:Client[];stages:PipelineStage[];initialClient?:string}){
+export default function NewInvoice({clients,stages,accounts:initialAccounts,initialClient}:{clients:Client[];stages:PipelineStage[];accounts:BankAccount[];initialClient?:string}){
  const router=useRouter();
  const first=clients.find(c=>c.id===initialClient);
  const [mode,setMode]=useState<'existing'|'new'>(clients.length?'existing':'new');
@@ -25,6 +27,7 @@ export default function NewInvoice({clients,stages,initialClient}:{clients:Clien
  const current=clients.find(c=>c.id===leadId);
  const stageOptions=stages.map(s=>({value:s.key,label:s.label,color:s.color}));
  const [v,setV]=useState<LinesValue&{issue_date:string;due_date:string}>({currency:first?.currency||'NGN',items:[{description:'',qty:1,unit_price:0}],tax_rate:'0',discount:'0',notes:'',issue_date:today(),due_date:plusDays(today(),14)});
+ const [accounts,setAccounts]=useState(initialAccounts),[bankId,setBankId]=useState(()=>pickAccount(initialAccounts,first?.currency||'NGN')?.id??'');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const items=v.items.map(i=>({...i,qty:Number(i.qty)||0,unit_price:Number(i.unit_price)||0}));
  const total=invoiceTotals(items,Number(v.tax_rate),Number(v.discount)).total;
@@ -36,7 +39,7 @@ export default function NewInvoice({clients,stages,initialClient}:{clients:Clien
   if(!ready){setError(mode==='existing'?'Choose who this invoice is for.':'Enter the new client’s name and email.');document.getElementById('bill-to')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
   setBusy(true);
   try{
-   const r=await invoiceApi<{id:string;number:string}>({action:'create_full',client:mode==='existing'?{lead_id:leadId}:{new:nc},stage:mode==='new'||stage!==current?.status?stage||undefined:undefined,values:{...v,items:items.filter(i=>i.description.trim()||i.unit_price),tax_rate:Number(v.tax_rate)||0,discount:Number(v.discount)||0}});
+   const r=await invoiceApi<{id:string;number:string}>({action:'create_full',client:mode==='existing'?{lead_id:leadId}:{new:nc},stage:mode==='new'||stage!==current?.status?stage||undefined:undefined,values:{...v,bank_account_id:bankId||null,items:items.filter(i=>i.description.trim()||i.unit_price),tax_rate:Number(v.tax_rate)||0,discount:Number(v.discount)||0}});
    router.replace('/admin/invoices?created='+encodeURIComponent(r.number));
   }catch(e){setError(e instanceof Error?e.message:'Could not create the invoice.');setBusy(false);}
  }
@@ -79,7 +82,8 @@ export default function NewInvoice({clients,stages,initialClient}:{clients:Clien
      <F label="Issue date"><input type="date" value={v.issue_date} onChange={e=>setV(s=>({...s,issue_date:e.target.value}))}/></F>
      <F label="Due date"><input type="date" value={v.due_date} min={v.issue_date} onChange={e=>setV(s=>({...s,due_date:e.target.value}))}/></F>
      <div className="za-field-wide za-chips">{[7,14,30].map(n=><button key={n} type="button" onClick={()=>setV(s=>({...s,due_date:plusDays(s.issue_date,n)}))}>Net {n}</button>)}<button type="button" onClick={()=>setV(s=>({...s,due_date:s.issue_date}))}>On receipt</button></div>
-     <F label="Currency"><Dropdown label="Currency" value={v.currency} onChange={x=>setV(s=>({...s,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></F>
+     <F label="Currency"><Dropdown label="Currency" value={v.currency} onChange={x=>{setV(s=>({...s,currency:x}));setBankId(pickAccount(accounts,x)?.id??'');}} options={currencies.map(c=>({value:c,label:c}))}/></F>
+     <F label="Pay to (bank account)" wide><BankAccountField accounts={accounts} onAccounts={setAccounts} value={bankId} onChange={setBankId} currency={v.currency}/></F>
     </div>
    </section>
 

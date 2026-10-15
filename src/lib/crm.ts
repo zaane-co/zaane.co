@@ -57,7 +57,7 @@ export const materialPresets=['Logo files (SVG/PNG)','Brand guidelines','Website
 // Invoices
 export type InvoiceItem={description:string;qty:number;unit_price:number};
 export type InvoiceStatus='draft'|'sent'|'paid'|'void';
-export type Invoice={id:string;lead_id:string;number:string;status:InvoiceStatus;currency:string;issue_date:string;due_date:string;items:InvoiceItem[];tax_rate:number;discount:number;subtotal:number;total:number;amount_paid:number;notes:string;public_token:string;sent_at:string|null;paid_at:string|null;created_at:string;updated_at:string};
+export type Invoice={id:string;lead_id:string;number:string;status:InvoiceStatus;currency:string;issue_date:string;due_date:string;items:InvoiceItem[];tax_rate:number;discount:number;subtotal:number;total:number;amount_paid:number;notes:string;bank_account_id?:string|null;public_token:string;sent_at:string|null;paid_at:string|null;created_at:string;updated_at:string};
 export type Payment={id:string;invoice_id:string;amount:number;paid_on:string;method:string;note:string;created_at:string};
 export const paymentMethods=['Bank transfer','Card','Cash','Paystack','Other'];
 const r2=(n:number)=>Math.round(n*100)/100;

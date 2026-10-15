@@ -1,14 +1,16 @@
 'use client';
-import {useState} from 'react';
+import {Fragment,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Check,ImageIcon,Loader2,X} from 'lucide-react';
 import MediaPicker from './MediaPicker';
+import BankAccounts from './BankAccounts';
+import type {BankAccount} from '@/lib/bank';
 import Dropdown from '@/components/ui/Dropdown';
 import {currencies} from '@/lib/crm';
 import {settingGroups,settingKeys,type SettingField} from '@/lib/site-settings';
 
 // The Settings page: every site-wide value in grouped cards, saved together from one bar.
-export default function SiteSettings({initial}:{initial:Record<string,string>}){
+export default function SiteSettings({initial,accounts}:{initial:Record<string,string>;accounts:BankAccount[]}){
  const router=useRouter();
  const [saved,setSaved]=useState(initial),[values,setValues]=useState(initial);
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[bad,setBad]=useState(''),[done,setDone]=useState(false);
@@ -46,12 +48,14 @@ export default function SiteSettings({initial}:{initial:Record<string,string>}){
  };
 
  return <div className="za-settings">
-  <nav className="za-set-nav" aria-label="Settings sections">{settingGroups.map(g=><a key={g.id} href={`#${g.id}`}>{g.title}</a>)}</nav>
+  <nav className="za-set-nav" aria-label="Settings sections">{settingGroups.flatMap(g=>g.id==='invoices'?[<a key="bank" href="#bank">Bank accounts</a>,<a key={g.id} href={`#${g.id}`}>{g.title}</a>]:[<a key={g.id} href={`#${g.id}`}>{g.title}</a>])}</nav>
   <div className="za-set-groups">
-   {settingGroups.map(g=><section className="za-card za-set-group" id={g.id} key={g.id}>
-    <header><h2>{g.title}</h2><p>{g.summary}</p></header>
-    <div className="za-set-fields">{g.fields.map(field)}</div>
-   </section>)}
+   {settingGroups.map(g=><Fragment key={g.id}>
+    {g.id==='invoices'&&<BankAccounts initial={accounts}/>}
+    <section className="za-card za-set-group" id={g.id}>
+     <header><h2>{g.title}</h2><p>{g.summary}</p></header>
+     <div className="za-set-fields">{g.fields.map(field)}</div>
+    </section></Fragment>)}
   </div>
   {(dirty.length>0||error||done)&&<div className="za-set-bar" role="status">
    <span>{error?<b className="za-set-error">{error}</b>:done&&!dirty.length?<><Check size={15}/>Saved. Changes are live on zaane.co.</>:`${dirty.length} unsaved change${dirty.length===1?'':'s'}`}</span>
