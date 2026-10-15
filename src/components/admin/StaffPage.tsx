@@ -13,7 +13,7 @@ export type ZarnAccess={type:'member'|'guest';state:'active'|'pending'|'deactiva
 export type Member={id:string;email:string;name:string;role:Role|null;created_at:string;last_sign_in_at:string|null;zarn:ZarnAccess|null};
 const roleColor:Record<Role,string>={super_admin:'#f10c45',admin:'#2563eb',editor:'#7c3aed',sales:'#f59e0b',finance:'#16a34a'};
 // What each Studio role reaches, in a couple of words.
-const roleArea:Record<Role,string>={super_admin:'Full access',admin:'All of Studio',editor:'Blog & content',sales:'CRM & contacts',finance:'Invoices & payments'};
+const roleArea:Record<Role,string>={super_admin:'Full access',admin:'All of Studio',editor:'Blog, content & newsletter',sales:'CRM & contacts',finance:'Invoices & payments'};
 const zarnLabel=(z:ZarnAccess)=>z.state==='deactivated'?'Deactivated':z.state==='pending'?'Invite pending':z.type==='guest'?'Guest':'Member';
 const zarnColor=(z:ZarnAccess)=>z.state==='deactivated'?'#3f3f46':z.state==='pending'?'#52525b':z.type==='guest'?'#d97706':'#0891b2';
 type View='all'|'studio'|'zarn'|'none';
@@ -53,7 +53,7 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
 
   <div className="za-access-groups">
    <section><h2 className="za-access-title">Studio admin</h2><p className="za-access-sub">The admin at zaane.co/admin. Each person has one role.</p>
-    <div className="za-roles">{roles.map(r=><div key={r} className="za-card za-role"><span className="za-col-dot" style={{background:roleColor[r]}}/><div><strong>{roleInfo[r].label}</strong><p>{roleInfo[r].summary}</p></div><small>{staffers.filter(m=>m.role===r).length}</small></div>)}</div></section>
+    <div className="za-roles">{roles.map(r=><div key={r} className="za-card za-role"><span className="za-col-dot" style={{background:roleColor[r]}}/><div><strong>{roleInfo[r].label}</strong><p>{roleInfo[r].summary}</p><div className="za-tags">{roleInfo[r].areas.map(a=><span key={a}>{a}</span>)}</div></div><small>{staffers.filter(m=>m.role===r).length}</small></div>)}</div></section>
    <section><h2 className="za-access-title">ZARN team chat</h2><p className="za-access-sub">Separate from Studio roles. Invite and manage people in <Link href="/admin/zarn">ZARN admin</Link>.</p>
     <div className="za-roles za-roles-zarn">
      <div className="za-card za-role"><span className="za-col-dot" style={{background:'#0891b2'}}/><div><strong>Members</strong><p>Full team: channels, DMs and assigned clients.</p></div><small>{zarnCount(z=>z.state==='active'&&z.type==='member')}</small></div>
@@ -78,7 +78,7 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
      <F label="Name *"><input required autoFocus maxLength={120} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/></F>
      <F label="Email *"><input required type="email" maxLength={254} value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))}/></F>
     </div>
-    <div className="za-role-pick" role="radiogroup" aria-label="Role">{roles.map(r=><button key={r} type="button" role="radio" aria-checked={form.role===r} className={form.role===r?'is-on':''} onClick={()=>setForm(f=>({...f,role:r}))}><span className="za-col-dot" style={{background:roleColor[r]}}/><span><strong>{roleInfo[r].label}</strong><small>{roleInfo[r].summary}</small></span></button>)}</div>
+    <div className="za-role-pick" role="radiogroup" aria-label="Role">{roles.map(r=><button key={r} type="button" role="radio" aria-checked={form.role===r} className={form.role===r?'is-on':''} onClick={()=>setForm(f=>({...f,role:r}))}><span className="za-col-dot" style={{background:roleColor[r]}}/><span><strong>{roleInfo[r].label}</strong><small>{roleInfo[r].areas.join(' · ')}</small></span></button>)}</div>
     {error&&<Flash tone="error">{error}</Flash>}
     <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setInviting(false)}>Cancel</button><button className="za-btn za-btn-primary" disabled={busy==='invite'}><Send size={14}/>{busy==='invite'?'Sending…':'Send invite'}</button></div>
    </form>

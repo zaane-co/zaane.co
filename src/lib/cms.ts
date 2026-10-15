@@ -26,23 +26,23 @@ export const collections:Record<string,Collection>={
 // Staff roles. super_admin/admin see everything (admin minus users + settings); the others are scoped to one area.
 export const roles=['super_admin','admin','editor','sales','finance'] as const;
 export type Role=typeof roles[number];
-export const roleInfo:Record<Role,{label:string;summary:string}>={
- super_admin:{label:'Super admin',summary:'Everything, including staff accounts and site settings.'},
- admin:{label:'Admin',summary:'Everything except staff accounts and site settings.'},
- editor:{label:'Editor',summary:'Blog and site content. Drafts need an admin to publish.'},
- sales:{label:'Sales & marketing',summary:'Leads CRM, contacts and subscribers. Can view a client’s invoices.'},
- finance:{label:'Finance',summary:'Invoices and payments, and adding clients to bill.'},
+export const roleInfo:Record<Role,{label:string;summary:string;areas:string[]}>={
+ super_admin:{label:'Super admin',summary:'Everything, including staff accounts and site settings.',areas:['Everything','Staff accounts','Site settings']},
+ admin:{label:'Admin',summary:'Everything except staff accounts and site settings.',areas:['Everything except staff accounts and settings']},
+ editor:{label:'Editor',summary:'Blog, site content and media, plus newsletter campaigns and subscribers. Site content drafts need an admin to publish.',areas:['Blog','Site content','Media','Newsletter campaigns','Subscribers']},
+ sales:{label:'Sales',summary:'Leads CRM and contacts. Can view a client’s invoices but not change them.',areas:['Leads CRM','Contacts','Client invoices (view only)']},
+ finance:{label:'Finance',summary:'Invoices, payments and bank accounts, and adding clients to bill.',areas:['Invoices','Payments','Bank accounts']},
 };
 export const isAdmin=(role?:string|null)=>role==='super_admin'||role==='admin';
 // Non-content areas; everything else in collections is site content.
-const area:Record<string,'crm'|'finance'|'content'>={leads:'crm',contact_submissions:'crm',subscribers:'crm',newsletter:'crm',invoices:'finance',media:'content'};
+const area:Record<string,'crm'|'finance'|'content'|'mail'>={leads:'crm',contact_submissions:'crm',subscribers:'mail',newsletter:'mail',invoices:'finance',media:'content'};
 export function allowed(key:string,role:string){
  const c=collections[key];if(!c&&!(key in area))return false;
  if(role==='super_admin')return true;
  if(c?.superOnly)return false;
  if(role==='admin')return true;
  const a=area[key]??'content';
- if(role==='editor')return a==='content'&&!c?.management;
+ if(role==='editor')return a==='mail'||(a==='content'&&!c?.management);
  if(role==='sales')return a==='crm';
  if(role==='finance')return a==='finance';
  return false;
