@@ -18,7 +18,7 @@ const tabs:{key:Tab;label:string;icon:LucideIcon}[]=[{key:'note',label:'Note',ic
 const kindIcon:Record<Activity['kind'],LucideIcon>={note:StickyNote,call:Phone,meeting:Users,email:Mail,stage:ArrowRight,task:CheckSquare};
 const local=(d:Date)=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
 
-export default function LeadDetail({files,hasSpace,canInvoice,stages,categories,materials,invoices,lead,activities,tasks,team,me,emailReady}:{files:LeadFile[];hasSpace:boolean;canInvoice:boolean;stages:PipelineStage[];categories:string[];materials:Material[];invoices:Invoice[];lead:Lead;activities:Activity[];tasks:Task[];team:Staff[];me:string;emailReady:boolean}){
+export default function LeadDetail({initialSection='activity',files,hasSpace,canInvoice,stages,categories,materials,invoices,lead,activities,tasks,team,me,emailReady}:{initialSection?:'activity'|'project'|'materials'|'invoices';files:LeadFile[];hasSpace:boolean;canInvoice:boolean;stages:PipelineStage[];categories:string[];materials:Material[];invoices:Invoice[];lead:Lead;activities:Activity[];tasks:Task[];team:Staff[];me:string;emailReady:boolean}){
  const router=useRouter(),[pending,start]=useTransition();
  const refresh=()=>start(()=>router.refresh());
  const [flash,setFlash]=useState(''),[busy,setBusy]=useState<string|null>(null);
@@ -38,7 +38,7 @@ export default function LeadDetail({files,hasSpace,canInvoice,stages,categories,
  const setStage=(status:Stage,extra:Partial<Lead>={})=>run('stage',{action:'update_lead',id:lead.id,values:{status,...extra}},`Moved to ${label(status)}.`);
  const at=path.findIndex(s=>s.key===lead.status);
 
- const [section,setSection]=useState<'activity'|'project'|'materials'|'invoices'>('activity');
+ const [section,setSection]=useState<'activity'|'project'|'materials'|'invoices'>(initialSection);
  // Composer
  const [tab,setTab]=useState<Tab>('note'),[body,setBody]=useState(''),[subject,setSubject]=useState(''),[outcome,setOutcome]=useState(callOutcomes[0]!);
  const composer=useRef<HTMLTextAreaElement>(null);
