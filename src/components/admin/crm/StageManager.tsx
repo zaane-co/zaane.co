@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {ArrowDown,ArrowUp,Lock,Plus,Trash2,X} from 'lucide-react';
@@ -55,7 +56,7 @@ export default function StageManager({stages,counts,onClose}:{stages:PipelineSta
   {palette===s.key&&<div className="za-palette" role="group" aria-label="Colours">{stageColors.map(c=><button key={c} type="button" className={c===s.color?'is-on':''} style={{background:c}} aria-label={c} onClick={()=>recolor(s,c)}/>)}</div>}
   {removing===s.key&&<div className="za-stage-remove">
    <span>{counts[s.key]?<>Move its {counts[s.key]} lead{counts[s.key]===1?'':'s'} to</>:'Delete this stage?'}</span>
-   {!!counts[s.key]&&<select className="za-select" value={moveTo} onChange={e=>setMoveTo(e.target.value)} aria-label="Move leads to">{list.filter(x=>x.key!==s.key).map(x=><option key={x.key} value={x.key}>{x.label}</option>)}</select>}
+   {!!counts[s.key]&&<Dropdown variant="toolbar" label="Move leads to" value={moveTo} onChange={setMoveTo} options={list.filter(x=>x.key!==s.key).map(x=>({value:x.key,label:x.label,color:x.color}))}/>}
    <button type="button" className="za-btn za-btn-danger" disabled={busy} onClick={()=>void remove(s.key)}>Delete stage</button>
    <button type="button" className="za-btn za-btn-ghost" onClick={()=>setRemoving(null)}>Cancel</button>
   </div>}

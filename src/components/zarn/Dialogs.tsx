@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Check,Hash,Lock,Search as SearchIcon,X} from 'lucide-react';
@@ -134,7 +135,7 @@ export function Profile({onClose}:{onClose:()=>void}){
    <input className="zn-input" aria-label="Status text" maxLength={100} placeholder="What’s your status?" value={st.text} onChange={e=>setSt({...st,text:e.target.value})}/>
    {(st.emoji||st.text)&&<button type="button" className="zn-btn" onClick={()=>setSt({emoji:'',text:'',clear:'',date:''})}>Clear</button>}
   </div>
-  {(st.emoji||st.text)&&<div className="zn-status-clear"><span>Clear after</span><select className="zn-input" value={st.clear} onChange={e=>setSt({...st,clear:e.target.value})}>{clearOptions.map(([k,l])=><option key={k} value={k}>{l}</option>)}</select>
+  {(st.emoji||st.text)&&<div className="zn-status-clear"><span>Clear after</span><Dropdown variant="inline" label="Clear after" value={st.clear} onChange={x=>setSt({...st,clear:x})} options={clearOptions.map(([k,l])=>({value:k,label:l}))}/>
    {st.clear==='pick'&&<input className="zn-input" type="date" min={new Date().toISOString().slice(0,10)} value={st.date} onChange={e=>setSt({...st,date:e.target.value})} aria-label="Clear on"/>}</div>}
   <div className="zn-grid-2">
    <label className="zn-label">Work email<input className="zn-input" type="email" maxLength={254} value={v.work_email} onChange={set('work_email')}/></label>

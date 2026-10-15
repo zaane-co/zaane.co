@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Send,Trash2,UserPlus,X} from 'lucide-react';
@@ -28,8 +29,7 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
  const Row=({m}:{m:Member})=><tr>
   <td><div className="za-cell-main"><span className="za-crm-avatar" style={m.role?{background:roleColor[m.role]}:undefined}>{initials(m.name||m.email)}</span><span><b>{m.name||m.email.split('@')[0]}{m.id===me&&' (you)'}</b><small>{m.email}</small></span></div></td>
   <td>{m.id===me?<span className="za-status" style={{background:roleColor[m.role!]}}>{roleInfo[m.role!].label}</span>
-   :<select className="za-select" aria-label={`Role for ${m.name||m.email}`} value={m.role??''} disabled={busy===m.id} onChange={e=>void run(m.id,{action:'set_role',id:m.id,role:e.target.value||null},e.target.value?`Role changed to ${roleInfo[e.target.value as Role].label}.`:'Access removed.')}>
-    <option value="">No access</option>{roles.map(r=><option key={r} value={r}>{roleInfo[r].label}</option>)}</select>}</td>
+   :<Dropdown variant="toolbar" label={`Role for ${m.name||m.email}`} value={m.role??''} disabled={busy===m.id} onChange={x=>void run(m.id,{action:'set_role',id:m.id,role:x||null},x?`Role changed to ${roleInfo[x as Role].label}.`:'Access removed.')} options={[{value:'',label:'No access'},...roles.map(r=>({value:r,label:roleInfo[r].label}))]}/>}</td>
   <td className="za-hide-sm za-cell-muted">{m.last_sign_in_at?ago(m.last_sign_in_at):'Invite pending'}</td>
   <td><div className="za-row-actions">{m.id!==me&&<button type="button" className="za-row-danger" aria-label={`Remove ${m.name||m.email}`} data-tip="Delete account" onClick={()=>setRemoving(m)}><Trash2 size={14}/></button>}</div></td>
  </tr>;

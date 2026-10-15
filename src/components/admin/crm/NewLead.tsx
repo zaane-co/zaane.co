@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useState} from 'react';
 import {X} from 'lucide-react';
 import {sources,currencies,crmApi,type PipelineStage,type Staff} from '@/lib/crm';
@@ -26,10 +27,10 @@ export default function NewLead({stages,team,me,onClose,onCreated}:{stages:Pipel
      <F label="Phone"><input type="tel" maxLength={40} value={v.phone} onChange={set('phone')}/></F>
      <F label="Service" wide><input maxLength={120} placeholder="e.g. Web app MVP" value={v.service_interested} onChange={set('service_interested')}/></F>
      <F label="Deal value"><input type="number" min={0} step="any" inputMode="decimal" value={v.deal_value} onChange={set('deal_value')}/></F>
-     <F label="Currency"><select value={v.currency} onChange={set('currency')}>{currencies.map(c=><option key={c}>{c}</option>)}</select></F>
-     <F label="Stage"><select value={v.status} onChange={set('status')}>{stages.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select></F>
-     <F label="Source"><select value={v.source} onChange={set('source')}>{sources.map(s=><option key={s} value={s}>{s[0]!.toUpperCase()+s.slice(1)}</option>)}</select></F>
-     <F label="Owner" wide><select value={v.owner_id} onChange={set('owner_id')}><option value="">Unassigned</option>{team.map(s=><option key={s.id} value={s.id}>{s.name||s.email}</option>)}</select></F>
+     <F label="Currency"><Dropdown label="Currency" value={v.currency} onChange={x=>setV(s=>({...s,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></F>
+     <F label="Stage"><Dropdown label="Stage" value={v.status} onChange={x=>setV(s=>({...s,status:x}))} options={stages.map(s=>({value:s.key,label:s.label,color:s.color}))}/></F>
+     <F label="Source"><Dropdown label="Source" value={v.source} onChange={x=>setV(s=>({...s,source:x}))} options={sources.map(s=>({value:s,label:s[0]!.toUpperCase()+s.slice(1)}))}/></F>
+     <F label="Owner" wide><Dropdown label="Owner" value={v.owner_id} onChange={x=>setV(s=>({...s,owner_id:x}))} options={[{value:'',label:'Unassigned'},...team.map(s=>({value:s.id,label:s.name||s.email}))]}/></F>
      <F label="Brief / context" wide><textarea rows={5} maxLength={10000} placeholder="What do they need? How did you meet?" value={v.message} onChange={set('message')}/></F>
     </div>
     {error&&<p role="alert" className="za-flash">{error}</p>}

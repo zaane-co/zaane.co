@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useState} from 'react';
 import {F} from './NewLead';
 import {useRouter} from 'next/navigation';
@@ -83,7 +84,7 @@ export default function InvoiceList({invoices,clients,collected,compact,leadId,r
     <div className="za-modal-head"><span className="za-modal-icon za-modal-icon-brand"><FileText size={18}/></span><div><strong>New invoice</strong><small>Who is it for?</small></div><button type="button" className="za-icon-btn za-push" aria-label="Close" onClick={()=>setPicking(false)}><X size={16}/></button></div>
     {!!clients?.length&&<div className="za-seg za-seg-full" role="group" aria-label="Client type"><button type="button" className={mode==='existing'?'is-on':''} aria-pressed={mode==='existing'} onClick={()=>setMode('existing')}>Existing client</button><button type="button" className={mode==='new'?'is-on':''} aria-pressed={mode==='new'} onClick={()=>setMode('new')}>New client</button></div>}
     {mode==='existing'&&clients?.length?<>
-     <select className="za-select za-select-full" value={client} onChange={e=>setClient(e.target.value)} aria-label="Client"><option value="">Choose a client…</option>{clients.map(c=><option key={c.id} value={c.id}>{c.company?`${c.company} (${c.name})`:c.name}</option>)}</select>
+     <Dropdown label="Client" placeholder="Choose a client…" value={client} onChange={setClient} options={clients.map(c=>({value:c.id,label:c.company||c.name,hint:c.company?c.name:undefined}))}/>
      {error&&<p role="alert" className="za-flash">{error}</p>}
      <div className="za-modal-foot" style={{marginTop:16}}><button type="button" className="za-btn za-btn-ghost" onClick={()=>setPicking(false)}>Cancel</button><button type="button" className="za-btn za-btn-primary" disabled={!client||busy} onClick={()=>void create(client)}>{opening?'Opening invoice…':busy?'Creating…':'Create draft'}</button></div>
     </>:<form onSubmit={createWithClient}>
@@ -92,7 +93,7 @@ export default function InvoiceList({invoices,clients,collected,compact,leadId,r
       <F label="Email *"><input required type="email" maxLength={254} value={nc.email} onChange={e=>setNc(v=>({...v,email:e.target.value}))}/></F>
       <F label="Company"><input maxLength={200} value={nc.company} onChange={e=>setNc(v=>({...v,company:e.target.value}))}/></F>
       <F label="Phone"><input type="tel" maxLength={40} value={nc.phone} onChange={e=>setNc(v=>({...v,phone:e.target.value}))}/></F>
-      <F label="Currency" wide><select value={nc.currency} onChange={e=>setNc(v=>({...v,currency:e.target.value}))}>{currencies.map(c=><option key={c}>{c}</option>)}</select></F>
+      <F label="Currency" wide><Dropdown label="Currency" value={nc.currency} onChange={x=>setNc(v=>({...v,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></F>
      </div>
      <p className="za-modal-hint">They’re saved to Leads as a won client. If the email already exists, the invoice goes to that client.</p>
      {error&&<p role="alert" className="za-flash">{error}</p>}

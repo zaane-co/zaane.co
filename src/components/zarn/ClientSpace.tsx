@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
 import {AlarmClock,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Plus,Receipt,ListChecks,LayoutGrid,History,Trash2,UserPlus,X} from 'lucide-react';
@@ -43,7 +44,7 @@ export default function ClientSpace({data}:{data:SpaceData}){
     <div><h1>{name}<Lock size={13} className="zn-lock"/></h1><p>{lead.company?lead.name:''}{lead.service_interested&&<>{lead.company?' · ':''}{lead.service_interested}</>}</p></div>
    </div>
    <div className="zn-client-meta">
-    <select className="zn-stage-select" style={{background:stage?.color??'#52525b'}} value={lead.status} disabled={pending} onChange={async e=>{if(await act({action:'stage',status:e.target.value},'Stage updated.'))z.loadLead(lead.id,true);}} aria-label="Stage">{stages.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select>
+    <Dropdown variant="pill" label="Stage" value={lead.status} disabled={pending} onChange={async x=>{if(await act({action:'stage',status:x},'Stage updated.'))z.loadLead(lead.id,true);}} options={stages.map(s=>({value:s.key,label:s.label,color:s.color}))}/>
     <div className="zn-team-stack" title={team.map(id=>z.people[id]?.display_name??data.names[id]).join(', ')}>{team.slice(0,5).map(id=><Avatar key={id} m={z.people[id]} size={28} online={z.online.has(id)}/>)}{team.length>5&&<span className="zn-more">+{team.length-5}</span>}</div>
     {data.canManage&&<button type="button" className="zn-btn" onClick={()=>setAdding(true)}><UserPlus size={14}/>Team</button>}
    </div>
@@ -141,7 +142,7 @@ function Tasks({data,onAct}:{data:SpaceData;onAct:(b:object,m?:string)=>Promise<
  return <div className="zn-pane"><div className="zn-pane-inner">
   <form className="zn-task-form" onSubmit={async e=>{e.preventDefault();if(await onAct({action:'task_add',title,due_at:due?new Date(due).toISOString():null,assignee_id:who},'Task added.')){setTitle('');setDue('');}}}>
    <input className="zn-input" required maxLength={300} placeholder="Add a task, e.g. Send first logo concepts" value={title} onChange={e=>setTitle(e.target.value)}/>
-   <div className="zn-row"><select className="zn-input" value={who} onChange={e=>setWho(e.target.value)} aria-label="Assign to">{data.team.map(id=><option key={id} value={id}>{name(id)}{id===z.me.user_id?' (me)':''}</option>)}</select>
+   <div className="zn-row"><Dropdown label="Assign to" value={who} onChange={setWho} options={data.team.map(id=>({value:id,label:`${name(id)}${id===z.me.user_id?' (me)':''}`}))}/>
     <input className="zn-input" type="datetime-local" value={due} onChange={e=>setDue(e.target.value)} aria-label="Due"/>
     <button className="zn-btn is-primary" disabled={!title.trim()}><Plus size={14}/>Add</button></div>
   </form>

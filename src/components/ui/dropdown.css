@@ -1,0 +1,36 @@
+/* Shared dropdown: works in the admin (--a-*) and ZARN (--z-*) themes. */
+.dd,.dd-menu{--dd-panel:var(--a-panel,var(--z-panel));--dd-input:var(--a-input,var(--z-input));--dd-border:var(--a-border,var(--z-border));--dd-fg:var(--a-fg,var(--z-fg));--dd-muted:var(--a-muted,var(--z-muted));--dd-faint:var(--a-faint,var(--z-faint));--dd-hover:var(--a-hover,var(--z-hover));--dd-accent:var(--accent,var(--z-accent))}
+.dd{display:inline-flex;align-items:center;gap:8px;min-width:0;font:inherit;text-align:left;cursor:pointer;transition:background-color .15s,border-color .15s}
+.dd:disabled{opacity:.6;cursor:default}
+.dd-value{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd.is-empty .dd-value{color:var(--dd-faint)}
+.dd-chev{flex:none;color:var(--dd-faint);transition:transform .15s}
+.dd.is-open .dd-chev{transform:rotate(180deg)}
+.dd-dot{width:9px;height:9px;flex:none;border-radius:50%}
+
+/* Form field: looks like the inputs around it. */
+.dd-field{width:100%;height:42px;padding:0 12px 0 13px;border-radius:9px;background:var(--dd-input);border:1px solid var(--dd-border);color:var(--dd-fg);font-size:13.5px}
+.zarn .dd-field{height:40px;font-size:14px}
+.dd-field:hover:not(:disabled){border-color:var(--dd-muted)}
+.dd-field:focus-visible,.dd-field.is-open{outline:none;border-color:var(--dd-accent)}
+/* Toolbar: matches the admin's filter buttons. */
+.dd-toolbar{height:38px;padding:0 12px;border-radius:9px;background:var(--dd-panel);border:1px solid var(--dd-border);color:var(--dd-fg);font-size:13px;font-weight:500;white-space:nowrap}
+.dd-toolbar:hover:not(:disabled),.dd-toolbar.is-open{background:var(--dd-hover);border-color:var(--dd-muted)}
+/* Inline: a compact control inside a row or bar. */
+.dd-inline{height:32px;padding:0 10px;border-radius:8px;background:var(--dd-input);border:1px solid var(--dd-border);color:var(--dd-fg);font-size:12.5px;font-weight:500}
+.dd-inline:hover:not(:disabled),.dd-inline.is-open{border-color:var(--dd-muted)}
+/* Pill: a solid colour chip, e.g. a pipeline stage. */
+.dd-pill{height:30px;padding:0 10px 0 12px;gap:6px;border-radius:999px;border:0;color:#fff;font-size:12.5px;font-weight:700}
+.dd-pill .dd-chev{color:#fff}
+.dd-pill:hover:not(:disabled){filter:brightness(1.1)}
+
+.dd-menu{position:fixed;z-index:1000;margin:0;padding:6px;list-style:none;overflow-y:auto;max-width:min(320px,calc(100vw - 24px));border-radius:12px;background:var(--dd-panel);border:1px solid var(--dd-border);box-shadow:0 14px 36px rgba(0,0,0,.32);animation:dd-in .12s ease-out}
+@keyframes dd-in{from{opacity:0;transform:translateY(-4px)}}
+.dd-group{margin:4px 0 0;padding:8px 10px 4px;border-top:1px solid var(--dd-border);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--dd-faint)}
+li:first-child>.dd-group{margin-top:0;border-top:0}
+.dd-opt{display:flex;align-items:center;gap:9px;width:100%;min-height:34px;padding:7px 10px;border-radius:8px;background:none;border:0;color:var(--dd-fg);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.dd-opt span{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-opt small{font-size:11.5px;color:var(--dd-muted);overflow:hidden;text-overflow:ellipsis}
+.dd-opt.is-hover{background:var(--dd-hover)}
+.dd-opt[aria-selected=true]{font-weight:600}
+.dd-check{flex:none;color:var(--dd-accent)}

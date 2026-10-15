@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Check,X} from 'lucide-react';
@@ -29,7 +30,7 @@ export default function AddClient({onClose}:{onClose:()=>void}){
     <label className="zn-label">Phone<input className="zn-input" type="tel" maxLength={40} value={v.phone} onChange={set('phone')}/></label>
     <label className="zn-label">Service<input className="zn-input" maxLength={120} placeholder="e.g. Brand identity" value={v.service} onChange={set('service')}/></label>
     <div className="zn-grid-2 zn-tight"><label className="zn-label">Deal value<input className="zn-input" type="number" min={0} step="any" value={v.deal_value} onChange={set('deal_value')}/></label>
-     <label className="zn-label">Currency<select className="zn-input" value={v.currency} onChange={set('currency')}>{currencies.map(c=><option key={c}>{c}</option>)}</select></label></div>
+     <label className="zn-label">Currency<Dropdown label="Currency" value={v.currency} onChange={x=>setV(s=>({...s,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></label></div>
    </div>
    <label className="zn-label">Brief<textarea className="zn-input" rows={3} maxLength={10000} placeholder="What are we doing for them?" value={v.brief} onChange={set('brief')}/></label>
    <div className="zn-label">Team <small>Only these people (and admins) can see this client’s space. You’re added automatically.</small></div>

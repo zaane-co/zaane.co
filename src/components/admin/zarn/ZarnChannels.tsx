@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Archive,ArchiveRestore,Hash,Lock,Pencil,Plus,Trash2,Users,X} from 'lucide-react';
@@ -44,8 +45,8 @@ export default function ZarnChannels({rows,members}:{rows:ChannelRow[];members:P
    <div className="za-modal-head"><span className="za-modal-icon za-modal-icon-brand"><Hash size={18}/></span><div><strong>{edit==='new'?'New channel':`Edit #${edit.name}`}</strong><small>Lowercase, numbers, dashes</small></div><button type="button" className="za-icon-btn za-push" aria-label="Close" onClick={()=>setEdit(null)}><X size={16}/></button></div>
    <div className="za-form-grid">
     <F label="Name *" wide><input required maxLength={80} value={v.name} onChange={e=>setV({...v,name:e.target.value})}/></F>
-    {edit==='new'&&<F label="Visibility"><select value={v.kind} onChange={e=>setV({...v,kind:e.target.value as 'public'|'private',is_default:e.target.value==='private'?false:v.is_default})}><option value="public">Public</option><option value="private">Private</option></select></F>}
-    <F label="CRM updates" wide={edit!=='new'}><select value={v.crm_feed} onChange={e=>setV({...v,crm_feed:e.target.value as ''|'leads'|'invoices'})}><option value="">None</option><option value="leads">{feedLabel.leads}</option><option value="invoices">{feedLabel.invoices}</option></select></F>
+    {edit==='new'&&<F label="Visibility"><Dropdown label="Visibility" value={v.kind} onChange={x=>setV({...v,kind:x as 'public'|'private',is_default:x==='private'?false:v.is_default})} options={[{value:'public',label:'Public',hint:'Any member can find and join'},{value:'private',label:'Private',hint:'Invite only'}]}/></F>}
+    <F label="CRM updates" wide={edit!=='new'}><Dropdown label="CRM updates" value={v.crm_feed} onChange={x=>setV({...v,crm_feed:x as ''|'leads'|'invoices'})} options={[{value:'',label:'None'},{value:'leads',label:feedLabel.leads},{value:'invoices',label:feedLabel.invoices}]}/></F>
     <F label="Topic" wide><input maxLength={250} value={v.topic} onChange={e=>setV({...v,topic:e.target.value})}/></F>
    </div>
    {v.kind==='public'&&<label className="za-check-row"><input type="checkbox" checked={v.is_default} onChange={e=>setV({...v,is_default:e.target.checked})}/>Everyone joins automatically (new members too)</label>}

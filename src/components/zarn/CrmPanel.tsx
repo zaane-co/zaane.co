@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useMemo,useState} from 'react';
 import {useRouter,useSearchParams} from 'next/navigation';
 import {Briefcase,Search,Send,X} from 'lucide-react';
@@ -43,7 +44,7 @@ export default function CrmPanel(){
   </div>
   {open&&<aside className="zn-drawer"><header><h2>Lead</h2><button type="button" aria-label="Close" onClick={()=>setOpen(null)}><X size={18}/></button></header>
    <div className="zn-drawer-body"><LeadCard id={open}/>
-    {sharing?<div className="zn-share"><label className="zn-label">Share to<select className="zn-input" value={target} onChange={e=>setTarget(e.target.value)}><option value="">Choose a channel or DM…</option>{targets.map(c=><option key={c.id} value={c.id}>{c.kind==='dm'?title(c):`#${c.name}`}</option>)}</select></label>
+    {sharing?<div className="zn-share"><label className="zn-label">Share to<Dropdown label="Share to" placeholder="Choose a channel or DM…" value={target} onChange={setTarget} options={targets.map(c=>({value:c.id,label:c.kind==='dm'?title(c):`#${c.name}`,group:c.kind==='dm'?'Direct messages':'Channels'}))}/></label>
      <label className="zn-label">Message (optional)<textarea className="zn-input" rows={3} maxLength={2000} value={note} onChange={e=>setNote(e.target.value)}/></label>
      <div className="zn-row"><button type="button" className="zn-btn" onClick={()=>setSharing(false)}>Cancel</button><button type="button" className="zn-btn is-primary" disabled={!target} onClick={()=>void share()}><Send size={14}/>Share</button></div></div>
     :<div className="zn-row"><button type="button" className="zn-btn is-primary" onClick={()=>setSharing(true)}><Send size={14}/>Share in a channel</button>

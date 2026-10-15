@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
@@ -89,10 +90,7 @@ export default function BlogList({posts,categories=[],postCats=[],viewCounts=[],
      </div>
      <div className="flex items-center gap-2">
       {parentCats.length>0&&<div className="relative">
-       <select value={catFilter} onChange={e=>setCatFilter(e.target.value)} className={`rounded-lg border pl-3 pr-7 py-1.5 text-xs focus:outline-none transition-colors appearance-none ${t.input}`}>
-        <option value="all">All categories</option>{parentCats.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-       </select>
-       <ChevronDown className={`absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none ${t.faint}`}/>
+       <Dropdown variant="inline" label="Filter by category" value={catFilter} onChange={setCatFilter} options={[{value:'all',label:'All categories'},...parentCats.map(c=>({value:c.id,label:c.name}))]}/>
       </div>}
       <div className="relative w-44">
        <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${t.sub}`}/>

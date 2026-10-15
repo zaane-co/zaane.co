@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useState,useTransition} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
@@ -102,11 +103,11 @@ export default function InvoiceEditor({invoice,payments,clients,emailReady,canCr
     <section className="za-card">
      <div className="za-card-head"><h2>Details</h2></div>
      <fieldset disabled={locked} className="za-card-pad za-form-grid za-fieldset">
-      <F label="Client" wide><select value={v.lead_id} onChange={e=>setV(s=>({...s,lead_id:e.target.value}))}>{clients.map(c=><option key={c.id} value={c.id}>{c.company?`${c.company} (${c.name})`:c.name}</option>)}</select></F>
+      <F label="Client" wide><Dropdown label="Client" value={v.lead_id} onChange={x=>setV(s=>({...s,lead_id:x}))} options={clients.map(c=>({value:c.id,label:c.company||c.name,hint:c.company?c.name:undefined}))}/></F>
       <F label="Issue date"><input type="date" value={v.issue_date} onChange={e=>setV(s=>({...s,issue_date:e.target.value}))}/></F>
       <F label="Due date"><input type="date" value={v.due_date} min={v.issue_date} onChange={e=>setV(s=>({...s,due_date:e.target.value}))}/></F>
       <div className="za-field-wide za-chips">{[7,14,30].map(n=><button key={n} type="button" onClick={()=>setV(s=>({...s,due_date:plusDays(s.issue_date,n)}))}>Net {n}</button>)}<button type="button" onClick={()=>setV(s=>({...s,due_date:s.issue_date}))}>On receipt</button></div>
-      <F label="Currency"><select value={v.currency} onChange={e=>setV(s=>({...s,currency:e.target.value}))}>{currencies.map(c=><option key={c}>{c}</option>)}</select></F>
+      <F label="Currency"><Dropdown label="Currency" value={v.currency} onChange={x=>setV(s=>({...s,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></F>
      </fieldset>
     </section>
 
@@ -120,7 +121,7 @@ export default function InvoiceEditor({invoice,payments,clients,emailReady,canCr
       {!locked&&<form id="record-payment" className="za-form-grid za-pay-form" onSubmit={addPayment}>
        <F label="Amount paid"><input type="number" min={0} step="any" required placeholder={String(owed)} value={pay.amount} onChange={e=>setPay(p=>({...p,amount:e.target.value}))}/></F>
        <F label="Date"><input type="date" required value={pay.paid_on} onChange={e=>setPay(p=>({...p,paid_on:e.target.value}))}/></F>
-       <F label="Method" wide><select value={pay.method} onChange={e=>setPay(p=>({...p,method:e.target.value}))}>{paymentMethods.map(m=><option key={m}>{m}</option>)}</select></F>
+       <F label="Method" wide><Dropdown label="Method" value={pay.method} onChange={x=>setPay(p=>({...p,method:x}))} options={paymentMethods.map(m=>({value:m,label:m}))}/></F>
        <div className="za-field-wide za-chips"><button type="button" onClick={()=>setPay(p=>({...p,amount:String(owed)}))}>Full amount</button><button type="button" onClick={()=>setPay(p=>({...p,amount:String(Math.round(owed/2*100)/100)}))}>Half</button></div>
        <button className="za-btn za-btn-primary za-field-wide" disabled={busy==='pay'||!pay.amount}><Plus size={14}/>Record payment</button>
       </form>}

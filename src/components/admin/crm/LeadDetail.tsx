@@ -1,4 +1,5 @@
 'use client';
+import Dropdown from '@/components/ui/Dropdown';
 import {useRef,useState,useTransition} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
@@ -155,9 +156,9 @@ export default function LeadDetail({files,hasSpace,canInvoice,stages,categories,
      <div className="za-card-head"><h2>Details</h2>{lead.deal_value!=null&&<strong className="za-lead-value">{money(lead.deal_value,lead.currency)}</strong>}</div>
      <form className="za-card-pad za-form-grid" onSubmit={saveDetails}>
       <F label="Deal value"><input type="number" min={0} step="any" inputMode="decimal" value={d.deal_value} onChange={set('deal_value')}/></F>
-      <F label="Currency"><select value={d.currency} onChange={set('currency')}>{currencies.map(c=><option key={c}>{c}</option>)}</select></F>
-      <F label="Owner"><select value={d.owner_id} onChange={set('owner_id')}><option value="">Unassigned</option>{team.map(s=><option key={s.id} value={s.id}>{s.name||s.email}</option>)}</select></F>
-      <F label="Source"><select value={d.source} onChange={set('source')}>{sources.map(s=><option key={s} value={s}>{s[0]!.toUpperCase()+s.slice(1)}</option>)}</select></F>
+      <F label="Currency"><Dropdown label="Currency" value={d.currency} onChange={x=>setD(s=>({...s,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></F>
+      <F label="Owner"><Dropdown label="Owner" value={d.owner_id} onChange={x=>setD(s=>({...s,owner_id:x}))} options={[{value:'',label:'Unassigned'},...team.map(s=>({value:s.id,label:s.name||s.email}))]}/></F>
+      <F label="Source"><Dropdown label="Source" value={d.source} onChange={x=>setD(s=>({...s,source:x}))} options={sources.map(s=>({value:s,label:s[0]!.toUpperCase()+s.slice(1)}))}/></F>
       <F label="Tags (comma separated)" wide><input maxLength={400} placeholder="e.g. fintech, urgent" value={d.tags} onChange={set('tags')}/></F>
       <F label="Name" wide><input required maxLength={120} value={d.name} onChange={set('name')}/></F>
       <F label="Email" wide><input required type="email" maxLength={254} value={d.email} onChange={set('email')}/></F>
