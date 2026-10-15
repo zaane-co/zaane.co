@@ -35,7 +35,7 @@ export const roleInfo:Record<Role,{label:string;summary:string}>={
 };
 export const isAdmin=(role?:string|null)=>role==='super_admin'||role==='admin';
 // Non-content areas; everything else in collections is site content.
-const area:Record<string,'crm'|'finance'|'content'>={leads:'crm',contact_submissions:'crm',subscribers:'crm',invoices:'finance',media:'content'};
+const area:Record<string,'crm'|'finance'|'content'>={leads:'crm',contact_submissions:'crm',subscribers:'crm',newsletter:'crm',invoices:'finance',media:'content'};
 export function allowed(key:string,role:string){
  const c=collections[key];if(!c&&!(key in area))return false;
  if(role==='super_admin')return true;

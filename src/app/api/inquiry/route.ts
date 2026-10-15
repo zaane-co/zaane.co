@@ -24,7 +24,9 @@ export async function POST(request:Request){
   let {error}=await db.from(table).insert(record);
   // Until the CRM migration is applied the source column doesn't exist; save the lead without it rather than lose it.
   if(error&&table==='leads'&&error.code==='PGRST204'){delete record.source;({error}=await db.from(table).insert(record));}
-  if(error&&!(table==='subscribers'&&error.code==='23505'))throw error;
+  // Signing up again after opting out re-subscribes them.
+  if(error&&table==='subscribers'&&error.code==='23505'){({error}=await db.from('subscribers').update({unsubscribed_at:null}).eq('email',v.email.toLowerCase()));}
+  if(error)throw error;
   if(v.kind!=='subscribe'&&process.env.RESEND_API_KEY)after(async()=>{
    try{const result=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.RESEND_FROM,to:[process.env.LEAD_NOTIFICATION_EMAIL||'hello@zaane.co'],reply_to:v.email,subject:`New Zaane ${v.kind} inquiry`,text:`${v.name} <${v.email}>\n${v.company}\n${v.service}\n${v.budget}\n\n${v.message}\n\nView this submission in /admin.`})});if(!result.ok)console.error('Lead saved; email notification failed:',result.status);}catch{console.error('Lead saved; notification service unavailable.');}
   });

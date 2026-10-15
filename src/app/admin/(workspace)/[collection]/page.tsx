@@ -7,7 +7,7 @@ const intro:Record<string,string>={leads:'Project briefs submitted through the w
 export default async function Page({params,searchParams}:{params:Promise<{collection:string}>;searchParams:Promise<{page?:string;open?:string}>}){
  const {collection}=await params;
  if(collection==='blog_posts')redirect('/admin/blog');if(collection==='project_images')redirect('/admin/projects');if(collection==='blog_categories')redirect('/admin/blog/categories');const user=await staff();if(!user||!allowed(collection,user.role))notFound();
- const sp=await searchParams,page=Math.max(1,Number(sp.page)||1);const db=await sessionClient();const {data,error,count}=await db.from(collection).select('*',{count:'exact'}).order('created_at',{ascending:false}).range((page-1)*30,page*30-1);
+ const sp=await searchParams,page=Math.max(1,Number(sp.page)||1);const db=await sessionClient();let q=db.from(collection).select('*',{count:'exact'});if(collection==='subscribers')q=q.is('unsubscribed_at',null);const {data,error,count}=await q.order('created_at',{ascending:false}).range((page-1)*30,page*30-1);
  const [categories,projects,taxonomy]=await Promise.all([db.from('blog_categories').select('id,name'),db.from('projects').select('id,title'),db.from('project_categories').select('kind,name').order('name')]);
  const galleryRows=collection==='projects'?(await db.from('project_images').select('id,project_id,image_url,order').order('order').order('created_at')).data??[]:[];
  const gallery=galleryRows.reduce<Record<string,{id:string;image_url:string;order:number}[]>>((m,r)=>{(m[r.project_id]??=[]).push({id:r.id,image_url:r.image_url,order:r.order});return m;},{});
