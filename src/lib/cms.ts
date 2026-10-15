@@ -27,11 +27,11 @@ export const collections:Record<string,Collection>={
 export const roles=['super_admin','admin','editor','sales','finance'] as const;
 export type Role=typeof roles[number];
 export const roleInfo:Record<Role,{label:string;summary:string;areas:string[]}>={
- super_admin:{label:'Super admin',summary:'Everything, including staff accounts and site settings.',areas:['Everything','Staff accounts','Site settings']},
- admin:{label:'Admin',summary:'Everything except staff accounts and site settings.',areas:['Everything except staff accounts and settings']},
- editor:{label:'Editor',summary:'Blog, site content and media, plus newsletter campaigns and subscribers. Site content drafts need an admin to publish.',areas:['Blog','Site content','Media','Newsletter campaigns','Subscribers']},
- sales:{label:'Sales',summary:'Leads CRM and contacts. Can view a client’s invoices but not change them.',areas:['Leads CRM','Contacts','Client invoices (view only)']},
- finance:{label:'Finance',summary:'Invoices, payments and bank accounts, and adding clients to bill.',areas:['Invoices','Payments','Bank accounts']},
+ super_admin:{label:'Super admin',summary:'Full control of the studio.',areas:['Everything','Staff accounts','Site settings']},
+ admin:{label:'Admin',summary:'Runs the studio day to day.',areas:['Everything','Not staff or settings']},
+ editor:{label:'Editor',summary:'Writes and sends content.',areas:['Blog','Site content','Media','Campaigns','Subscribers']},
+ sales:{label:'Sales',summary:'Works leads and clients.',areas:['Leads CRM','Contacts','Invoices (view)']},
+ finance:{label:'Finance',summary:'Bills clients and tracks payments.',areas:['Invoices','Payments','Bank accounts']},
 };
 export const isAdmin=(role?:string|null)=>role==='super_admin'||role==='admin';
 // Non-content areas; everything else in collections is site content.

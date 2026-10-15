@@ -686,3 +686,5 @@
 .za-nl-tpl-meta small{color:var(--a-muted);font-size:12.5px;line-height:1.5}
 .za-nl-tpl-actions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px 16px;margin-top:auto}
 .za-nl-tpl-select{margin-left:auto;font-size:12.5px;max-width:200px}
+
+.za-role .za-tags{margin-top:8px}.za-role .za-tags span{white-space:nowrap}
