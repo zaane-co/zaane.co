@@ -10,9 +10,9 @@ type Row=Invoice&{client:string};
 const sum=(rows:{currency:string;v:number}[])=>{const m:Record<string,number>={};for(const r of rows)if(r.v)m[r.currency]=(m[r.currency]??0)+r.v;return Object.entries(m).map(([c,v])=>money(v,c)).join(' · ')||'-';};
 
 // All invoices across clients. compact=true is the per-client list on a lead's page.
-export default function InvoiceList({invoices,collected,compact,leadId,readOnly}:{invoices:Row[];collected?:{currency:string;amount:number}[];compact?:boolean;leadId?:string;readOnly?:boolean}){
+export default function InvoiceList({created,invoices,collected,compact,leadId,readOnly}:{invoices:Row[];collected?:{currency:string;amount:number}[];created?:string;compact?:boolean;leadId?:string;readOnly?:boolean}){
  const router=useRouter();
- const [deleting,setDeleting]=useState<Row|null>(null),[flash,setFlash]=useState('');
+ const [deleting,setDeleting]=useState<Row|null>(null),[flash,setFlash]=useState(created?`Invoice ${created} created. It’s a draft: open it to send it or record a payment.`:'');
  async function remove(){
   if(!deleting)return;setBusy(true);
   try{await invoiceApi({action:'delete',id:deleting.id});setFlash(`Invoice ${deleting.number} deleted.`);setDeleting(null);router.refresh();}

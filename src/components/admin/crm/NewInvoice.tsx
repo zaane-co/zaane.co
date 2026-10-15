@@ -36,8 +36,8 @@ export default function NewInvoice({clients,stages,initialClient}:{clients:Clien
   if(!ready){setError(mode==='existing'?'Choose who this invoice is for.':'Enter the new client’s name and email.');document.getElementById('bill-to')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
   setBusy(true);
   try{
-   const r=await invoiceApi<{id:string;lead_id:string}>({action:'create_full',client:mode==='existing'?{lead_id:leadId}:{new:nc},stage:mode==='new'||stage!==current?.status?stage||undefined:undefined,values:{...v,items:items.filter(i=>i.description.trim()||i.unit_price),tax_rate:Number(v.tax_rate)||0,discount:Number(v.discount)||0}});
-   router.replace(`/admin/leads/${r.lead_id}?section=invoices`);
+   const r=await invoiceApi<{id:string;number:string}>({action:'create_full',client:mode==='existing'?{lead_id:leadId}:{new:nc},stage:mode==='new'||stage!==current?.status?stage||undefined:undefined,values:{...v,items:items.filter(i=>i.description.trim()||i.unit_price),tax_rate:Number(v.tax_rate)||0,discount:Number(v.discount)||0}});
+   router.replace('/admin/invoices?created='+encodeURIComponent(r.number));
   }catch(e){setError(e instanceof Error?e.message:'Could not create the invoice.');setBusy(false);}
  }
 
