@@ -20,7 +20,6 @@ export default function InvoiceEditor({invoice,payments,clients,emailReady,canCr
  const [v,setV]=useState(initial);
  const dirty=JSON.stringify(v)!==JSON.stringify(initial);
  const items=v.items.map(i=>({...i,qty:Number(i.qty)||0,unit_price:Number(i.unit_price)||0}));
- const t=invoiceTotals(items,Number(v.tax_rate),Number(v.discount));
  const owed=Math.max(0,Number(invoice.total)-Number(invoice.amount_paid));
  const client=clients.find(c=>c.id===v.lead_id);
 
@@ -31,7 +30,6 @@ export default function InvoiceEditor({invoice,payments,clients,emailReady,canCr
   finally{setBusy(null);}
  }
  const save=()=>run('save',{action:'save',id:invoice.id,values:{...v,items,tax_rate:Number(v.tax_rate)||0,discount:Number(v.discount)||0}},'Invoice saved.');
- const setItem=(i:number,p:Partial<Record<keyof InvoiceItem,string|number>>)=>setV(s=>({...s,items:s.items.map((it,k)=>k===i?{...it,...p} as InvoiceItem:it)}));
 
  // Send dialog
  const [sending,setSending]=useState(false);
@@ -72,32 +70,7 @@ export default function InvoiceEditor({invoice,payments,clients,emailReady,canCr
   <div className="za-inv-stack">
     <section className="za-card">
      <div className="za-card-head"><h2>Line items</h2><small className="za-date">{v.items.length} line{v.items.length===1?'':'s'}</small></div>
-     <fieldset disabled={locked} className="za-fieldset">
-      <div className="za-lines">
-       <div className="za-line za-line-head"><span>Description</span><span>Qty</span><span>Price (each)</span><span>Line total</span><span/></div>
-       {v.items.map((it,i)=><div key={i} className="za-line">
-        <input aria-label="Description" placeholder="e.g. Brand identity design" maxLength={500} value={it.description} onChange={e=>setItem(i,{description:e.target.value})}/>
-        <input aria-label="Quantity" type="number" min={0} step="any" value={it.qty} onChange={e=>setItem(i,{qty:e.target.value})}/>
-        <input aria-label="Price" type="number" min={0} step="any" placeholder="Amount" value={it.unit_price===0?'':it.unit_price} onChange={e=>setItem(i,{unit_price:e.target.value})}/>
-        <span className="za-line-amt">{money((Number(it.qty)||0)*(Number(it.unit_price)||0),v.currency)}</span>
-        <button type="button" className="za-stage-icon za-row-danger" aria-label="Remove line" data-tip="Remove" onClick={()=>setV(s=>({...s,items:s.items.filter((_,k)=>k!==i)}))}><Trash2 size={14}/></button>
-       </div>)}
-       <button type="button" className="za-btn za-btn-ghost za-line-add" onClick={()=>setV(s=>({...s,items:[...s.items,{description:'',qty:1,unit_price:0}]}))}><Plus size={14}/>Add line</button>
-      </div>
-      <div className="za-inv-sum">
-       <div className="za-form-grid">
-        <F label={`Discount (${v.currency})`}><input type="number" min={0} step="any" value={v.discount} onChange={e=>setV(s=>({...s,discount:e.target.value}))}/></F>
-        <F label="Tax / VAT (%)"><input type="number" min={0} max={100} step="any" value={v.tax_rate} onChange={e=>setV(s=>({...s,tax_rate:e.target.value}))}/></F>
-        <F label="Notes to client" wide><textarea rows={3} maxLength={5000} placeholder="e.g. 50% deposit, balance on delivery" value={v.notes} onChange={e=>setV(s=>({...s,notes:e.target.value}))}/></F>
-       </div>
-       <dl className="za-inv-totals">
-        <dt>Subtotal</dt><dd>{money(t.subtotal,v.currency)}</dd>
-        {Number(v.discount)>0&&<><dt>Discount</dt><dd>-{money(Number(v.discount),v.currency)}</dd></>}
-        {Number(v.tax_rate)>0&&<><dt>Tax ({Number(v.tax_rate)}%)</dt><dd>{money(t.tax,v.currency)}</dd></>}
-        <dt className="is-total">Total</dt><dd className="is-total">{money(t.total,v.currency)}</dd>
-       </dl>
-      </div>
-     </fieldset>
+     <InvoiceLines v={v} setV={setV} locked={locked}/>
      {!locked&&dirty&&<div className="za-card-pad za-save-row"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setV(initial)}>Discard</button><button type="button" className="za-btn za-btn-primary" disabled={busy==='save'} onClick={()=>void save()}>{busy==='save'?'Saving…':'Save changes'}</button></div>}
     </section>
 
@@ -147,4 +120,40 @@ export default function InvoiceEditor({invoice,payments,clients,emailReady,canCr
    </div>
   </div>}
  </div>;
+}
+
+// Line items, discount, tax, notes and totals: shared by the invoice editor and the new invoice page.
+export type LinesValue={currency:string;items:InvoiceItem[];tax_rate:string;discount:string;notes:string};
+export function InvoiceLines<T extends LinesValue>({v,setV,locked=false}:{v:T;setV:React.Dispatch<React.SetStateAction<T>>;locked?:boolean}){
+ const items=v.items.map(i=>({...i,qty:Number(i.qty)||0,unit_price:Number(i.unit_price)||0}));
+ const t=invoiceTotals(items,Number(v.tax_rate),Number(v.discount));
+ const setItem=(i:number,p:Partial<Record<keyof InvoiceItem,string|number>>)=>setV(s=>({...s,items:s.items.map((it,k)=>k===i?{...it,...p} as InvoiceItem:it)}));
+ return <>
+  <fieldset disabled={locked} className="za-fieldset">
+      <div className="za-lines">
+       <div className="za-line za-line-head"><span>Description</span><span>Qty</span><span>Price (each)</span><span>Line total</span><span/></div>
+       {v.items.map((it,i)=><div key={i} className="za-line">
+        <input aria-label="Description" placeholder="e.g. Brand identity design" maxLength={500} value={it.description} onChange={e=>setItem(i,{description:e.target.value})}/>
+        <input aria-label="Quantity" type="number" min={0} step="any" value={it.qty} onChange={e=>setItem(i,{qty:e.target.value})}/>
+        <input aria-label="Price" type="number" min={0} step="any" placeholder="Amount" value={it.unit_price===0?'':it.unit_price} onChange={e=>setItem(i,{unit_price:e.target.value})}/>
+        <span className="za-line-amt">{money((Number(it.qty)||0)*(Number(it.unit_price)||0),v.currency)}</span>
+        <button type="button" className="za-stage-icon za-row-danger" aria-label="Remove line" data-tip="Remove" onClick={()=>setV(s=>({...s,items:s.items.filter((_,k)=>k!==i)}))}><Trash2 size={14}/></button>
+       </div>)}
+       <button type="button" className="za-btn za-btn-ghost za-line-add" onClick={()=>setV(s=>({...s,items:[...s.items,{description:'',qty:1,unit_price:0}]}))}><Plus size={14}/>Add line</button>
+      </div>
+      <div className="za-inv-sum">
+       <div className="za-form-grid">
+        <F label={`Discount (${v.currency})`}><input type="number" min={0} step="any" value={v.discount} onChange={e=>setV(s=>({...s,discount:e.target.value}))}/></F>
+        <F label="Tax / VAT (%)"><input type="number" min={0} max={100} step="any" value={v.tax_rate} onChange={e=>setV(s=>({...s,tax_rate:e.target.value}))}/></F>
+        <F label="Notes to client" wide><textarea rows={3} maxLength={5000} placeholder="e.g. 50% deposit, balance on delivery" value={v.notes} onChange={e=>setV(s=>({...s,notes:e.target.value}))}/></F>
+       </div>
+       <dl className="za-inv-totals">
+        <dt>Subtotal</dt><dd>{money(t.subtotal,v.currency)}</dd>
+        {Number(v.discount)>0&&<><dt>Discount</dt><dd>-{money(Number(v.discount),v.currency)}</dd></>}
+        {Number(v.tax_rate)>0&&<><dt>Tax ({Number(v.tax_rate)}%)</dt><dd>{money(t.tax,v.currency)}</dd></>}
+        <dt className="is-total">Total</dt><dd className="is-total">{money(t.total,v.currency)}</dd>
+       </dl>
+      </div>
+     </fieldset>
+ </>;
 }

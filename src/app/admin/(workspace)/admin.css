@@ -481,8 +481,8 @@
 .za-admin input:-webkit-autofill,.za-admin input:-webkit-autofill:hover,.za-admin input:-webkit-autofill:focus{-webkit-text-fill-color:var(--a-fg);-webkit-box-shadow:0 0 0 1000px var(--a-input) inset;caret-color:var(--a-fg);transition:background-color 9999s}
 .za-modal .za-flash{margin-bottom:12px}
 /* Invoice editor: one column, actions bar under the title */
-.za-inv-stack{display:flex;flex-direction:column;gap:16px;max-width:1040px;width:100%}
-.za-invoice-edit{max-width:1040px}
+.za-inv-stack{display:flex;flex-direction:column;gap:16px;width:100%}
+.za-new-inv-foot{display:flex;justify-content:flex-end;gap:8px}
 .za-inv-bar{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border-radius:12px;background:var(--a-panel);border:1px solid var(--a-border)}
 .za-inv-bar .za-btn{height:36px;padding:0 14px}
 .za-pay-form{margin-top:4px}

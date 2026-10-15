@@ -8,7 +8,9 @@ const id=z.uuid();
 const date=z.iso.date();
 const item=z.object({description:z.string().trim().min(1,'Every line needs a description.').max(500),qty:z.number().positive('Quantities must be above zero.').max(1e6),unit_price:z.number().min(0).max(1e12)});
 const values=z.object({lead_id:id,currency:z.enum(currencies),issue_date:date,due_date:date,items:z.array(item).max(100),tax_rate:z.number().min(0).max(100),discount:z.number().min(0).max(1e12),notes:z.string().trim().max(5000)});
+const newClient=z.object({name:z.string().trim().min(1,'Enter the client’s name.').max(120),email:z.email('Enter the client’s email.').max(254),company:z.string().trim().max(200),phone:z.string().trim().max(40)});
 const actions=z.discriminatedUnion('action',[
+ z.object({action:z.literal('create_full'),client:z.union([z.object({lead_id:id}),z.object({new:newClient})]),values:values.omit({lead_id:true})}),
  z.object({action:z.literal('create'),lead_id:id}),
  z.object({action:z.literal('create_with_client'),client:z.object({name:z.string().trim().min(1,'Enter the client’s name.').max(120),email:z.email('Enter a valid email.').max(254),company:z.string().trim().max(200),phone:z.string().trim().max(40)}),currency:z.enum(currencies)}),
  z.object({action:z.literal('save'),id,values}),
@@ -32,6 +34,25 @@ export async function POST(request:Request){
  const b=parsed.data,db=await sessionClient();
  const load=async(invoiceId:string)=>(await db.from('invoices').select('*').eq('id',invoiceId).single()).data;
  switch(b.action){
+  case 'create_full':{
+   // The New invoice page: the whole draft at once, for an existing client or someone new (saved to Leads as a won client).
+   if(b.values.due_date<b.values.issue_date)return fail('The due date can’t be before the issue date.');
+   let leadId='lead_id' in b.client?b.client.lead_id:null;
+   if(!('lead_id' in b.client)){
+    const email=b.client.new.email.toLowerCase();
+    const {data:found}=await db.from('leads').select('id').eq('email',email).order('created_at').limit(1).maybeSingle();
+    if(found)leadId=found.id;
+    else{
+     const {data:won}=await db.from('pipeline_stages').select('key').eq('kind','won').order('position').limit(1).maybeSingle();
+     const res=await db.from('leads').insert({...b.client.new,email,currency:b.values.currency,source:'other',status:won?.key??'new',owner_id:user.id,service_interested:'',message:''}).select('id').single();
+     if(res.error){console.error('Invoice client insert failed:',res.error.code,res.error.message);return fail('Could not save the client.');}
+     leadId=res.data.id;
+    }
+   }
+   const t=invoiceTotals(b.values.items,b.values.tax_rate,b.values.discount);
+   const {data,error}=await db.from('invoices').insert({...b.values,lead_id:leadId,subtotal:t.subtotal,total:t.total,created_by:user.id}).select('id').single();
+   return error?fail('Could not create the invoice.'):Response.json({ok:true,id:data.id});
+  }
   case 'create_with_client':{
    // Invoicing someone who isn't in the CRM yet: reuse a lead with the same email, otherwise save them as a won client.
    const email=b.client.email.toLowerCase();
