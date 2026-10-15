@@ -24,7 +24,6 @@ export default async function Home() {
     title: String(p.title),
     subtitle: String(p.sub_category || p.category || ''),
   }));
-  const clientNames = [...new Set(projects.map(p=>String(p.client_name)).filter(Boolean))];
 
   return (
     <>
@@ -35,7 +34,6 @@ export default async function Home() {
       <main>
         <Hero />
         <div className="studio-sections">
-          {clientNames.length>0&&<ScrollReveal><section className="studio-panel client-strip"><span className="eyebrow">Built together</span><div>{clientNames.slice(0,6).map(name=><span key={name}>{name}</span>)}</div></section></ScrollReveal>}
           <ScrollReveal><About testimonial={quotes[0]} project={featured[0] || projects[0]} /></ScrollReveal>
           <Process />
           <WorkGallery items={workItems} />
