@@ -3,7 +3,7 @@ import Dropdown from '@/components/ui/Dropdown';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import Link from 'next/link';
-import {MessagesSquare,Send,Trash2,UserPlus,X} from 'lucide-react';
+import {KeyRound,MessagesSquare,Send,Trash2,UserPlus,X} from 'lucide-react';
 import {roles,roleInfo,type Role} from '@/lib/cms';
 import {ago,initials} from '@/lib/crm';
 import {F} from './crm/NewLead';
@@ -21,7 +21,7 @@ async function api(body:object){const r=await fetch('/api/admin/staff',{method:'
 export default function StaffPage({members,me}:{members:Member[];me:string}){
  const router=useRouter();
  const [inviting,setInviting]=useState(false),[form,setForm]=useState<{name:string;email:string;role:Role}>({name:'',email:'',role:'editor'});
- const [busy,setBusy]=useState<string|null>(null),[flash,setFlash]=useState(''),[error,setError]=useState(''),[removing,setRemoving]=useState<Member|null>(null);
+ const [busy,setBusy]=useState<string|null>(null),[flash,setFlash]=useState(''),[error,setError]=useState(''),[removing,setRemoving]=useState<Member|null>(null),[resetting,setResetting]=useState<Member|null>(null);
  const [view,setView]=useState<View>('all');
  const staffers=members.filter(m=>m.role),chat=members.filter(m=>m.zarn&&m.zarn.state!=='deactivated'),none=members.filter(m=>!m.role&&(!m.zarn||m.zarn.state==='deactivated'));
  const shown=view==='studio'?staffers:view==='zarn'?members.filter(m=>m.zarn):view==='none'?none:members;
@@ -43,7 +43,7 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
    {m.role&&<small className="za-access-area">{roleArea[m.role]}</small>}</td>
   <td>{m.zarn?<Link href="/admin/zarn" className="za-zarn-badge" style={{background:zarnColor(m.zarn)}} data-tip="Manage in ZARN admin"><MessagesSquare size={12}/>{zarnLabel(m.zarn)}</Link>:<span className="za-cell-muted">Not on ZARN</span>}</td>
   <td className="za-hide-sm za-cell-muted">{m.last_sign_in_at?ago(m.last_sign_in_at):'Invite pending'}</td>
-  <td><div className="za-row-actions">{m.id!==me&&<button type="button" className="za-row-danger" aria-label={`Remove ${m.name||m.email}`} data-tip="Delete account" onClick={()=>setRemoving(m)}><Trash2 size={14}/></button>}</div></td>
+  <td><div className="za-row-actions"><button type="button" className="za-row-btn" aria-label={`Send ${m.name||m.email} a new password`} data-tip="Email a new password" onClick={()=>setResetting(m)}><KeyRound size={14}/></button>{m.id!==me&&<button type="button" className="za-row-danger" aria-label={`Remove ${m.name||m.email}`} data-tip="Delete account" onClick={()=>setRemoving(m)}><Trash2 size={14}/></button>}</div></td>
  </tr>;
 
  return <div className="za-page">
@@ -81,6 +81,13 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
     {error&&<p role="alert" className="za-flash">{error}</p>}
     <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setInviting(false)}>Cancel</button><button className="za-btn za-btn-primary" disabled={busy==='invite'}><Send size={14}/>{busy==='invite'?'Sending…':'Send invite'}</button></div>
    </form>
+  </div>}
+  {resetting&&<div className="za-modal-scrim" onClick={()=>!busy&&setResetting(null)}>
+   <div className="za-modal" role="alertdialog" aria-label="Send a new password" onClick={e=>e.stopPropagation()}>
+    <div className="za-modal-head"><span className="za-modal-icon za-modal-icon-brand"><KeyRound size={18}/></span><div><strong>Email a new password?</strong><small>{resetting.email}</small></div></div>
+    <p>{resetting.id===me?'You':(resetting.name||resetting.email.split('@')[0]!).split(' ')[0]} will get a new password by email, with a link to set {resetting.id===me?'your':'their'} own instead. {resetting.id===me?'Your':'Their'} current password stops working straight away{resetting.id===me?', so check your inbox before signing out':''}.</p>
+    <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" disabled={!!busy} onClick={()=>setResetting(null)}>Cancel</button><button type="button" className="za-btn za-btn-primary" disabled={!!busy} onClick={async()=>{const d=await run(`pw-${resetting.id}`,{action:'send_password',id:resetting.id},`New password sent to ${resetting.email}.`);if(d)setResetting(null);}}><Send size={14}/>{busy?'Sending…':'Send new password'}</button></div>
+   </div>
   </div>}
   {removing&&<div className="za-modal-scrim" onClick={()=>setRemoving(null)}>
    <div className="za-modal" role="alertdialog" aria-label="Delete account" onClick={e=>e.stopPropagation()}>
