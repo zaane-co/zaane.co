@@ -66,7 +66,7 @@ export default function StageManager({stages,counts,onClose}:{stages:PipelineSta
   <aside className="za-drawer" role="dialog" aria-label="Pipeline stages">
    <div className="za-drawer-head"><div><p>Leads</p><h2>Pipeline stages</h2></div><button className="za-icon-btn" onClick={onClose} aria-label="Close" data-tip="Close"><X size={18}/></button></div>
    <div className="za-drawer-body" data-lenis-prevent>
-    <p className="za-muted-note">Changes save as you go. Rename a stage by editing its name, click the dot to change its colour.</p>
+    <p className="za-muted-note">Changes save as you go. Rename a stage by editing its name, click the dot to change its colour. Stages with a lock can be renamed and recoloured but not deleted: website briefs land in the first one, and Won and Lost drive your win rate and monthly stats.</p>
     <div className="za-field-label"><label>Pipeline</label></div>
     <ul className="za-stage-list">{open.map((s,i)=>Row({s,i}))}</ul>
     <form className="za-stage-add" onSubmit={add}>
