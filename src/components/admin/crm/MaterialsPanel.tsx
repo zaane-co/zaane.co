@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import {useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
 import {Download,ExternalLink,Link2,ListPlus,Paperclip,Plus,Trash2} from 'lucide-react';
@@ -44,7 +45,7 @@ export default function MaterialsPanel({leadId,materials}:{leadId:string;materia
     <div className="za-inline-create"><input placeholder="Add an item, e.g. Product photos" maxLength={200} value={title} onChange={e=>setTitle(e.target.value)}/><button className="za-btn za-btn-ghost" disabled={busy==='add'||!title.trim()}><Plus size={14}/>Add</button></div>
    </form>
    {missing.length>0&&<div className="za-presets"><span><ListPlus size={13}/>Common items</span><div className="za-chips">{missing.map(p=><button key={p} type="button" disabled={!!busy} onClick={()=>void run('add',{action:'material_add',lead_id:leadId,titles:[p]})}>+ {p}</button>)}{missing.length>1&&<button type="button" className="is-on" disabled={!!busy} onClick={()=>void run('add',{action:'material_add',lead_id:leadId,titles:missing},'Checklist added.')}>Add all</button>}</div></div>}
-   {flash&&<p role="status" className="za-flash" style={{marginTop:12}}>{flash}</p>}
+   {flash&&<Flash style={{marginTop:12}}>{flash}</Flash>}
   </div>
  </section>;
 }

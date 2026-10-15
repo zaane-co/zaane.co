@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import Dropdown from '@/components/ui/Dropdown';
 import {useState,useTransition} from 'react';
 import Link from 'next/link';
@@ -65,8 +66,8 @@ export default function InvoiceEditor({invoice,payments,clients,emailReady,canCr
    {invoice.status==='sent'&&<button type="button" className="za-btn za-btn-ghost za-btn-danger-text" onClick={()=>setConfirm('void')}><Ban size={14}/>Void</button>}
    <button type="button" className="za-btn za-btn-ghost za-btn-danger-text za-push" onClick={()=>setConfirm('delete')}><Trash2 size={14}/>Delete</button>
   </div>
-  {flash&&<p role="status" className="za-flash">{flash}</p>}
-  {locked&&<p className="za-flash">{invoice.status==='paid'?'This invoice is paid and locked. Remove a payment to reopen it.':'This invoice is void. Reopen it to make changes.'}</p>}
+  {flash&&<Flash>{flash}</Flash>}
+  {locked&&<Flash tone="info">{invoice.status==='paid'?'This invoice is paid and locked. Remove a payment to reopen it.':'This invoice is void. Reopen it to make changes.'}</Flash>}
 
   <div className="za-inv-stack">
     <section className="za-card">

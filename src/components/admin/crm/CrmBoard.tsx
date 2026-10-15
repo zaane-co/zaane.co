@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import {useMemo,useState,useSyncExternalStore} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
@@ -97,7 +98,7 @@ export default function CrmBoard({stages,leads,tasks,team,me,startNew}:{startNew
     {allCats.length>0&&<FilterSelect label="Filter by category" icon={<Tag size={14}/>} value={category} onChange={setCategory} options={[{value:'all',label:'All categories'},...allCats.map(c=>({value:c,label:c}))]}/>}
    </div>
   </div>
-  {flash&&<p role="status" className="za-flash">{flash}</p>}
+  {flash&&<Flash>{flash}</Flash>}
 
   {view==='board'?<div className="za-board" data-lenis-prevent>
    {stages.map(({key:stage,label,color})=>{

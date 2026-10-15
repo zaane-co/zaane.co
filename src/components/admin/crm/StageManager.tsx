@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
@@ -78,7 +79,7 @@ export default function StageManager({stages,counts,onClose}:{stages:PipelineSta
     {palette==='__new'&&<div className="za-palette" role="group" aria-label="Colours">{stageColors.map(c=><button key={c} type="button" className={c===newColor?'is-on':''} style={{background:c}} aria-label={c} onClick={()=>{setNewColor(c);setPalette(null);}}/>)}</div>}
     <div className="za-field-label"><label>Closing stages</label></div>
     <ul className="za-stage-list">{closing.map(s=>Row({s}))}</ul>
-    {error&&<p role="alert" className="za-flash">{error}</p>}
+    {error&&<Flash tone="error">{error}</Flash>}
     <div className="za-drawer-foot"><button type="button" className="za-btn za-btn-primary za-push" onClick={onClose}>Done</button></div>
    </div>
   </aside>

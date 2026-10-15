@@ -1,4 +1,5 @@
 'use client';
+import Flash from './Flash';
 import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useState,useRef} from 'react';
 import {useRouter} from 'next/navigation';
@@ -78,7 +79,7 @@ export default function Manager({collection,rows,role,options,gallery={},openId}
    </div>
   </div>
   {collection==='users'&&<p className="za-notice">Create or invite an account in Supabase Authentication, then assign its staff role here. Unassigned accounts have no admin access.</p>}
-  {message&&!selected&&<p role="status" className="za-flash">{message}</p>}
+  {message&&!selected&&<Flash>{message}</Flash>}
   {picked.length>0&&<div className="za-bulkbar" role="region" aria-label="Bulk actions">
    <strong>{picked.length} selected</strong>
    {statusField?.options&&<Dropdown variant="inline" label="Change status of selected" placeholder="Change status…" value="" disabled={working==='bulk'} onChange={x=>void bulk('bulk_status',x)} options={statusField.options.filter(o=>!(role==='editor'&&o==='published')).map(o=>({value:o,label:o.replace('_',' ')}))}/>}
@@ -128,7 +129,7 @@ export default function Manager({collection,rows,role,options,gallery={},openId}
       {f.type==='image'&&<div className="za-upload">{safeUrl(values[f.key])&&<img src={safeUrl(values[f.key])} alt="Selected image preview"/>}<label className="za-btn za-btn-ghost"><Upload size={15}/>Upload image<input type="file" accept="image/*" disabled={busy} onChange={e=>void upload(f,e.target.files?.[0])} hidden/></label><button type="button" className="za-btn za-btn-ghost" onClick={()=>setPickFor(f.key)}><ImagePlus size={15}/>Choose from library</button></div>}
      </div>)}
      {collection==='projects'&&(selected.id?<ProjectGallery key={String(selected.id)} projectId={String(selected.id)} initial={gallery[String(selected.id)]??[]}/>:<div className="za-field"><div className="za-field-label"><label>Gallery</label></div><p className="za-notice">Save the project first, then reopen it to add gallery images.</p></div>)}
-     {message&&<p role="status" className="za-flash">{message}</p>}
+     {message&&<Flash>{message}</Flash>}
      <div className="za-drawer-foot">
       {!!selected.id&&role!=='editor'&&collection!=='users'&&(deleting?<div className="za-confirm"><span>Delete permanently?</span><button disabled={busy} type="button" className="za-btn za-btn-danger" onClick={()=>void save('delete')}>Yes, delete</button><button type="button" className="za-btn za-btn-ghost" onClick={()=>setDeleting(false)}>Cancel</button></div>:<button type="button" className="za-btn za-btn-ghost za-btn-danger-text" onClick={()=>setDeleting(true)}><Trash2 size={15}/>Delete</button>)}
       {collection==='contact_submissions'&&!!selected.id&&!deleting&&<button type="button" className="za-btn za-btn-ghost" disabled={working===selected.id} onClick={()=>void convert(selected)}><UserPlus size={15}/>Convert to lead</button>}

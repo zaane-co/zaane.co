@@ -1,4 +1,5 @@
 'use client';
+import Flash from './Flash';
 import Dropdown from '@/components/ui/Dropdown';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
@@ -21,7 +22,7 @@ async function api(body:object){const r=await fetch('/api/admin/staff',{method:'
 export default function StaffPage({members,me}:{members:Member[];me:string}){
  const router=useRouter();
  const [inviting,setInviting]=useState(false),[form,setForm]=useState<{name:string;email:string;role:Role}>({name:'',email:'',role:'editor'});
- const [busy,setBusy]=useState<string|null>(null),[flash,setFlash]=useState(''),[error,setError]=useState(''),[removing,setRemoving]=useState<Member|null>(null),[resetting,setResetting]=useState<Member|null>(null);
+ const [busy,setBusy]=useState<string|null>(null),[flash,setFlash]=useState(''),[error,setError]=useState(''),[removing,setRemoving]=useState<Member|null>(null),[confirmText,setConfirmText]=useState(''),[resetting,setResetting]=useState<Member|null>(null);
  const [view,setView]=useState<View>('all');
  const staffers=members.filter(m=>m.role),chat=members.filter(m=>m.zarn&&m.zarn.state!=='deactivated'),none=members.filter(m=>!m.role&&(!m.zarn||m.zarn.state==='deactivated'));
  const shown=view==='studio'?staffers:view==='zarn'?members.filter(m=>m.zarn):view==='none'?none:members;
@@ -43,7 +44,7 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
    {m.role&&<small className="za-access-area">{roleArea[m.role]}</small>}</td>
   <td>{m.zarn?<Link href="/admin/zarn" className="za-zarn-badge" style={{background:zarnColor(m.zarn)}} data-tip="Manage in ZARN admin"><MessagesSquare size={12}/>{zarnLabel(m.zarn)}</Link>:<span className="za-cell-muted">Not on ZARN</span>}</td>
   <td className="za-hide-sm za-cell-muted">{m.last_sign_in_at?ago(m.last_sign_in_at):'Invite pending'}</td>
-  <td><div className="za-row-actions"><button type="button" className="za-row-btn" aria-label={`Send ${m.name||m.email} a new password`} data-tip="Email a new password" onClick={()=>setResetting(m)}><KeyRound size={14}/></button>{m.id!==me&&<button type="button" className="za-row-danger" aria-label={`Remove ${m.name||m.email}`} data-tip="Delete account" onClick={()=>setRemoving(m)}><Trash2 size={14}/></button>}</div></td>
+  <td><div className="za-row-actions"><button type="button" className="za-row-btn" aria-label={`Send ${m.name||m.email} a new password`} data-tip="Email a new password" onClick={()=>setResetting(m)}><KeyRound size={14}/></button>{m.id!==me&&<button type="button" className="za-row-danger" aria-label={`Remove ${m.name||m.email}`} data-tip="Delete account" onClick={()=>{setConfirmText('');setRemoving(m);}}><Trash2 size={14}/></button>}</div></td>
  </tr>;
 
  return <div className="za-page">
@@ -60,7 +61,7 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
      <div className="za-card za-role"><span className="za-col-dot" style={{background:'#52525b'}}/><div><strong>Pending</strong><p>Invited, not joined yet.</p></div><small>{zarnCount(z=>z.state==='pending')}</small></div>
     </div></section>
   </div>
-  {flash&&<p role="status" className="za-flash">{flash}</p>}
+  {flash&&<Flash>{flash}</Flash>}
 
   <section className="za-card">
    <div className="za-card-head"><h2>People</h2>
@@ -78,7 +79,7 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
      <F label="Email *"><input required type="email" maxLength={254} value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))}/></F>
     </div>
     <div className="za-role-pick" role="radiogroup" aria-label="Role">{roles.map(r=><button key={r} type="button" role="radio" aria-checked={form.role===r} className={form.role===r?'is-on':''} onClick={()=>setForm(f=>({...f,role:r}))}><span className="za-col-dot" style={{background:roleColor[r]}}/><span><strong>{roleInfo[r].label}</strong><small>{roleInfo[r].summary}</small></span></button>)}</div>
-    {error&&<p role="alert" className="za-flash">{error}</p>}
+    {error&&<Flash tone="error">{error}</Flash>}
     <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setInviting(false)}>Cancel</button><button className="za-btn za-btn-primary" disabled={busy==='invite'}><Send size={14}/>{busy==='invite'?'Sending…':'Send invite'}</button></div>
    </form>
   </div>}
@@ -91,9 +92,10 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
   </div>}
   {removing&&<div className="za-modal-scrim" onClick={()=>setRemoving(null)}>
    <div className="za-modal" role="alertdialog" aria-label="Delete account" onClick={e=>e.stopPropagation()}>
-    <div className="za-modal-head"><span className="za-modal-icon"><Trash2 size={18}/></span><div><strong>Delete this account?</strong><small>{removing.email}</small></div></div>
+    <div className="za-modal-head"><span className="za-modal-icon"><Trash2 size={18}/></span><div><strong>Delete {removing.name||removing.email.split('@')[0]}?</strong><small>{removing.email} · this can’t be undone</small></div></div>
     <p>{removing.zarn&&removing.zarn.state!=='deactivated'?'This deletes their login everywhere, including ZARN. To remove only Studio access, set the role to “No Studio access”. To pause ZARN, deactivate them in ZARN admin.':'They lose access immediately and their login is deleted. To keep the account but block access, set the role to “No Studio access” instead.'}</p>
-    <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setRemoving(null)}>Cancel</button><button type="button" className="za-btn za-btn-danger" disabled={!!busy} onClick={async()=>{await run(removing.id,{action:'remove',id:removing.id},'Account deleted.');setRemoving(null);}}>Delete</button></div>
+    <div className="za-field za-confirm-field"><label htmlFor="confirm-delete">Type <b>delete</b> to confirm</label><input id="confirm-delete" autoFocus autoComplete="off" spellCheck={false} value={confirmText} onChange={e=>setConfirmText(e.target.value)} placeholder="delete"/></div>
+    <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setRemoving(null)}>Cancel</button><button type="button" className="za-btn za-btn-danger" disabled={!!busy||confirmText.trim().toLowerCase()!=='delete'} onClick={async()=>{await run(removing.id,{action:'remove',id:removing.id},'Account deleted.');setRemoving(null);}}><Trash2 size={14}/>Delete account</button></div>
    </div>
   </div>}
  </div>;

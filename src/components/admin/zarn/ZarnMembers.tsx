@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Briefcase,ExternalLink,Hash,Lock,MoreHorizontal,Pencil,Power,RotateCcw,Search,Send,ShieldCheck,Trash2,UserPlus,X} from 'lucide-react';
@@ -20,7 +21,7 @@ function daysLeft(iso:string){const d=Math.ceil((new Date(iso).getTime()-Date.no
 export default function ZarnMembers({rows,channels,me}:{rows:Row[];channels:ChannelOpt[];me:{id:string;name:string;email:string}}){
  const router=useRouter();
  const [filter,setFilter]=useState<Filter>('all'),[q,setQ]=useState(''),[menu,setMenu]=useState<string|null>(null);
- const [form,setForm]=useState<{mode:'invite'|'edit';row?:Row}|null>(null),[removing,setRemoving]=useState<Row|null>(null);
+ const [form,setForm]=useState<{mode:'invite'|'edit';row?:Row}|null>(null),[removing,setRemoving]=useState<Row|null>(null),[confirmText,setConfirmText]=useState('');
  const [busy,setBusy]=useState<string|null>(null),[flash,setFlash]=useState('');
  const amMember=rows.some(r=>r.user_id===me.id);
  const counts={all:rows.length,member:rows.filter(r=>r.account_type==='member'&&!r.deactivated_at).length,guest:rows.filter(r=>r.account_type==='guest'&&!r.deactivated_at).length,invited:rows.filter(r=>status(r)==='invited').length,deactivated:rows.filter(r=>r.deactivated_at).length};
@@ -41,7 +42,7 @@ export default function ZarnMembers({rows,channels,me}:{rows:Row[];channels:Chan
    <div className="za-search za-search-wide"><Search size={14}/><input placeholder="Search name, email or title" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search members"/></div>
    <div className="za-seg za-seg-scroll" role="group" aria-label="Filter">{(['all','member','guest','invited','deactivated'] as Filter[]).map(f=><button key={f} type="button" className={filter===f?'is-on':''} aria-pressed={filter===f} onClick={()=>setFilter(f)}>{f==='all'?'All':f==='member'?'Members':f==='guest'?'Guests':f==='invited'?'Invited':'Deactivated'} <span className="za-seg-n">{counts[f]}</span></button>)}</div>
   </div>
-  {flash&&<p role="status" className="za-flash">{flash}</p>}
+  {flash&&<Flash>{flash}</Flash>}
   <section className="za-card">{shown.length?<div className="za-table-wrap"><table className="za-table za-zm-table"><thead><tr><th>Name</th><th>Account</th><th className="za-hide-sm">Access</th><th className="za-hide-sm">Last active</th><th className="za-th-actions"><span className="sr-only">Actions</span></th></tr></thead>
    <tbody>{shown.map(r=>{const st=status(r);return <tr key={r.user_id} className={r.deactivated_at?'is-off':''}>
     <td><div className="za-cell-main"><span className="za-crm-avatar">{initials(r.display_name)}</span><span><b>{r.display_name}{r.user_id===me.id&&' (you)'}</b><small>{r.email}{r.title?` · ${r.title}`:''}</small></span></div></td>
@@ -62,7 +63,7 @@ export default function ZarnMembers({rows,channels,me}:{rows:Row[];channels:Chan
       {r.user_id!==me.id&&(r.deactivated_at
        ?<button type="button" role="menuitem" onClick={()=>void run(r.user_id,{action:'reactivate',user_id:r.user_id},`${r.display_name} can use ZARN again.`)}><RotateCcw size={14}/>Reactivate account</button>
        :<button type="button" role="menuitem" onClick={()=>void run(r.user_id,{action:'deactivate',user_id:r.user_id},`${r.display_name} is deactivated. Their messages stay; they can’t sign in.`)}><Power size={14}/>Deactivate account</button>)}
-      {r.user_id!==me.id&&<button type="button" role="menuitem" className="za-zm-danger" onClick={()=>{setMenu(null);setRemoving(r);}}><Trash2 size={14}/>Remove from ZARN</button>}
+      {r.user_id!==me.id&&<button type="button" role="menuitem" className="za-zm-danger" onClick={()=>{setMenu(null);setConfirmText('');setRemoving(r);}}><Trash2 size={14}/>Remove from ZARN</button>}
      </div></>}</td>
    </tr>;})}</tbody></table></div>:<p className="za-empty">{rows.length?'No one matches.':'No one on ZARN yet. Invite your team.'}</p>}</section>
 
@@ -70,7 +71,8 @@ export default function ZarnMembers({rows,channels,me}:{rows:Row[];channels:Chan
   {removing&&<div className="za-modal-scrim" onClick={()=>setRemoving(null)}><div className="za-modal" role="alertdialog" aria-label="Remove member" onClick={e=>e.stopPropagation()}>
    <div className="za-modal-head"><span className="za-modal-icon"><Trash2 size={18}/></span><div><strong>Remove {removing.display_name}?</strong><small>{removing.email}</small></div></div>
    <p>{removing.staff_role?'They keep their Studio admin login but lose ZARN.':'Their login is deleted.'} Their messages stay, shown as a former member. To pause access instead, deactivate them.</p>
-   <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setRemoving(null)}>Cancel</button><button type="button" className="za-btn za-btn-danger" disabled={!!busy} onClick={async()=>{await run(removing.user_id,{action:'remove',user_id:removing.user_id},`${removing.display_name} was removed.`);setRemoving(null);}}>Remove</button></div>
+   <div className="za-field za-confirm-field"><label htmlFor="confirm-remove">Type <b>delete</b> to confirm</label><input id="confirm-remove" autoFocus autoComplete="off" spellCheck={false} value={confirmText} onChange={e=>setConfirmText(e.target.value)} placeholder="delete"/></div>
+   <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setRemoving(null)}>Cancel</button><button type="button" className="za-btn za-btn-danger" disabled={!!busy||confirmText.trim().toLowerCase()!=='delete'} onClick={async()=>{await run(removing.user_id,{action:'remove',user_id:removing.user_id},`${removing.display_name} was removed.`);setRemoving(null);}}>Remove</button></div>
   </div></div>}
  </div>;
 }
@@ -122,7 +124,7 @@ function AccessForm({mode,row,channels,isMe,onClose,onDone}:{mode:'invite'|'edit
      {a.expiry==='custom'&&<input type="date" aria-label="End date" min={new Date().toISOString().slice(0,10)} value={a.custom} onChange={e=>setA({...a,custom:e.target.value})}/>}</div>
     <p className="za-modal-hint">Access ends automatically on that date. You can extend it here any time.</p></>}
   </div>
-  {error&&<p role="alert" className="za-flash">{error}</p>}
+  {error&&<Flash tone="error">{error}</Flash>}
   <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={onClose}>Cancel</button><button className="za-btn za-btn-primary" disabled={busy}>{busy?'Saving…':mode==='invite'?'Send invite':'Save access'}</button></div>
  </form></div>;
 }

@@ -1,4 +1,5 @@
 'use client';
+import Flash from './Flash';
 import {useState} from 'react';
 import {GripVertical,ImagePlus,Loader2,UploadCloud,X} from 'lucide-react';
 import {t,uploadImage} from './blog/shared';
@@ -45,7 +46,7 @@ export default function ProjectGallery({projectId,initial}:{projectId:string;ini
     <button type="button" className="za-btn za-btn-ghost" onClick={()=>setPicker(true)}><ImagePlus size={15}/>Choose from library</button>
    </>}
   </div>
-  {error&&<p className="za-flash" role="status">{error}</p>}
+  {error&&<Flash>{error}</Flash>}
   <MediaPicker open={picker} multiple onClose={()=>setPicker(false)} onPick={urls=>void run({action:'add',urls})}/>
  </div>;
 }

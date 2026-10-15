@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import Dropdown from '@/components/ui/Dropdown';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
@@ -37,7 +38,7 @@ export default function ZarnChannels({rows,members}:{rows:ChannelRow[];members:P
   </div></td></tr>)}</tbody></table></div>;
  return <div className="za-page">
   <div className="za-page-head"><div><h1>ZARN channels</h1><p>Set up channels, who’s in them, and where CRM updates post.</p></div><button type="button" className="za-btn za-btn-primary" onClick={()=>open('new')}><Plus size={15}/>New channel</button></div>
-  {flash&&<p role="status" className="za-flash">{flash}</p>}
+  {flash&&<Flash>{flash}</Flash>}
   <section className="za-card">{active.length?table(active):<p className="za-empty">No channels yet.</p>}</section>
   {archived.length>0&&<section className="za-card"><div className="za-card-head"><h2>Archived</h2></div>{table(archived)}</section>}
 
@@ -50,7 +51,7 @@ export default function ZarnChannels({rows,members}:{rows:ChannelRow[];members:P
     <F label="Topic" wide><input maxLength={250} value={v.topic} onChange={e=>setV({...v,topic:e.target.value})}/></F>
    </div>
    {v.kind==='public'&&<label className="za-check-row"><input type="checkbox" checked={v.is_default} onChange={e=>setV({...v,is_default:e.target.checked})}/>Everyone joins automatically (new members too)</label>}
-   {error&&<p role="alert" className="za-flash">{error}</p>}
+   {error&&<Flash tone="error">{error}</Flash>}
    <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setEdit(null)}>Cancel</button><button className="za-btn za-btn-primary" disabled={busy}>{busy?'Saving…':'Save'}</button></div>
   </form></div>}
   {people&&<div className="za-modal-scrim" onClick={()=>setPeople(null)}><div className="za-modal za-modal-wide" role="dialog" aria-label="Channel members" onClick={e=>e.stopPropagation()}>

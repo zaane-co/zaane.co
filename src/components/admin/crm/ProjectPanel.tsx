@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Check,Plus} from 'lucide-react';
@@ -36,7 +37,7 @@ export default function ProjectPanel({lead,categories}:{lead:Lead;categories:str
    </div>
    <label className="za-field"><span className="za-field-name">Project description</span>
     <textarea rows={12} maxLength={50000} placeholder={'What are we building? Goals, scope, deliverables, timeline, anything agreed on calls…'} value={desc} onChange={e=>setDesc(e.target.value)}/></label>
-   {flash&&<p role="status" className="za-flash">{flash}</p>}
+   {flash&&<Flash>{flash}</Flash>}
    {dirty&&<div className="za-save-row"><button type="button" className="za-btn za-btn-ghost" onClick={()=>{setDesc(lead.project_description);setPicked(lead.categories);}}>Discard</button><button type="button" className="za-btn za-btn-primary" disabled={busy} onClick={()=>void save()}>{busy?'Saving…':'Save project'}</button></div>}
   </div>
  </section>;

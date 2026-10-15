@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import Dropdown from '@/components/ui/Dropdown';
 import {useState} from 'react';
 import {F} from './NewLead';
@@ -58,8 +59,8 @@ export default function InvoiceList({invoices,clients,collected,compact,leadId,r
  if(compact)return <div className="za-lead-main">
   <div className="za-toolbar"><p className="za-muted-note" style={{margin:0}}>{live.length?`${sum(live.map(i=>({currency:i.currency,v:owed(i)})))} outstanding`:'Nothing outstanding.'}</p>
    {readOnly?<small className="za-date">Finance manages invoices</small>:<button type="button" className="za-btn za-btn-primary" disabled={busy} onClick={()=>leadId&&void create(leadId)}><Plus size={15}/>{opening?'Opening…':busy?'Creating…':'New invoice'}</button>}</div>
-  {error&&<p role="alert" className="za-flash">{error}</p>}
-  {flash&&<p role="status" className="za-flash">{flash}</p>}
+  {error&&<Flash tone="error">{error}</Flash>}
+  {flash&&<Flash>{flash}</Flash>}
   {table}
   {confirmModal}
  </div>;
@@ -76,7 +77,7 @@ export default function InvoiceList({invoices,clients,collected,compact,leadId,r
    <div className="za-search za-search-wide"><Search size={14}/><input placeholder="Search number or client…" value={search} onChange={e=>setSearch(e.target.value)} aria-label="Search invoices"/></div>
    <div className="za-seg" role="group" aria-label="Filter">{[['all','All'],['draft','Drafts'],['open','Open'],['overdue','Overdue'],['paid','Paid']].map(([k,l])=><button key={k} type="button" className={filter===k?'is-on':''} aria-pressed={filter===k} onClick={()=>setFilter(k!)}>{l}</button>)}</div>
   </div>
-  {flash&&<p role="status" className="za-flash">{flash}</p>}
+  {flash&&<Flash>{flash}</Flash>}
   {table}
   {confirmModal}
   {picking&&<div className="za-modal-scrim" onClick={()=>setPicking(false)}>
@@ -85,7 +86,7 @@ export default function InvoiceList({invoices,clients,collected,compact,leadId,r
     {!!clients?.length&&<div className="za-seg za-seg-full" role="group" aria-label="Client type"><button type="button" className={mode==='existing'?'is-on':''} aria-pressed={mode==='existing'} onClick={()=>setMode('existing')}>Existing client</button><button type="button" className={mode==='new'?'is-on':''} aria-pressed={mode==='new'} onClick={()=>setMode('new')}>New client</button></div>}
     {mode==='existing'&&clients?.length?<>
      <Dropdown label="Client" placeholder="Choose a client…" value={client} onChange={setClient} options={clients.map(c=>({value:c.id,label:c.company||c.name,hint:c.company?c.name:undefined}))}/>
-     {error&&<p role="alert" className="za-flash">{error}</p>}
+     {error&&<Flash tone="error">{error}</Flash>}
      <div className="za-modal-foot" style={{marginTop:16}}><button type="button" className="za-btn za-btn-ghost" onClick={()=>setPicking(false)}>Cancel</button><button type="button" className="za-btn za-btn-primary" disabled={!client||busy} onClick={()=>void create(client)}>{opening?'Opening invoice…':busy?'Creating…':'Create draft'}</button></div>
     </>:<form onSubmit={createWithClient}>
      <div className="za-form-grid">
@@ -96,7 +97,7 @@ export default function InvoiceList({invoices,clients,collected,compact,leadId,r
       <F label="Currency" wide><Dropdown label="Currency" value={nc.currency} onChange={x=>setNc(v=>({...v,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></F>
      </div>
      <p className="za-modal-hint">They’re saved to Leads as a won client. If the email already exists, the invoice goes to that client.</p>
-     {error&&<p role="alert" className="za-flash">{error}</p>}
+     {error&&<Flash tone="error">{error}</Flash>}
      <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={()=>setPicking(false)}>Cancel</button><button className="za-btn za-btn-primary" disabled={busy}>{opening?'Opening invoice…':busy?'Saving client…':'Create draft'}</button></div>
     </form>}
    </div>

@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import Dropdown from '@/components/ui/Dropdown';
 import {useRef,useState,useTransition} from 'react';
 import Link from 'next/link';
@@ -102,7 +103,7 @@ export default function LeadDetail({files,hasSpace,canInvoice,stages,categories,
    <button className="za-btn za-btn-primary" disabled={busy==='stage'||(isLost&&lostReason===lead.lost_reason)}>{isLost?'Update':`Mark as ${lostStage.label.toLowerCase()}`}</button>
    {!isLost&&<button type="button" className="za-btn za-btn-ghost" onClick={()=>setLostOpen(false)}>Cancel</button>}
   </form>}
-  {flash&&<p role="status" className="za-flash">{flash}</p>}
+  {flash&&<Flash>{flash}</Flash>}
 
   <div className="za-pagetabs" role="tablist" aria-label="Lead sections">{([['activity','Activity',activities.length],['project','Project',lead.categories.length||null],['materials','Files',files.length||null],['invoices','Invoices',invoices.length||null]] as const).map(([k,l,n])=><button key={k} type="button" role="tab" aria-selected={section===k} className={section===k?'is-on':''} onClick={()=>setSection(k)}>{l}{n!=null&&<span>{n}</span>}</button>)}</div>
   <div className="za-lead-grid">

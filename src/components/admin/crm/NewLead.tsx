@@ -1,4 +1,5 @@
 'use client';
+import Flash from '../Flash';
 import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useState} from 'react';
 import {X} from 'lucide-react';
@@ -33,7 +34,7 @@ export default function NewLead({stages,team,me,onClose,onCreated}:{stages:Pipel
      <F label="Owner" wide><Dropdown label="Owner" value={v.owner_id} onChange={x=>setV(s=>({...s,owner_id:x}))} options={[{value:'',label:'Unassigned'},...team.map(s=>({value:s.id,label:s.name||s.email}))]}/></F>
      <F label="Brief / context" wide><textarea rows={5} maxLength={10000} placeholder="What do they need? How did you meet?" value={v.message} onChange={set('message')}/></F>
     </div>
-    {error&&<p role="alert" className="za-flash">{error}</p>}
+    {error&&<Flash tone="error">{error}</Flash>}
     <div className="za-drawer-foot"><button type="button" className="za-btn za-btn-ghost" onClick={onClose}>Cancel</button><button disabled={busy} className="za-btn za-btn-primary za-push">{busy?'Creating…':'Create lead'}</button></div>
    </form>
   </aside>
