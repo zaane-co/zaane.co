@@ -85,10 +85,10 @@
 .za-profile{position:relative}
 .za-profile-btn{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:10px;background:none;border:0;color:var(--a-muted)}
 .za-profile-btn:hover{background:var(--a-hover)}
-.za-main{flex:1;overflow-y:auto;padding:28px}
+.za-main{flex:1;overflow-y:auto;padding:28px 24px}
 
 /* Page */
-.za-page{max-width:1280px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.za-page{width:100%;display:flex;flex-direction:column;gap:20px}
 .za-page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .za-page-head h1{font-size:24px;font-weight:700;letter-spacing:-.025em}
 .za-page-head p{margin-top:4px;color:var(--a-muted);font-size:13.5px}
