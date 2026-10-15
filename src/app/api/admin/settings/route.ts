@@ -3,6 +3,7 @@ import {revalidatePath} from 'next/cache';
 import {staff,sessionClient} from '@/lib/supabase/server';
 import {safeUrl} from '@/lib/cms';
 import {settingKeys} from '@/lib/site-settings';
+import {currencies} from '@/lib/crm';
 
 const body=z.object({values:z.record(z.string(),z.string().max(5000))});
 // Saves the whole Settings page at once: filled keys are upserted, emptied keys are removed.
@@ -16,6 +17,7 @@ export async function POST(request:Request){
   const v=parsed.data.values[f.key].trim();
   if(!v){remove.push(f.key);continue;}
   if((f.type==='url'||f.type==='image')&&!safeUrl(v))return Response.json({error:`${f.label}: enter a full link starting with https://`,field:f.key},{status:400});
+  if(f.type==='currency'&&!(currencies as readonly string[]).includes(v))return Response.json({error:`${f.label}: choose a currency from the list.`,field:f.key},{status:400});
   if(f.type==='email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))return Response.json({error:`${f.label}: enter a valid email address.`,field:f.key},{status:400});
   upsert.push({key:f.key,value:v});
  }

@@ -3,6 +3,8 @@ import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Check,ImageIcon,Loader2,X} from 'lucide-react';
 import MediaPicker from './MediaPicker';
+import Dropdown from '@/components/ui/Dropdown';
+import {currencies} from '@/lib/crm';
 import {settingGroups,settingKeys,type SettingField} from '@/lib/site-settings';
 
 // The Settings page: every site-wide value in grouped cards, saved together from one bar.
@@ -36,6 +38,7 @@ export default function SiteSettings({initial}:{initial:Record<string,string>}){
       <div><button type="button" className="za-btn za-btn-ghost" onClick={()=>setPicking(f.key)}>{v?'Replace':'Choose image'}</button>{v&&<button type="button" className="za-btn za-btn-ghost" onClick={()=>set(f.key,'')}><X size={14}/>Remove</button>}</div>
      </div>
     </div>
+   :f.type==='currency'?<Dropdown id={id} label={f.label} value={v} onChange={x=>set(f.key,x)} options={[{value:'',label:'Any currency'},...currencies.map(c=>({value:c,label:c}))]}/>
    :f.type==='textarea'?<textarea id={id} rows={f.key==='site_description'?2:3} value={v} placeholder={f.placeholder} onChange={e=>set(f.key,e.target.value)}/>
    :<input id={id} type={f.type} value={v} placeholder={f.placeholder} onChange={e=>set(f.key,e.target.value)}/>}
    {f.key==='site_description'&&v.length>0?<p className="za-set-hint">{v.length} / 160 characters</p>:f.hint&&<p className="za-set-hint">{f.hint}</p>}
