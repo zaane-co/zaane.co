@@ -960,7 +960,6 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 .zn-badge.is-soft{background:var(--z-fg);color:var(--z-bg)}
 .zn-nav-item.is-active .zn-badge.is-soft{background:#fff;color:var(--z-bg)}
 .zn-menu-note{margin:0;padding:2px 12px 8px;font-size:12px;line-height:1.45;color:var(--z-muted);max-width:260px}
-/* Kanban in light mode: panel and page are both white, so give columns a tinted surface and cards an edge */
-.zarn.is-light .zp-col{background:#eeeef2;border:1px solid var(--z-border)}
-.zarn.is-light .zp-card{background:#fff;border-color:#dcdce3;box-shadow:0 1px 2px rgba(10,10,13,.06)}
-.zarn.is-light .zp-card:hover{border-color:var(--z-muted);box-shadow:0 3px 10px rgba(10,10,13,.1)}
+/* Kanban in light mode: same layering as dark. Tinted column, page-coloured cards, no extra borders or shadows. */
+.zarn.is-light .zp-col{background:#f1f1f4}
+.zarn.is-light .zp-card{background:#fff;border-color:var(--z-border)}
