@@ -6,6 +6,7 @@ import {Check,Hash,Lock,Search as SearchIcon,X} from 'lucide-react';
 import {channelHref,channelSlug,clearAt,clearOptions,liveStatus,statusPresets,usernameOk,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
+import AssigneePicker from './AssigneePicker';
 
 export function Modal({title,onClose,children,wide}:{title:string;onClose:()=>void;children:React.ReactNode;wide?:boolean}){
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[onClose]);
@@ -29,16 +30,17 @@ export function PeoplePicker({title,exclude=[],confirm,onClose,onPick,max=50,ins
 
 export function NewChannel({onClose}:{onClose:()=>void}){
  const z=useZarn(),router=useRouter();
- const [name,setName]=useState(''),[kind,setKind]=useState<'public'|'private'>('public'),[topic,setTopic]=useState(''),[busy,setBusy]=useState(false),[err,setErr]=useState('');
+ const [name,setName]=useState(''),[kind,setKind]=useState<'public'|'private'>('public'),[topic,setTopic]=useState(''),[busy,setBusy]=useState(false),[err,setErr]=useState(''),[people,setPeople]=useState<string[]>([]);
  async function create(e:React.FormEvent){
   e.preventDefault();setBusy(true);setErr('');
-  try{const r=await zarnApi<{id:string}>('/api/zarn',{action:'channel_create',name,kind,topic});await z.reload();onClose();router.push(`/zarn/c/${r.id}`);}
+  try{const r=await zarnApi<{id:string}>('/api/zarn',{action:'channel_create',name,kind,topic,members:people});await z.reload();onClose();router.push(`/zarn/c/${r.id}`);}
   catch(x){setErr(x instanceof Error?x.message:'Could not create it.');setBusy(false);}
  }
  return <Modal title="Create a channel" onClose={onClose}><form onSubmit={create} className="zn-modal-body">
   <label className="zn-label">Name<span className="zn-prefix"><Hash size={15}/><input className="zn-input" autoFocus required maxLength={80} placeholder="e.g. design-reviews" value={name} onChange={e=>setName(e.target.value)}/></span>{name&&channelSlug(name)!==name&&<small>Will be created as #{channelSlug(name)}</small>}</label>
   <label className="zn-label">Topic (optional)<input className="zn-input" maxLength={250} value={topic} onChange={e=>setTopic(e.target.value)}/></label>
   <div className="zn-choice">{(['public','private'] as const).map(k=><button key={k} type="button" className={kind===k?'is-on':''} onClick={()=>setKind(k)}>{k==='public'?<Hash size={16}/>:<Lock size={16}/>}<span><b>{k==='public'?'Public':'Private'}</b><small>{k==='public'?'Anyone on ZARN can find and join':'Only people you add can see it'}</small></span></button>)}</div>
+  <div className="zn-label">{kind==='private'?'Invite people (optional)':'Add people (optional)'}<AssigneePicker candidates={z.members.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member'&&m.user_id!==z.me.user_id).map(m=>m.user_id)} value={people} onToggle={u=>setPeople(p=>p.includes(u)?p.filter(x=>x!==u):[...p,u])}/>{kind==='private'&&people.length>0&&<small>They get an invitation and join once they accept.</small>}</div>
   {err&&<p className="zn-error">{err}</p>}
   <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary" disabled={busy||!channelSlug(name)}>{busy?'Creating…':'Create'}</button></div>
  </form></Modal>;

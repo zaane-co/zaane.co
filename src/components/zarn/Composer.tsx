@@ -38,6 +38,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
  }
 
  // Voice notes: tap the mic, speak, tap send. Recorded with the browser's MediaRecorder and sent like any attachment.
+ const [outsiders,setOutsiders]=useState<string[]>([]),[note,setNote]=useState('');
  const [rec,setRec]=useState(false),[recSecs,setRecSecs]=useState(0),[recBusy,setRecBusy]=useState(false);
  const recorder=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),recStream=useRef<MediaStream|null>(null),recTimer=useRef<ReturnType<typeof setInterval>|null>(null),recStart=useRef(0),discard=useRef(false);
  const MAX_VOICE=180;
@@ -124,6 +125,20 @@ function micDown(e:React.PointerEvent){
   if(e){emit({table:'zarn_messages',type:'DELETE',row:{...msg} as never});setError('Message not sent. Check your connection and try again.');return;}
   void fetch('/api/zarn/push/notify',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:msg.id})}).catch(()=>{});
   setText('');setFiles([]);setLeadId(null);onSent?.();box.current?.focus();
+  void checkOutsiders(body);
+ }
+ // Tagging someone who isn't in a private channel doesn't add them: they won't see the message. Offer to invite them.
+ async function checkOutsiders(body:string){
+  const kind=channels.find(c=>c.id===channelId)?.kind;if(kind!=='private'||parentId)return;
+  const tagged=[...new Set([...body.matchAll(/<@([0-9a-f-]{36})>/gi)].map(m=>m[1]!))].filter(u=>u!==me.user_id);if(!tagged.length)return;
+  const {data}=await db.from('zarn_channel_members').select('user_id').eq('channel_id',channelId).in('user_id',tagged);
+  const inside=new Set(((data??[]) as {user_id:string}[]).map(r=>r.user_id));
+  const out=tagged.filter(u=>!inside.has(u));if(out.length)setOutsiders(out);
+ }
+ async function inviteOutsiders(){
+  const ids=outsiders;setOutsiders([]);
+  try{const r=await fetch('/api/zarn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'channel_add',id:channelId,members:ids})});if(!r.ok)throw new Error();setNote(`Invitation sent. They join the channel once they accept.`);setTimeout(()=>setNote(''),5000);}
+  catch{setError('Could not send the invitation.');}
  }
  function onKey(e:React.KeyboardEvent<HTMLTextAreaElement>){
   if(mention&&options.length){
@@ -139,6 +154,8 @@ function micDown(e:React.PointerEvent){
  const hasContent=!!text.trim()||files.length>0||!!leadId;
  return <div className="zn-composer" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();void addFiles(e.dataTransfer.files);}}>
   {mention&&options.length>0&&<ul className="zn-suggest" role="listbox">{options.map((o,i)=><li key={o.id} role="option" aria-selected={i===pick} className={i===pick?'is-on':''} onMouseDown={e=>{e.preventDefault();choose(o);}}>{o.m?<Avatar m={o.m} size={22}/>:<AtSign size={16}/>}<b>{o.label}</b>{o.m&&<small>{o.m.username?`@${o.m.username}`:''}{o.m.username&&o.m.title?' · ':''}{o.m.title}</small>}{!o.m&&<small>Notify everyone in this channel</small>}</li>)}</ul>}
+  {outsiders.length>0&&<div className="zn-outsiders" role="status"><span>{outsiders.map(u=>people[u]?.display_name??'Someone').join(', ')} {outsiders.length>1?'aren’t':'isn’t'} in this private channel, so {outsiders.length>1?'they':'they'} won’t see your message.</span><button type="button" className="zn-btn is-primary" onClick={()=>void inviteOutsiders()}>Invite</button><button type="button" className="zn-btn" onClick={()=>setOutsiders([])}>Dismiss</button></div>}
+  {note&&<div className="zn-outsiders is-ok" role="status">{note}</div>}
   {(files.length>0||leadId)&&<div className="zn-attach-row">
    {files.map(f=><span key={f.tmp} className={`zn-chip${f.error?' is-error':''}`} title={f.error}>{f.uploading?<Loader2 size={13} className="zn-spin"/>:<Paperclip size={13}/>}{f.name}<button type="button" aria-label="Remove" onClick={()=>setFiles(x=>x.filter(y=>y.tmp!==f.tmp))}><X size={12}/></button></span>)}
    {leadId&&<span className="zn-chip"><Briefcase size={13}/>{l?.company||l?.name||'Lead'}<button type="button" aria-label="Remove lead" onClick={()=>setLeadId(null)}><X size={12}/></button></span>}
