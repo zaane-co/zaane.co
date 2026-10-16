@@ -26,7 +26,7 @@ export function useNav(){
  const clients=live.filter(c=>c.kind==='client'&&(membership[c.id]||staffAdmin)).sort((a,b)=>title(a).localeCompare(title(b)));
  const count=(list:ZChannel[],k:'unread'|'mentions')=>list.reduce((t,c)=>t+(membership[c.id]?.muted&&k==='unread'?0:unread[c.id]?.[k]??0),0);
  const badges={
-  home:count([...starred,...rooms].filter(c=>c.kind!=='dm'),'mentions'),
+  home:count([...starred,...rooms].filter(c=>c.kind!=='dm'),'unread'),
   dms:count(dms,'unread'),
   clients:count(clients.filter(c=>membership[c.id]),'unread'),
   activity:Object.values(unread).reduce((t,u)=>t+u.mentions,0),
@@ -45,9 +45,10 @@ export function ChannelRow({c,big}:{c:ZChannel;big?:boolean}){
  const icon=c.kind==='dm'?<Avatar m={people[other??me.user_id]} size={big?36:20} online={online.has(other??me.user_id)}/>
   :c.kind==='client'?<i className="zn-client-dot" style={{background:lead?.stage_color??'#52525b'}}/>
   :c.kind==='private'?<Lock size={big?17:15}/>:<Hash size={big?18:15}/>;
- const badge=u?.mentions?u.mentions:(c.kind==='dm'||c.kind==='client')&&u?.unread?u.unread:0;
+ // Every unread message counts (muted conversations only show @mentions). Mentions use the accent colour, plain unread a neutral one.
+ const badge=muted?u?.mentions??0:u?.unread??0,mentioned=!!u?.mentions;
  return <Link href={href} className={`zn-nav-item${big?' is-big':''}${isActive?' is-active':''}${u?.unread&&!muted?' is-unread':''}${muted?' is-muted':''}`}>
   {icon}<span>{title(c)}{c.kind==='dm'&&other&&<StatusMark m={people[other]}/>}{big&&c.kind==='client'&&lead?.stage_label&&<small>{lead.stage_label}</small>}{big&&c.kind==='dm'&&<small>{online.has(other??'')?'Online':people[other??'']?.title||'Direct message'}</small>}</span>
-  {badge?<em className="zn-badge">{badge}</em>:!membership[c.id]&&c.kind==='client'?<em className="zn-admin-eye" title="You can see this as an admin">admin</em>:null}
+  {badge?<em className={`zn-badge${mentioned?'':' is-soft'}`}>{badge>99?'99+':badge}</em>:!membership[c.id]&&c.kind==='client'?<em className="zn-admin-eye" title="You can see this as an admin">admin</em>:null}
  </Link>;
 }

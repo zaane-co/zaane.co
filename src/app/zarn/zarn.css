@@ -957,3 +957,5 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 .zn-call-mini button{height:34px;min-width:34px;border-radius:999px;display:grid;place-items:center;color:var(--z-fg)}.zn-call-mini button:hover{background:var(--z-hover)}
 .zn-call-mini .zn-call-mini-main{display:flex;align-items:center;gap:8px;padding:0 12px 0 4px;min-width:0}.zn-call-mini-main b{font-size:13.5px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.zn-call-mini-main small{font-size:12.5px;color:var(--z-muted);font-variant-numeric:tabular-nums}
 .zn-call-mini .is-on{background:var(--z-fg);color:var(--z-bg)}.zn-call-mini .is-decline{background:#dc2626;color:#fff}
+.zn-badge.is-soft{background:var(--z-fg);color:var(--z-bg)}
+.zn-nav-item.is-active .zn-badge.is-soft{background:#fff;color:var(--z-bg)}
