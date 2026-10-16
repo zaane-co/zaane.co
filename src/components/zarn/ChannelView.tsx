@@ -167,8 +167,12 @@ function Thread({parent,typers,onTyping,onClose}:{parent:ZMessage;typers:string[
 function Details({c,pinned,onClose,onJump}:{c:ZChannel;pinned:ZMessage[];onClose:()=>void;onJump:(id:string)=>void}){
  const {profile:profileOf}=useShell();
  const z=useZarn(),{db,me,people,membership,title,online}=z,router=useRouter();
- const [tab,setTab]=useState<'about'|'members'|'pins'>('about'),[ids,setIds]=useState<string[]>([]),[topic,setTopic]=useState(c.topic),[adding,setAdding]=useState(false),[msg,setMsg]=useState(''),[confirmDel,setConfirmDel]=useState(false),[deleting,setDeleting]=useState(false);
- useEffect(()=>{void db.from('zarn_channel_members').select('user_id').eq('channel_id',c.id).then(({data}:{data:{user_id:string}[]|null})=>setIds((data??[]).map(r=>r.user_id)));},[db,c.id,adding]);
+ const [tab,setTab]=useState<'about'|'members'|'pins'>('about'),[ids,setIds]=useState<string[]>([]),[pending,setPending]=useState<string[]>([]),[topic,setTopic]=useState(c.topic),[adding,setAdding]=useState(false),[msg,setMsg]=useState(''),[confirmDel,setConfirmDel]=useState(false),[deleting,setDeleting]=useState(false);
+ useEffect(()=>{
+  void db.from('zarn_channel_members').select('user_id').eq('channel_id',c.id).then(({data}:{data:{user_id:string}[]|null})=>setIds((data??[]).map(r=>r.user_id)));
+  // People who were invited to a private channel but haven't accepted yet.
+  if(c.kind==='private')void zarnApi<{pending:string[]}>('/api/zarn',{action:'invite_list',id:c.id}).then(r=>setPending(r.pending)).catch(()=>{});
+ },[db,c.id,c.kind,adding]);
  const mine=membership[c.id];
  const saveTopic=async()=>{try{await zarnApi('/api/zarn',{action:'topic',id:c.id,topic});setMsg('Topic updated.');await z.reload();}catch(e){setMsg(e instanceof Error?e.message:'Could not save.');}};
  const staff=me.staffRole==='super_admin'||me.staffRole==='admin';
@@ -193,8 +197,9 @@ function Details({c,pinned,onClose,onJump}:{c:ZChannel;pinned:ZMessage[];onClose
   :<div className="zn-modal-body">
    {mine&&c.kind!=='dm'&&<button type="button" className="zn-btn" onClick={()=>setAdding(true)}><UserPlus size={14}/>Add people</button>}
    <ul className="zn-list">{ids.map(u=>people[u]).filter(Boolean).map(p=><li key={p!.user_id}><div className="zn-person is-click" role="button" tabIndex={0} onClick={()=>{onClose();profileOf(p!.user_id);}}><Avatar m={p} size={32} online={online.has(p!.user_id)}/><span><b>{p!.display_name}{p!.user_id===me.user_id&&' (you)'}</b><small>{p!.title||p!.email}</small></span></div></li>)}</ul>
+  {pending.length>0&&<div className="zn-pending"><p className="zn-section-label">Invited · {pending.length}</p><ul className="zn-list">{pending.map(u=>people[u]).filter(Boolean).map(p=><li key={p!.user_id}><div className="zn-person"><Avatar m={p} size={32}/><span><b>{p!.display_name}</b><small>Waiting to accept the invitation</small></span>{mine&&<button type="button" className="zn-remove" onClick={async()=>{await zarnApi('/api/zarn',{action:'invite_cancel',id:c.id,user_id:p!.user_id});setPending(x=>x.filter(y=>y!==p!.user_id));}}>Cancel</button>}</div></li>)}</ul></div>}
   </div>}
-  {adding&&<PeoplePicker title="Add people" exclude={ids} confirm="Add" onClose={()=>setAdding(false)} onPick={async sel=>{await zarnApi('/api/zarn',{action:'channel_add',id:c.id,members:sel});setAdding(false);}}/>}
+  {adding&&<PeoplePicker title="Add people" exclude={[...ids,...pending]} confirm="Add" onClose={()=>setAdding(false)} onPick={async sel=>{await zarnApi('/api/zarn',{action:'channel_add',id:c.id,members:sel});setAdding(false);}}/>}
  </div></div>;
 }
 

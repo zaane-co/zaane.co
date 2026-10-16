@@ -9,6 +9,8 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('channel_create'),name:z.string().trim().min(1).max(80),kind:z.enum(['public','private']),topic:z.string().trim().max(250).default(''),members:z.array(id).max(200).default([])}),
  z.object({action:z.literal('channel_add'),id,members:z.array(id).min(1).max(200)}),
  z.object({action:z.literal('invites')}),
+ z.object({action:z.literal('invite_list'),id}),
+ z.object({action:z.literal('invite_cancel'),id,user_id:id}),
  z.object({action:z.literal('invite_accept'),channel_id:id}),
  z.object({action:z.literal('invite_decline'),channel_id:id}),
  z.object({action:z.literal('topic'),id,topic:z.string().trim().max(250)}),
@@ -69,6 +71,16 @@ export async function POST(request:Request){
    ]);
    const invites=rows.map(r=>{const c=chs?.find(x=>x.id===r.channel_id);const w=who?.find(x=>x.user_id===r.invited_by);return c&&!c.archived_at?{channel_id:r.channel_id,name:c.name,topic:c.topic,inviter:w?.display_name??'Someone',created_at:r.created_at}:null;}).filter(Boolean);
    return Response.json({ok:true,invites});
+  }
+  case 'invite_list':{
+   if(!await inChannel(b.id))return fail('Join the channel first.',403);
+   const {data}=await admin.from('zarn_channel_invites').select('user_id').eq('channel_id',b.id);
+   return Response.json({ok:true,pending:(data??[]).map(r=>r.user_id)});
+  }
+  case 'invite_cancel':{
+   if(!await inChannel(b.id))return fail('Join the channel first.',403);
+   await admin.from('zarn_channel_invites').delete().eq('channel_id',b.id).eq('user_id',b.user_id);
+   return Response.json({ok:true});
   }
   case 'invite_accept':{
    const {data:inv}=await admin.from('zarn_channel_invites').select('channel_id').eq('channel_id',b.channel_id).eq('user_id',me.user_id).maybeSingle();
