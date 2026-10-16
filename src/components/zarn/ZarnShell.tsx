@@ -11,7 +11,8 @@ import {Browse,Invite,NewChannel,NewDm,Profile,SearchDialog} from './Dialogs';
 import AddClient from './AddClient';
 import {useInstall} from './ZarnPwa';
 import ProfileSheet from './ProfileSheet';
-import {setSound,useSound} from '@/lib/zarn-sound';
+import {useSound} from '@/lib/zarn-sound';
+import SoundDialog from './SoundDialog';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 
 type Area='chat'|'business'|'clients'|'projects';
@@ -27,7 +28,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false);
  const router=useRouter();
- const {mode:installMode,install}=useInstall(),sound=useSound();
+ const {mode:installMode,install}=useInstall(),sound=useSound(),[soundOpen,setSoundOpen]=useState(false);
  const routeArea=areaOf(pathname);
  const [area,setArea]=useState<Area>(routeArea);
  // Follow the route's area whenever the route changes.
@@ -75,7 +76,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       <div className="zn-menu-me"><Avatar m={me} size={36} online/><span><b>{me.display_name}</b><small>{me.status_text||me.title||me.email}</small></span></div>
       <button type="button" onClick={()=>{setMenu(false);setDialog('profile');}}><UserRound size={15}/>Profile and status</button>
       <button type="button" onClick={()=>writeTheme(!light)}>{light?<Moon size={15}/>:<Sun size={15}/>}{light?'Dark mode':'Light mode'}</button>
-      <button type="button" onClick={()=>setSound(!sound)}>{sound?<Volume2 size={15}/>:<VolumeX size={15}/>}{sound?'Message sounds: on':'Message sounds: off'}</button>
+      <button type="button" onClick={()=>{setMenu(false);setSoundOpen(true);}}>{sound?<Volume2 size={15}/>:<VolumeX size={15}/>}{sound?'Message sounds: on':'Message sounds: off'}</button>
       {!z.notifyOn&&<button type="button" onClick={()=>{z.enableNotify();setMenu(false);}}><Bell size={15}/>Turn on notifications</button>}
       {installMode&&<button type="button" onClick={()=>{setMenu(false);if(installMode==='prompt')void install();else setDialog('install');}}><Download size={15}/>Install ZARN on this device</button>}
       {staffAdmin&&<><div className="zn-menu-sep"/><p className="zn-menu-label">Admin</p>
@@ -145,6 +146,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
    <button type="button" className={`zn-fab${quick?' is-open':''}`} aria-label={quick?'Close quick actions':'Quick actions'} aria-expanded={quick} onClick={()=>setQuick(v=>!v)}><Plus size={26}/></button>
   </div>
   {profileId&&<ProfileSheet userId={profileId} onClose={()=>setProfileId(null)} onEdit={()=>{setProfileId(null);setDialog('profile');}}/>}
+  {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {newProject&&<NewProject onClose={()=>setNewProject(false)}/>}
   {dialog==='dm'&&<NewDm onClose={()=>setDialog(null)}/>}

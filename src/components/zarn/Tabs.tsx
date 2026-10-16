@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import {useState} from 'react';
 import {AtSign,BarChart3,Bell,Files,FolderKanban,ListChecks,Volume2,VolumeX,Briefcase,ChevronRight,Contact,Download,LayoutDashboard,LogOut,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
@@ -7,7 +8,8 @@ import {liveStatus} from '@/lib/zarn';
 import {Avatar} from './format';
 import {ChannelRow,useNav,useShell} from './nav';
 import {useInstall} from './ZarnPwa';
-import {setSound,useSound} from '@/lib/zarn-sound';
+import {useSound} from '@/lib/zarn-sound';
+import SoundDialog from './SoundDialog';
 import {signOut} from './ZarnShell';
 
 // Phone tab screens (Slack-style). They also work on a computer as plain list pages.
@@ -60,7 +62,7 @@ export function ClientsTab(){
 }
 
 export function YouTab(){
- const z=useZarn(),{me}=z,{open,profile}=useShell(),{staffAdmin,canBusiness}=useNav(),{light}=useAdminTheme(),{mode,install}=useInstall(),sound=useSound();
+ const z=useZarn(),{me}=z,{open,profile}=useShell(),{staffAdmin,canBusiness}=useNav(),{light}=useAdminTheme(),{mode,install}=useInstall(),sound=useSound(),[soundOpen,setSoundOpen]=useState(false);
  return <Screen title="You">
   <button type="button" className="zn-you-card" onClick={()=>profile(me.user_id)}>
    <Avatar m={me} size={56} online/><span><b>{me.display_name}</b><small>{me.username?`@${me.username}`:''}{me.username?' · ':''}{liveStatus(me)?`${liveStatus(me)!.emoji} ${liveStatus(me)!.text}`:me.title||'Set a status'}</small></span><ChevronRight size={18} className="zn-chev"/>
@@ -68,7 +70,7 @@ export function YouTab(){
   <Group label="Preferences">
    <Row icon={<UserRound size={18}/>} label="Profile and status" onClick={()=>open('profile')}/>
    <Row icon={light?<Moon size={18}/>:<Sun size={18}/>} label={light?'Dark mode':'Light mode'} onClick={()=>writeTheme(!light)}/>
-   <Row icon={sound?<Volume2 size={18}/>:<VolumeX size={18}/>} label={sound?'Message sounds: on':'Message sounds: off'} sub="DMs, mentions and client messages" onClick={()=>setSound(!sound)}/>
+   <Row icon={sound?<Volume2 size={18}/>:<VolumeX size={18}/>} label={sound?'Message sounds: on':'Message sounds: off'} sub="DMs, mentions and client messages" onClick={()=>setSoundOpen(true)}/>
    {!z.notifyOn&&<Row icon={<Bell size={18}/>} label="Turn on notifications" onClick={()=>z.enableNotify()}/>}
    {mode&&<Row icon={<Download size={18}/>} label="Install ZARN on this device" onClick={()=>{if(mode==='prompt')void install();else open('install');}}/>}
   </Group>
@@ -86,5 +88,6 @@ export function YouTab(){
    {me.staffRole&&<Row href="/admin" icon={<LayoutDashboard size={18}/>} label="Studio admin"/>}
   </Group>}
   <Group label=" "><Row icon={<LogOut size={18}/>} label="Sign out" onClick={()=>void signOut()}/></Group>
- </Screen>;
+ {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
+  </Screen>;
 }

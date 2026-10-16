@@ -6,7 +6,7 @@ import type {RealtimePostgresChangesPayload} from '@supabase/supabase-js';
 type Change=RealtimePostgresChangesPayload<Record<string,unknown>>;
 import {channelHref,channelTitle,type ZChannel,type ZLead,type ZMember,type ZMembership,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {plain} from './format';
-import {playChime} from '@/lib/zarn-sound';
+import {playChime,getSound} from '@/lib/zarn-sound';
 
 export type ZEvent={table:'zarn_messages';type:'INSERT'|'UPDATE'|'DELETE';row:ZMessage}|{table:'zarn_reactions';type:'INSERT'|'DELETE';row:ZReaction};
 const b64=(k:string)=>{const p='='.repeat((4-k.length%4)%4),r=atob((k+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)));};
@@ -96,7 +96,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
     const mention=row.body.includes(`<@${me.user_id}>`)||row.body.includes('<!channel>');
     if(row.channel_id===activeRef.current&&document.visibilityState==='visible')return;
     // Sound for DMs, client spaces and @mentions (not every channel message), unless the conversation is muted.
-    {const ch=channelsRef.current.find(x=>x.id===row.channel_id);if((mention||ch?.kind==='dm'||ch?.kind==='client')&&!membershipRef.current[row.channel_id]?.muted)playChime();}
+    {const ch=channelsRef.current.find(x=>x.id===row.channel_id);if((mention||ch?.kind==='dm'||ch?.kind==='client'||getSound().scope==='all')&&!membershipRef.current[row.channel_id]?.muted)playChime();}
     setUnread(u=>({...u,[row.channel_id]:{unread:(u[row.channel_id]?.unread??0)+1,mentions:(u[row.channel_id]?.mentions??0)+(mention?1:0)}}));
     const c=channelsRef.current.find(x=>x.id===row.channel_id);
     if((mention||c?.kind==='dm')&&document.visibilityState!=='visible'&&'Notification' in window&&Notification.permission==='granted'){

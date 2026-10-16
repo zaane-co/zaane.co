@@ -1,8 +1,15 @@
 'use client';
 import {useSyncExternalStore} from 'react';
-// ZARN message sound: a short two-note chime made with Web Audio (no file to download).
-// Browsers only allow audio after the person has interacted with the page, so the context is unlocked on the first tap/click.
-const KEY='zarn-sound';
+// ZARN message sound, made with Web Audio (no file to download). Browsers only allow audio after the person has
+// interacted with the page, so the context is unlocked on the first tap/click. Settings live in this browser only.
+export type Tone='chime'|'pop'|'bell';
+export type Volume='low'|'medium'|'high';
+export type Scope='direct'|'all';
+export type SoundSettings={on:boolean;tone:Tone;volume:Volume;scope:Scope};
+export const tones:{id:Tone;label:string}[]=[{id:'chime',label:'Chime'},{id:'pop',label:'Pop'},{id:'bell',label:'Bell'}];
+const KEY='zarn-sound-v2',OLD='zarn-sound';
+const gains:Record<Volume,number>={low:.12,medium:.32,high:.65};
+const defaults:SoundSettings={on:true,tone:'chime',volume:'medium',scope:'direct'};
 let ctx:AudioContext|null=null;
 const listeners=new Set<()=>void>();
 function unlock(){
@@ -10,19 +17,33 @@ function unlock(){
  try{ctx=new (window.AudioContext||(window as unknown as {webkitAudioContext:typeof AudioContext}).webkitAudioContext)();void ctx.resume();}catch{ctx=null;}
 }
 if(typeof window!=='undefined'){for(const ev of ['pointerdown','keydown','touchstart'])window.addEventListener(ev,unlock,{once:false,passive:true});}
-export function soundOn(){try{return localStorage.getItem(KEY)!=='off';}catch{return true;}}
-export function setSound(on:boolean){try{localStorage.setItem(KEY,on?'on':'off');}catch{}listeners.forEach(fn=>fn());if(on)playChime();}
-export function useSound(){return useSyncExternalStore(cb=>{listeners.add(cb);return()=>{listeners.delete(cb);};},soundOn,()=>true);}
+let cache:{raw:string|null;value:SoundSettings}={raw:'\0',value:defaults};
+export function getSound():SoundSettings{
+ let raw:string|null=null;try{raw=localStorage.getItem(KEY);if(raw===null&&localStorage.getItem(OLD)==='off')raw=JSON.stringify({...defaults,on:false});}catch{}
+ if(raw===cache.raw)return cache.value;
+ let value=defaults;try{if(raw)value={...defaults,...JSON.parse(raw)};}catch{}
+ cache={raw,value};return value;
+}
+export const soundOn=()=>getSound().on;
+export function updateSound(patch:Partial<SoundSettings>){try{localStorage.setItem(KEY,JSON.stringify({...getSound(),...patch}));}catch{}listeners.forEach(fn=>fn());}
+export const setSound=(on:boolean)=>{updateSound({on});if(on)playChime(true);};
+export function useSoundSettings(){return useSyncExternalStore(cb=>{listeners.add(cb);return()=>{listeners.delete(cb);};},getSound,()=>defaults);}
+export const useSound=()=>useSoundSettings().on;
 let last=0;
-export function playChime(){
- if(!ctx||!soundOn())return;
- const now=Date.now();if(now-last<1200)return;last=now; // a burst of messages chimes once
+function note(c:AudioContext,type:OscillatorType,from:number,to:number,at:number,len:number,peak:number){
+ const t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();
+ o.type=type;o.frequency.setValueAtTime(from,t);if(to!==from)o.frequency.exponentialRampToValueAtTime(to,t+len*.6);
+ g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+len);
+ o.connect(g).connect(c.destination);o.start(t);o.stop(t+len+.03);
+}
+// force=true plays even if sounds are off or a chime just played (used by the settings preview).
+export function playChime(force=false,override?:Partial<SoundSettings>){
+ const s={...getSound(),...override};
+ if(!ctx||(!s.on&&!force))return;
+ const now=Date.now();if(!force&&now-last<1200)return;last=now; // a burst of messages sounds once
  if(ctx.state==='suspended')void ctx.resume();
- const t=ctx.currentTime;
- for(const [freq,at] of [[880,0],[1318.5,.11]] as const){
-  const o=ctx.createOscillator(),g=ctx.createGain();
-  o.type='sine';o.frequency.value=freq;
-  g.gain.setValueAtTime(0,t+at);g.gain.linearRampToValueAtTime(.18,t+at+.015);g.gain.exponentialRampToValueAtTime(.0001,t+at+.32);
-  o.connect(g).connect(ctx.destination);o.start(t+at);o.stop(t+at+.35);
- }
+ const p=gains[s.volume];
+ if(s.tone==='pop'){note(ctx,'triangle',700,300,0,.16,p*1.3);}
+ else if(s.tone==='bell'){note(ctx,'sine',1046.5,1046.5,0,.9,p);note(ctx,'sine',2093,2093,0,.5,p*.4);note(ctx,'sine',1568,1568,.12,.8,p*.7);}
+ else{note(ctx,'sine',880,880,0,.35,p);note(ctx,'sine',1318.5,1318.5,.11,.35,p);}
 }
