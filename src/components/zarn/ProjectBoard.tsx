@@ -41,7 +41,7 @@ export default function ProjectBoard({id}:{id?:string}){
  const mine=!id;
  const [project,setProject]=useState<ZProject|null|undefined>(mine?null:undefined),[members,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
  const [view,setView]=useState<View>('list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
- const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
+ const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
  const [formMembers,setFormMembers]=useState<string[]|null>(null);
 
  useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved'))setView(v);},[mine]);
@@ -120,6 +120,16 @@ export default function ProjectBoard({id}:{id?:string}){
   if(err)throw new Error('Could not add them.');
   setMembers(m=>[...m,...ids]);setInviting(false);
  }
+ async function removeMember(userId:string){
+  const self=userId===me.user_id,name=people[userId]?.display_name??'this person';
+  if(!window.confirm(self?`Leave “${project?.name}”?`:`Remove ${name} from “${project?.name}”? They will also be taken off its tasks.`))return;
+  const {error:err}=await db.from('zarn_project_members').delete().eq('project_id',id!).eq('user_id',userId);
+  if(err){setError('Could not remove them.');return;}
+  await db.from('zarn_task_assignees').delete().eq('project_id',id!).eq('user_id',userId);
+  setMembers(m=>m.filter(x=>x!==userId));setAssign(a=>Object.fromEntries(Object.entries(a).map(([k,v])=>[k,v.filter(x=>x!==userId)])));
+  void refreshDue();
+  if(self){await reloadProjects();router.push('/zarn/projects');}
+ }
  async function deleteProject(){
   if(!window.confirm(`Delete “${project?.name}” and all its tasks? This can’t be undone.`))return;
   await db.from('zarn_projects').delete().eq('id',id!);await reloadProjects();router.push('/zarn/projects');
@@ -187,7 +197,7 @@ export default function ProjectBoard({id}:{id?:string}){
    {mine?<div className="zp-title"><span className="zp-badge is-ink"><ListChecks size={22}/></span><div><h1>To-dos</h1><p>Tasks you created or were assigned, across every project.</p></div></div>
     :<div className="zp-title"><span className="zp-badge" style={{background:project!.color}}>{project!.name.slice(0,1).toUpperCase()}</span><div><h1>{project!.name}</h1>{project!.description&&<p>{project!.description}</p>}</div></div>}
    {!mine&&<div className="zp-head-right">
-    <span className="zp-members" data-tip={members.map(m=>people[m]?.display_name).filter(Boolean).join(', ')}><Stack ids={members} max={4}/></span>
+    <button type="button" className="zp-members" aria-label="Project members" data-tip="Members" onClick={()=>setShowMembers(true)}><Stack ids={members} max={4}/></button>
     <button type="button" className="zp-btn" onClick={()=>setInviting(true)}><UserPlus size={15}/>Invite</button>
     {canManage&&<div className="zp-menu"><button type="button" className="zp-icon-btn" aria-label="Project menu" onClick={()=>setMenu(v=>!v)}><Ellipsis size={17}/></button>{menu&&<div className="zp-menu-pop"><button type="button" onClick={()=>{setMenu(false);void deleteProject();}}><Trash2 size={14}/>Delete project</button></div>}</div>}
    </div>}
@@ -222,6 +232,7 @@ export default function ProjectBoard({id}:{id?:string}){
   </form></Modal>}
   {openTask&&<TaskDrawer key={openTask.id} task={openTask} assignees={assign[openTask.id]??[]} typeOptions={typeOptions} projectLabel={openTask.project_id?projectName(openTask.project_id):'Personal'}
    loadMembers={()=>chipMembersFor(openTask.project_id)} onClose={()=>setOpen(null)} onPatch={v=>patch(openTask.id,v)} onToggle={u=>toggleAssignee(openTask,u)} onDelete={()=>void remove(openTask.id)}/>}
+  {showMembers&&<Modal title={`Members · ${members.length}`} onClose={()=>setShowMembers(false)}><ul className="zn-list zn-list-scroll zn-member-list">{members.map(u=>{const owner=project?.created_by===u,self=u===me.user_id;return <li key={u}><div className="zn-person"><Avatar m={people[u]} size={32}/><span><b>{people[u]?.display_name??'Member'}{self&&' (you)'}</b><small>{owner?'Owner':people[u]?.title||people[u]?.email||''}</small></span>{!owner&&(canManage||self)&&<button type="button" className="zn-remove" onClick={()=>void removeMember(u)}>{self?'Leave':'Remove'}</button>}</div></li>;})}</ul><div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={()=>{setShowMembers(false);setInviting(true);}}><UserPlus size={14}/>Invite</button><button type="button" className="zn-btn is-primary" onClick={()=>setShowMembers(false)}>Done</button></div></Modal>}
   {inviting&&<PeoplePicker title="Invite to project" confirm="Invite" exclude={members} onClose={()=>setInviting(false)} onPick={invite}/>}
  </div>;
 }

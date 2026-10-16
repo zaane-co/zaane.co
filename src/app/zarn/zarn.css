@@ -976,3 +976,9 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 .zn-invite-text{display:flex;flex-direction:column;min-width:0}.zn-invite-text b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.zn-invite-text b::before{content:'# ';color:var(--z-faint)}
 .zn-invite-text small{font-size:12px;color:var(--z-muted)}
 .zn-invite-actions{display:flex;gap:6px}.zn-invite-actions .zn-btn{flex:1;height:32px;padding:0 10px;font-size:12.5px}
+/* Member lists with a Remove action */
+.zn-member-list .zn-person{cursor:default}
+.zn-remove{flex:none;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--z-border);font-size:12px;font-weight:700;color:#dc2626}
+.zn-remove:hover:not(:disabled){background:#dc2626;border-color:#dc2626;color:#fff}.zn-remove:disabled{opacity:.5}
+.zn-section-label{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--z-faint);margin-top:4px}
+button.zp-members{display:inline-flex;align-items:center;border-radius:999px;padding:2px}button.zp-members:hover{background:var(--z-hover)}
