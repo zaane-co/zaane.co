@@ -17,7 +17,9 @@ export type TodoPriority='low'|'medium'|'high';
 export type ZTodo={id:string;body:string;description:string;status:TodoStatus;priority:TodoPriority;message_id:string|null;channel_id:string|null;start_at:string|null;due_at:string|null;done_at:string|null;created_at:string};
 export type TodoFields=Partial<Pick<ZTodo,'body'|'description'|'status'|'priority'|'start_at'|'due_at'>>;
 export type Me=ZMember&{staffRole:string|null};
+export type ZInvite={channel_id:string;name:string|null;topic:string;inviter:string;created_at:string};
 type Ctx={
+ invites:ZInvite[];reloadInvites:()=>Promise<void>;
  me:Me;people:Record<string,ZMember>;members:ZMember[];channels:ZChannel[];membership:Record<string,ZMembership>;unread:Unread;online:Set<string>;
  db:ReturnType<typeof browserClient>;reload:()=>Promise<void>;markRead:(channelId:string)=>void;subscribe:(fn:(e:ZEvent)=>void)=>()=>void;
  active:string|null;setActive:(id:string|null)=>void;title:(c:ZChannel)=>string;lead:(id:string)=>ZLead|undefined;loadLead:(id:string,force?:boolean)=>void;
@@ -43,6 +45,16 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  useEffect(()=>{peopleRef.current=people;channelsRef.current=channels;membershipRef.current=membership;},[people,channels,membership]);
 
  const loadUnread=useCallback(async()=>{const {data}=await db.rpc('zarn_unread');setUnread(Object.fromEntries(((data??[]) as {channel_id:string;unread:number;mentions:number}[]).map(r=>[r.channel_id,{unread:r.unread,mentions:r.mentions}])));},[db]);
+ const [invites,setInvites]=useState<ZInvite[]>([]);
+ const reloadInvites=useCallback(async()=>{
+  try{const r=await fetch('/api/zarn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'invites'})});const d=await r.json();if(r.ok)setInvites(d.invites??[]);}catch{}
+ },[]);
+ useEffect(()=>{
+  void reloadInvites();
+  const ch=db.channel(`zarn-invites-${me.user_id}`).on('postgres_changes',{event:'*',schema:'public',table:'zarn_channel_invites',filter:`user_id=eq.${me.user_id}`},()=>{void reloadInvites();}).subscribe();
+  return()=>{void db.removeChannel(ch);};
+ // eslint-disable-next-line react-hooks/set-state-in-effect
+ },[db,me.user_id,reloadInvites]);
  const reload=useCallback(async()=>{
   const [{data:m},{data:c},{data:cm}]=await Promise.all([
    db.from('zarn_members').select('*').order('display_name'),
@@ -176,7 +188,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
 
  // Local echo: your own messages and reactions show instantly; the realtime copy is de-duplicated by id.
  const emit=useCallback((e:ZEvent)=>{listeners.current.forEach(fn=>fn(e));},[]);
- const value=useMemo<Ctx>(()=>({me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
-  [me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
+ const value=useMemo<Ctx>(()=>({invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
+  [invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
  return <ZarnCtx.Provider value={value}>{children}</ZarnCtx.Provider>;
 }

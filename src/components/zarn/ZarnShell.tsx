@@ -14,6 +14,7 @@ import {useInstall} from './ZarnPwa';
 import ProfileSheet from './ProfileSheet';
 import {useSound} from '@/lib/zarn-sound';
 import SoundDialog from './SoundDialog';
+import Invites from './Invites';
 import {usePushState} from '@/lib/zarn-push-client';
 import CallProvider from './CallProvider';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
@@ -101,6 +102,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       {link('/zarn/todos',<ListChecks size={15}/>,'To-dos',z.dueTasks)}
       {link('/zarn/people',<Contact size={15}/>,'People')}
       {starred.length>0&&section('starred','Starred',starred.map(c=><ChannelRow key={c.id} c={c}/>))}
+      <Invites/>
       {section('channels','Channels',<>{rooms.map(c=><ChannelRow key={c.id} c={c}/>)}{!guest&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('browse')}><Plus size={15}/><span>Browse channels</span></button>}</>,canCreate?()=>setDialog('channel'):undefined)}
       {section('dms','Direct messages',<>{dms.map(c=><ChannelRow key={c.id} c={c}/>)}{staffAdmin&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('invite')}><UserPlus size={15}/><span>Invite people</span></button>}</>,()=>setDialog('dm'))}
      </>}

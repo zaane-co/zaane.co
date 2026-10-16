@@ -10,6 +10,7 @@ import {ChannelRow,useNav,useShell} from './nav';
 import {useInstall} from './ZarnPwa';
 import {useSound} from '@/lib/zarn-sound';
 import SoundDialog from './SoundDialog';
+import Invites from './Invites';
 import {usePushState} from '@/lib/zarn-push-client';
 import {signOut} from './ZarnShell';
 
@@ -26,6 +27,7 @@ const Row=({href,icon,label,sub,onClick,badge}:{href?:string;icon:React.ReactNod
 export function HomeTab(){
  const {open}=useShell(),{starred,rooms,guest,canCreate,canBusiness}=useNav();
  return <Screen title="Home" action={<button type="button" className="zn-tab-action" aria-label="Search" onClick={()=>open('search')}><Search size={20}/></button>}>
+  <Invites/>
   <button type="button" className="zn-search-bar" onClick={()=>open('search')}><Search size={16}/>Search messages</button>
   {canBusiness&&<Group label="Business">
    <Row href="/zarn/business" icon={<BarChart3 size={18}/>} label="Overview" sub="Pipeline, my clients, my tasks"/>

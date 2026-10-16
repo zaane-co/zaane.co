@@ -88,6 +88,8 @@ function systemText(m:ZMessage,people:Record<string,{display_name:string}>){
   case 'topic':return m.meta.topic?`${by} set the topic: ${m.meta.topic}`:`${by} cleared the topic.`;
   case 'members_added':{const names=String(m.meta.users??'').split(',').map(id=>people[id]?.display_name).filter(Boolean);return `${by} added ${names.join(', ')||'people'}.`;}
   case 'members_removed':{const names=String(m.meta.users??'').split(',').map(id=>people[id]?.display_name).filter(Boolean);return `${by} removed ${names.join(', ')||'people'} from the team.`;}
+  case 'members_invited':{const names=String(m.meta.users??'').split(',').map(id=>people[id]?.display_name).filter(Boolean);return `${by} invited ${names.join(', ')||'people'}. They need to accept to join.`;}
+  case 'joined':return `${by} joined the channel.`;
   case 'call':{const d=Number(m.meta.duration)||0,t=m.meta.status;return t==='ended'?`Voice call · ${Math.floor(d/60)}:${String(d%60).padStart(2,'0')}`:t==='declined'?`${by} called. The call was declined.`:`Missed voice call from ${by}.`;}
   case 'client_opened':return `${by} opened this client space.`;
   default:return '';
