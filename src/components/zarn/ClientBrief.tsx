@@ -18,7 +18,7 @@ export default function ClientBrief({lead,canEdit}:{lead:L;canEdit:boolean}){
  const plain=lead.project_description||lead.message||'';
  const [html,setHtml]=useState(lead.brief_html||(plain?fromText(plain):'')),[editing,setEditing]=useState(false),[previewing,setPreviewing]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
  const editor=useEditor({
-  immediatelyRender:false,content:html,editable:editing,
+  immediatelyRender:false,shouldRerenderOnTransaction:true,content:html,editable:editing,
   extensions:[StarterKit.configure({link:false,underline:false}),Underline,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:'Describe the project: goals, scope, deliverables, deadlines, links to designs or documents…'})],
   editorProps:{attributes:{class:'zd-prose zcb-prose','aria-label':'Project brief'}},
  },[editing]);

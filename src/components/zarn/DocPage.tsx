@@ -41,7 +41,7 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
  },[db,doc.id,meId]);
  const queue=useCallback(()=>{setState('saving');if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void save(),1200);},[save]);
  const editor=useEditor({
-  immediatelyRender:false,editable:canEdit,content:doc.content,
+  immediatelyRender:false,shouldRerenderOnTransaction:true,editable:canEdit,content:doc.content,
   extensions:[StarterKit.configure({link:false,underline:false}),Underline,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:canEdit?'Start writing…':''})],
   editorProps:{attributes:{class:'zd-prose','aria-label':'Document'}},
   onUpdate:({editor:e})=>{latest.current.content=e.getHTML();queue();},

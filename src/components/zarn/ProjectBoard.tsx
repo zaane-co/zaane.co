@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {FolderKanban,FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
+import {FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
 import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal,PeoplePicker} from './Dialogs';
 import AddStatusDialog from './AddStatusDialog';
