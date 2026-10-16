@@ -1033,7 +1033,7 @@ button.zp-members{display:inline-flex;align-items:center;border-radius:999px;pad
 .zn-voice-bar::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--z-accent);border:0}
 /* Phones: a WhatsApp-style bar. The field is a rounded pill, attach sits to its left, and the round send / mic button to its right. */
 @media(max-width:860px){
- .zn-composer{display:grid;grid-template-columns:minmax(0,1fr);margin:0 8px calc(8px + env(safe-area-inset-bottom));border:0;background:none;gap:0 8px}
+ .zn-composer{display:grid;grid-template-columns:minmax(0,1fr);margin:0 8px max(8px,calc(env(safe-area-inset-bottom) - 10px));border:0;background:none;gap:0 8px}
  .zn-composer>.zn-suggest{grid-column:1/-1;grid-row:1}
  .zn-composer>.zn-attach-row{grid-column:1/-1;grid-row:2;padding:0 2px 8px}
  .zn-composer>.zn-error{grid-column:1/-1;grid-row:4;padding:6px 4px 0}
@@ -1067,4 +1067,11 @@ button.lf-name{text-align:left;background:none;border:0;padding:0;font:inherit;c
  /* With the keyboard up there is no home-bar area to clear */
  html[data-kb] .zn-composer{margin-bottom:8px}
  html[data-kb] .zn-tabbar{display:none}
+}
+
+/* Phones: the message bar sits low, like the bottom nav. The safe area was being added three times (app, page, bar). */
+@media(max-width:860px){
+ .zarn.is-deep{padding-bottom:0}
+ .zarn.is-deep .zn-main{padding-bottom:0!important}
+ html[data-kb] .zarn{padding-bottom:0}
 }
