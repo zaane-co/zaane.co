@@ -47,3 +47,11 @@ export function playChime(force=false,override?:Partial<SoundSettings>){
  else if(s.tone==='bell'){note(ctx,'sine',1046.5,1046.5,0,.9,p);note(ctx,'sine',2093,2093,0,.5,p*.4);note(ctx,'sine',1568,1568,.12,.8,p*.7);}
  else{note(ctx,'sine',880,880,0,.35,p);note(ctx,'sine',1318.5,1318.5,.11,.35,p);}
 }
+// Ringing for voice calls: repeats until the returned stop function is called. 'in' is the rapid double ring, 'out' the slower ringback.
+export function startRing(kind:'in'|'out'){
+ const burst=()=>{if(!ctx)return;if(ctx.state==='suspended')void ctx.resume();
+  if(kind==='in'){note(ctx,'sine',523,523,0,.28,.3);note(ctx,'sine',659,659,.3,.28,.3);note(ctx,'sine',523,523,.9,.28,.3);note(ctx,'sine',659,659,1.2,.28,.3);}
+  else{note(ctx,'sine',440,440,0,.9,.14);note(ctx,'sine',480,480,0,.9,.14);}};
+ burst();const t=setInterval(burst,kind==='in'?2800:3500);
+ return()=>clearInterval(t);
+}

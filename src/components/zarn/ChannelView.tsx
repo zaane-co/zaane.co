@@ -1,7 +1,8 @@
 'use client';
 import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Bell,BellOff,Briefcase,Hash,Info,Lock,Pin,Star,UserPlus,X} from 'lucide-react';
+import {useCall} from './CallProvider';
+import {Bell,BellOff,Briefcase,Hash,Info,Lock,Phone,Pin,Star,UserPlus,X} from 'lucide-react';
 import {zarnApi,type ZChannel,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {useZarn,type ZEvent} from './ZarnProvider';
 import Message from './Message';
@@ -15,7 +16,7 @@ const sameGroup=(a:ZMessage|undefined,b:ZMessage)=>!!a&&a.kind==='user'&&b.kind=
 
 // embedded: rendered inside a client space (no channel header; the client page has its own).
 export default function ChannelView({id,embedded}:{id:string;embedded?:boolean}){
- const z=useZarn(),{db,me,people,channels,membership,subscribe,markRead,setActive,title}=z,router=useRouter(),{profile}=useShell();
+ const z=useZarn(),{db,me,people,channels,membership,subscribe,markRead,setActive,title}=z,router=useRouter(),{profile}=useShell(),call=useCall();
  const channel=channels.find(c=>c.id===id);
  const [messages,setMessages]=useState<ZMessage[]>([]),[reactions,setReactions]=useState<ZReaction[]>([]);
  const [loading,setLoading]=useState(true),[more,setMore]=useState(false),[thread,setThread]=useState<ZMessage|null>(null);
@@ -102,6 +103,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
      return channel.topic?<p className="zn-topic" title={channel.topic}>{channel.topic}</p>:null;
     })()}
     <div className="zn-head-actions">
+     {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined?<button type="button" aria-label="Voice call" data-tip={call.busy?'You’re on a call':'Voice call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!)}><Phone size={16}/></button>:null;})()}
      {pinned.length>0&&<button type="button" data-tip="Pinned messages" onClick={()=>setDetails(true)}><Pin size={16}/><span>{pinned.length}</span></button>}
      {joined&&<button type="button" aria-label={membership[id]?.starred?'Unstar':'Star'} data-tip={membership[id]?.starred?'Unstar':'Star'} className={membership[id]?.starred?'is-on':''} onClick={async()=>{await db.from('zarn_channel_members').update({starred:!membership[id]?.starred}).eq('channel_id',id).eq('user_id',me.user_id);await z.reload();}}><Star size={16}/></button>}
      <button type="button" aria-label="Channel details" data-tip="Details" onClick={()=>setDetails(true)}><Info size={16}/></button>

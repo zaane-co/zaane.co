@@ -2,17 +2,19 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {FolderKanban,Hash,AtSign,BarChart3,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {FolderKanban,Sparkles,Hash,AtSign,BarChart3,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
 import {NewProject} from './Projects';
+import Assistant from './Assistant';
 import {Browse,Invite,NewChannel,NewDm,Profile,SearchDialog} from './Dialogs';
 import AddClient from './AddClient';
 import {useInstall} from './ZarnPwa';
 import ProfileSheet from './ProfileSheet';
 import {useSound} from '@/lib/zarn-sound';
 import SoundDialog from './SoundDialog';
+import CallProvider from './CallProvider';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 
 type Area='chat'|'business'|'clients'|'projects';
@@ -34,7 +36,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  // Follow the route's area whenever the route changes.
  const [seenPath,setSeenPath]=useState(pathname);
  if(seenPath!==pathname){setSeenPath(pathname);setArea(routeArea);setMenu(false);setQuick(false);}
- useEffect(()=>{const k=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setDialog('search');}};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[]);
+ useEffect(()=>{const k=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setDialog('search');}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='j'&&me.account_type!=='guest'){e.preventDefault();setDialog(d=>d==='assistant'?null:'assistant');}};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[]);
 
  const shownClients=clients.filter(c=>z.title(c).toLowerCase().includes(clientQ.toLowerCase()));
  const isTab=tabs.includes(pathname)||pathname==='/zarn';
@@ -56,7 +58,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span></Link>;};
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
- return <ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
+ return <CallProvider><ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
  <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}`}>
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
@@ -90,6 +92,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
     <div className="zn-nav" data-lenis-prevent>
      {area==='chat'&&<>
       <button type="button" className="zn-nav-item zn-search-btn" onClick={()=>setDialog('search')}><Search size={15}/><span>Search</span><kbd>⌘K</kbd></button>
+      {!guest&&<button type="button" className="zn-nav-item" onClick={()=>setDialog('assistant')}><Sparkles size={15}/><span>Assistant</span><kbd>⌘J</kbd></button>}
       {link('/zarn/activity',<Bell size={15}/>,'Activity')}
       {link('/zarn/mentions',<AtSign size={15}/>,'Mentions',badges.activity)}
       {link('/zarn/files',<Files size={15}/>,'Files')}
@@ -149,6 +152,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
   {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {newProject&&<NewProject onClose={()=>setNewProject(false)}/>}
+  {dialog==='assistant'&&<Assistant onClose={()=>setDialog(null)}/>}
   {dialog==='dm'&&<NewDm onClose={()=>setDialog(null)}/>}
   {dialog==='browse'&&<Browse onClose={()=>setDialog(null)}/>}
   {dialog==='search'&&<SearchDialog onClose={()=>setDialog(null)}/>}
@@ -161,7 +165,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
    <p className="zn-note">ZARN then opens full-screen from your home screen like any other app.</p>
   </div></div>}
  </div>
- </ShellCtx.Provider>;
+ </ShellCtx.Provider></CallProvider>;
 }
 
 export async function signOut(){await fetch('/api/zarn/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});window.location.assign('/zarn/login');}
