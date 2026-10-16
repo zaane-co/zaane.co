@@ -7,6 +7,7 @@ import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal,PeoplePicker} from './Dialogs';
 import {Avatar,dayOf,timeOf} from './format';
 import SavedMessages from './SavedMessages';
+import Dropdown from '@/components/ui/Dropdown';
 
 export type TaskStatus='todo'|'in_progress'|'in_review'|'done';
 type Priority='low'|'medium'|'high';
@@ -195,8 +196,8 @@ export default function ProjectBoard({id}:{id?:string}){
    <div className="zp-tabs" role="tablist" aria-label="View">{views.map(([k,l,i])=><button key={k} type="button" role="tab" aria-selected={view===k} className={view===k?'is-on':''} onClick={()=>pick(k)}>{i}{l}</button>)}</div>
    {view!=='saved'&&<div className="zp-tools">
     <label className="zp-search"><Search size={14}/><input placeholder="Search" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search tasks"/></label>
-    <label className="zp-filter"><ListFilter size={14}/><select value={prio} onChange={e=>setPrio(e.target.value as 'all'|Priority)} aria-label="Priority"><option value="all">All priorities</option>{priorities.map(p=><option key={p.key} value={p.key}>{p.label}</option>)}</select></label>
-    <label className="zp-filter"><select value={who} onChange={e=>setWho(e.target.value)} aria-label="Assignee"><option value="all">Everyone</option><option value="me">Assigned to me</option>{filterPeople.map(m=><option key={m} value={m}>{people[m]?.display_name??'Member'}</option>)}</select></label>
+    <Dropdown variant="toolbar" label="Priority" icon={<ListFilter size={14}/>} value={prio} onChange={v=>setPrio(v as 'all'|Priority)} options={[{value:'all',label:'All priorities'},...priorities.map(p=>({value:p.key,label:p.label}))]}/>
+    <Dropdown variant="toolbar" label="Assignee" value={who} onChange={setWho} options={[{value:'all',label:'Everyone'},{value:'me',label:'Assigned to me'},...filterPeople.map(m=>({value:m,label:people[m]?.display_name??'Member'}))]}/>
     <button type="button" className="zp-btn is-dark" onClick={()=>add()}><Plus size={15}/>New Task</button>
    </div>}
   </div>
@@ -205,10 +206,10 @@ export default function ProjectBoard({id}:{id?:string}){
   {form&&<Modal title="New task" onClose={()=>setForm(null)} wide><form className="zn-modal-body" onSubmit={create}>
    <label className="zn-label">Task name<input className="zn-input" autoFocus maxLength={200} value={form.title} onChange={e=>setForm(f=>f&&{...f,title:e.target.value})} placeholder="What needs doing?"/></label>
    <label className="zn-label">Description (optional)<textarea className="zn-input" rows={3} maxLength={4000} value={form.description} onChange={e=>setForm(f=>f&&{...f,description:e.target.value})}/></label>
-   {mine&&<label className="zn-label">Project<select className="zn-input" value={form.project_id} onChange={e=>setForm(f=>f&&{...f,project_id:e.target.value,assignees:[me.user_id]})}><option value="">No project (personal)</option>{(projects??[]).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+   {mine&&<div className="zn-label">Project<Dropdown label="Project" value={form.project_id} onChange={v=>setForm(f=>f&&{...f,project_id:v,assignees:[me.user_id]})} options={[{value:'',label:'No project (personal)'},...(projects??[]).map(p=>({value:p.id,label:p.name}))]}/></div>}
    <div className="zn-form-row">
-    <label className="zn-label">Status<select className="zn-input" value={form.status} onChange={e=>setForm(f=>f&&{...f,status:e.target.value as TaskStatus})}>{statuses.map(g=><option key={g.key} value={g.key}>{g.label}</option>)}</select></label>
-    <label className="zn-label">Priority<select className="zn-input" value={form.priority} onChange={e=>setForm(f=>f&&{...f,priority:e.target.value as Priority})}>{priorities.map(p=><option key={p.key} value={p.key}>{p.label}</option>)}</select></label>
+    <div className="zn-label">Status<Dropdown label="Status" value={form.status} onChange={v=>setForm(f=>f&&{...f,status:v as TaskStatus})} options={statuses.map(g=>({value:g.key,label:g.label,color:g.color}))}/></div>
+    <div className="zn-label">Priority<Dropdown label="Priority" value={form.priority} onChange={v=>setForm(f=>f&&{...f,priority:v as Priority})} options={priorities.map(p=>({value:p.key,label:p.label}))}/></div>
    </div>
    <div className="zn-form-row">
     <label className="zn-label">Start date<input type="date" className="zn-input" value={form.start_at} onChange={e=>setForm(f=>f&&{...f,start_at:e.target.value})}/></label>
@@ -243,7 +244,7 @@ function TaskDrawer({task,assignees,typeOptions,projectLabel,loadMembers,onClose
  const overdue=!!task.due_at&&task.status!=='done'&&task.due_at<iso(new Date());
  return <><button type="button" className="zp-scrim" aria-label="Close details" onClick={onClose}/>
   <aside className="zp-drawer" role="dialog" aria-label="Task details">
-   <header><select className="zp-status" value={task.status} style={{background:statuses.find(s=>s.key===task.status)!.color}} onChange={e=>void save({status:e.target.value as TaskStatus})} aria-label="Status">{statuses.map(s=><option key={s.key} value={s.key}>{s.label}</option>)}</select>
+   <header><Dropdown variant="pill" label="Status" value={task.status} onChange={v=>void save({status:v as TaskStatus})} options={statuses.map(s=>({value:s.key,label:s.label,color:s.color}))}/>
     <div className="zp-drawer-actions"><button type="button" className="zp-icon-btn" aria-label="Delete task" data-tip="Delete" onClick={()=>{if(window.confirm('Delete this task?'))onDelete();}}><Trash2 size={16}/></button><button type="button" className="zp-icon-btn" aria-label="Close" onClick={onClose}><X size={17}/></button></div></header>
    <div className="zp-drawer-body" data-lenis-prevent>
     <input className="zp-title-input" value={title} maxLength={200} onChange={e=>setTitle(e.target.value)} onBlur={()=>{const t=title.trim();if(!t){setTitle(task.title);return;}if(t!==task.title)void save({title:t});}} aria-label="Task name"/>
@@ -251,7 +252,7 @@ function TaskDrawer({task,assignees,typeOptions,projectLabel,loadMembers,onClose
      <dt>Assignees</dt><dd><div className="zp-assign">{options.map(m=>{const on=assignees.includes(m);return <button key={m} type="button" role="checkbox" aria-checked={on} className={on?'is-on':''} onClick={()=>onToggle(m)}><Avatar m={people[m]} size={20}/>{m===me.user_id?'Me':people[m]?.display_name??'Member'}</button>;})}</div></dd>
      <dt>Due date</dt><dd><input type="date" className="zp-input" value={task.due_at??''} onChange={e=>{const v=e.target.value||null;if(v&&task.start_at&&task.start_at>v){setErr('The due date can’t be before the start date.');return;}void save({due_at:v});}}/>{overdue&&<span className="zp-overdue">Overdue</span>}</dd>
      <dt>Start date</dt><dd><input type="date" className="zp-input" value={task.start_at??''} onChange={e=>{const v=e.target.value||null;if(v&&task.due_at&&v>task.due_at){setErr('The start date can’t be after the due date.');return;}void save({start_at:v});}}/></dd>
-     <dt>Priority</dt><dd><select className="zp-input" value={task.priority} onChange={e=>void save({priority:e.target.value as Priority})}>{priorities.map(p=><option key={p.key} value={p.key}>{p.label}</option>)}</select></dd>
+     <dt>Priority</dt><dd><Dropdown label="Priority" value={task.priority} onChange={v=>void save({priority:v as Priority})} options={priorities.map(p=>({value:p.key,label:p.label}))}/></dd>
      <dt>Type</dt><dd><input className="zp-input" list="zp-drawer-types" maxLength={40} value={type} onChange={e=>setType(e.target.value)} onBlur={()=>{if(type.trim()!==task.type)void save({type:type.trim()});}} placeholder="e.g. Design"/><datalist id="zp-drawer-types">{typeOptions.map(t=><option key={t} value={t}/>)}</datalist></dd>
      <dt>Project</dt><dd>{task.project_id?<Link href={`/zarn/projects/${task.project_id}`} className="zp-proj">{projectLabel}</Link>:<span className="zp-muted">Personal, no project</span>}</dd>
     </dl>

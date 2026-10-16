@@ -963,3 +963,5 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 /* Kanban in light mode: same layering as dark. Tinted column, page-coloured cards, no extra borders or shadows. */
 .zarn.is-light .zp-col{background:#f1f1f4}
 .zarn.is-light .zp-card{background:#fff;border-color:var(--z-border)}
+.zp-tools .dd-toolbar{height:36px;border-radius:10px}
+.zn-label>.dd{margin-top:2px}

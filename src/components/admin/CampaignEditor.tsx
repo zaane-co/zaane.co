@@ -1,5 +1,6 @@
 'use client';
 import {useState} from 'react';
+import Dropdown from '@/components/ui/Dropdown';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {ArrowLeft,LayoutTemplate,Send,Trash2} from 'lucide-react';
@@ -45,7 +46,7 @@ export default function CampaignEditor({campaign,audience,templates=[],startBody
    {campaign&&<Status value={campaign.status==='sending'?'in_progress':campaign.status}/>}</div>
   <div className="za-nl-grid"><section className="za-card za-nl-edit"><div className="za-set-fields">
    <div className="za-field za-set-field"><div className="za-field-label"><label htmlFor="nl-subject">Subject</label></div><input id="nl-subject" value={subject} maxLength={200} disabled={locked} onChange={e=>setSubject(e.target.value)} placeholder="What’s new at Zaane"/></div>
-   <div className="za-field za-set-field"><div className="za-field-label"><label>Message</label>{!locked&&templates.length>0&&<select aria-label="Start from template" className="za-nl-tpl-select" value="" onChange={e=>{const t=templates.find(x=>x.id===e.target.value);if(t&&(!body.trim()||window.confirm('Replace what you\'ve written with this template?')))setBody(t.body);}}><option value="">Start from template…</option>{templates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select>}</div><RichEmailEditor value={body} onChange={setBody} disabled={locked}/><small className="za-nl-hint">Format with the toolbar. Fonts are limited to ones email apps can show. Select text and use the button icon to make a link look like a button. Paste or drop images straight in.</small></div>
+   <div className="za-field za-set-field"><div className="za-field-label"><label>Message</label>{!locked&&templates.length>0&&<Dropdown variant="inline" label="Start from template" placeholder="Start from template…" value="" onChange={v=>{const t=templates.find(x=>x.id===v);if(t&&(!body.trim()||window.confirm('Replace what you\'ve written with this template?')))setBody(t.body);}} options={templates.map(t=>({value:t.id,label:t.name}))}/>}</div><RichEmailEditor value={body} onChange={setBody} disabled={locked}/><small className="za-nl-hint">Format with the toolbar. Fonts are limited to ones email apps can show. Select text and use the button icon to make a link look like a button. Paste or drop images straight in.</small></div>
    {msg&&<Flash tone={msg.tone}>{msg.text}</Flash>}
    {!locked&&<div className="za-toolbar-actions">
     <button type="button" className="za-btn za-btn-ghost" disabled={!!busy} onClick={()=>void run('save')}>{busy==='save'?'Saving…':'Save draft'}</button>

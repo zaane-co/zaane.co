@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import Dropdown from '@/components/ui/Dropdown';
 import {useEditor,EditorContent} from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {Image} from '@tiptap/extension-image';
@@ -56,7 +57,7 @@ export default function RichEmailEditor({value,onChange,disabled=false}:{value:s
  return <div className={`rounded-xl border border-[var(--a-border)] bg-[var(--a-panel-2)] ${disabled?'opacity-70':''}`}>
   <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-[var(--a-border)]">
    {tb('Undo',()=>c()?.undo().run(),<Undo2 className={ic}/>)}{tb('Redo',()=>c()?.redo().run(),<Redo2 className={ic}/>)}{sep}
-   <select aria-label="Font" disabled={disabled} value={emailFonts.some(f=>f.value===font)?font:''} onChange={e=>{const v=e.target.value;if(v)c()?.setFontFamily(v).run();else c()?.unsetFontFamily().run();}} className="h-7 rounded bg-transparent text-xs text-[var(--a-muted)] px-1 border border-[var(--a-border)] focus:outline-none">{emailFonts.map(f=><option key={f.label} value={f.value}>{f.label}</option>)}</select>{sep}
+   <Dropdown variant="inline" label="Font" disabled={disabled} value={emailFonts.some(f=>f.value===font)?font:''} onChange={v=>{if(v)c()?.setFontFamily(v).run();else c()?.unsetFontFamily().run();}} options={emailFonts.map(f=>({value:f.value,label:f.label}))}/>{sep}
    {tb('Bold',()=>c()?.toggleBold().run(),<Bold className={ic} strokeWidth={2.5}/>,editor?.isActive('bold'))}
    {tb('Italic',()=>c()?.toggleItalic().run(),<Italic className={ic}/>,editor?.isActive('italic'))}
    {tb('Underline',()=>c()?.toggleUnderline().run(),<UnderlineIcon className={ic}/>,editor?.isActive('underline'))}
