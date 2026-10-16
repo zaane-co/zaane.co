@@ -216,7 +216,7 @@
 
 /* Pages (CRM, Mentions) */
 .zn-page{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
-.zn-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 24px;border-bottom:1px solid var(--z-border)}
+.zn-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:0 24px;border-bottom:1px solid var(--z-border)}
 .zn-page-head h1{display:flex;align-items:center;gap:8px;font-size:19px;font-weight:800}
 .zn-page-head p{margin-top:2px;font-size:13px;color:var(--z-muted)}
 .zn-crm-stats{display:flex;gap:12px;padding:16px 24px 0;flex-wrap:wrap}
@@ -777,7 +777,7 @@ html:has(.zarn.is-light),body:has(.zarn.is-light),html:has(.zarn-auth.is-light),
 .zp-muted{color:var(--z-muted)}
 .zp-dot{flex:none;width:20px;height:20px;border-radius:6px;display:grid;place-items:center;color:#fff;font-style:normal;font-size:11px;font-weight:800}
 .zp-badge{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font-size:17px;font-weight:800}.zp-badge svg{width:18px;height:18px}
-.zp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 24px;border-bottom:1px solid var(--z-border)}
+.zp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;min-height:58px;padding:0 24px;border-bottom:1px solid var(--z-border)}
 .zp-title{display:flex;align-items:center;gap:10px;min-width:0}
 .zp-title h1{font-size:19px;font-weight:800;letter-spacing:-.02em}
 .zp-title p{font-size:12.5px;color:var(--z-muted);margin-top:1px}
