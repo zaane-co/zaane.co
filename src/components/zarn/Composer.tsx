@@ -9,7 +9,9 @@ import {Avatar,textToTokens} from './format';
 type Upload=ZAttachment&{uploading?:boolean;error?:string;tmp:string};
 // Message box: @mentions with autocomplete, file attachments, a CRM lead card, Enter to send.
 export default function Composer({channelId,parentId,placeholder,onSent,onTyping,disabled}:{channelId:string;parentId?:string;placeholder:string;onSent?:()=>void;onTyping?:()=>void;disabled?:string}){
- const {me,members,db,lead,emit,people}=useZarn();
+ const {me,members,db,lead,emit,people,channels}=useZarn();
+ // Nobody can be tagged in a direct message: it's only ever between two people.
+ const isDm=channels.find(c=>c.id===channelId)?.kind==='dm';
  const [text,setText]=useState(''),[files,setFiles]=useState<Upload[]>([]),[leadId,setLeadId]=useState<string|null>(null);
  const [mention,setMention]=useState<{q:string;start:number}|null>(null),[pick,setPick]=useState(0);
  const [leadPicker,setLeadPicker]=useState(false),[error,setError]=useState(''),[sending,setSending]=useState(false);
@@ -26,7 +28,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
  function onChange(v:string,caret:number){
   setText(v);onTyping?.();
   const before=v.slice(0,caret),hit=before.match(/(?:^|\s)@([\w .'-]{0,30})$/);
-  if(hit&&!hit[1]!.includes('  ')){setMention({q:hit[1]!,start:caret-hit[1]!.length-1});setPick(0);}else setMention(null);
+  if(!isDm&&hit&&!hit[1]!.includes('  ')){setMention({q:hit[1]!,start:caret-hit[1]!.length-1});setPick(0);}else setMention(null);
  }
  function choose(o:{label:string}){
   if(!mention)return;const el=box.current!,caret=el.selectionStart;
@@ -111,7 +113,7 @@ function micDown(e:React.PointerEvent){
   }
  }
  async function send(){
-  const body=textToTokens(text.trim(),members),ready=files.filter(f=>f.key&&!f.uploading&&!f.error);
+  const body=isDm?text.trim():textToTokens(text.trim(),members),ready=files.filter(f=>f.key&&!f.uploading&&!f.error);
   if((!body&&!ready.length&&!leadId)||sending)return;
   if(files.some(f=>f.uploading)){setError('Wait for uploads to finish.');return;}
   setSending(true);setError('');
@@ -151,7 +153,7 @@ function micDown(e:React.PointerEvent){
   <div className="zn-composer-bar">
    <button type="button" aria-label="Attach files" data-tip="Attach files (4 MB each)" onClick={()=>fileInput.current?.click()}><Paperclip size={17}/></button>
    <input ref={fileInput} type="file" multiple hidden onChange={e=>{void addFiles(e.target.files);e.target.value='';}}/>
-   <button type="button" aria-label="Mention someone" data-tip="Mention someone" onClick={()=>{const el=box.current!;const pos=el.selectionStart;const v=text.slice(0,pos)+(pos&&!/\s$/.test(text.slice(0,pos))?' @':'@')+text.slice(pos);onChange(v,v.length-(text.length-pos));el.focus();}}><AtSign size={17}/></button>
+   {!isDm&&<button type="button" aria-label="Mention someone" data-tip="Mention someone" onClick={()=>{const el=box.current!;const pos=el.selectionStart;const v=text.slice(0,pos)+(pos&&!/\s$/.test(text.slice(0,pos))?' @':'@')+text.slice(pos);onChange(v,v.length-(text.length-pos));el.focus();}}><AtSign size={17}/></button>}
    {me.can_view_crm&&<button type="button" aria-label="Attach a CRM lead" data-tip="Share a CRM lead" onClick={()=>setLeadPicker(true)}><Briefcase size={17}/></button>}
    <small className="zn-hint">*bold* _italic_ `code` · Shift+Enter for a new line</small>
    {hasContent
