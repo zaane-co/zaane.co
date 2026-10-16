@@ -4,9 +4,10 @@ import {useConfirm} from './ConfirmProvider';
 import ClientProjects from './ClientProjects';
 import ProjectBoard from './ProjectBoard';
 import ClientBrief from './ClientBrief';
+import ClientVault from './ClientVault';
 import {useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
-import {FolderKanban,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Receipt,ListChecks,LayoutGrid,History,UserPlus,X} from 'lucide-react';
+import {KeyRound,FolderKanban,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Receipt,ListChecks,LayoutGrid,History,UserPlus,X} from 'lucide-react';
 import {money,ago,dueLabel,dueState,invoiceState,invoiceStateStyle,fmtDate,type InvoiceStatus} from '@/lib/crm';
 import {zarnApi} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
@@ -25,7 +26,7 @@ export type SpaceData={
  invoices:{id:string;number:string;status:string;total:number;amount_paid:number;currency:string;due_date:string}[]|null;
  names:Record<string,string>;canManage:boolean;canStudio:boolean;
 };
-type Tab='chat'|'overview'|'tasks'|'projects'|'files'|'activity'|'invoices';
+type Tab='chat'|'overview'|'tasks'|'projects'|'files'|'vault'|'activity'|'invoices';
 
 // A client's private space: team chat plus everything we're tracking for them.
 export default function ClientSpace({data}:{data:SpaceData}){
@@ -37,7 +38,7 @@ export default function ClientSpace({data}:{data:SpaceData}){
   try{await zarnApi('/api/zarn/clients',{lead_id:lead.id,...body});if(msg)setFlash(msg);start(()=>router.refresh());return true;}
   catch(e){setFlash(e instanceof Error?e.message:'Something went wrong.');return false;}
  }
- const tabs:[Tab,string,React.ReactNode,number?][]=[['chat','Chat',<MessageSquare key="c" size={15}/>,z.unread[data.channelId]?.unread],['overview','Overview',<LayoutGrid key="o" size={15}/>],['tasks','Tasks',<ListChecks key="t" size={15}/>],['projects','Projects',<FolderKanban key="p" size={15}/>,(z.projects??[]).filter(p=>p.lead_id===lead.id).length||undefined],['files','Files',<FileText key="f" size={15}/>,data.files.length],['activity','Activity',<History key="a" size={15}/>]];
+ const tabs:[Tab,string,React.ReactNode,number?][]=[['chat','Chat',<MessageSquare key="c" size={15}/>,z.unread[data.channelId]?.unread],['overview','Overview',<LayoutGrid key="o" size={15}/>],['tasks','Tasks',<ListChecks key="t" size={15}/>],['projects','Projects',<FolderKanban key="p" size={15}/>,(z.projects??[]).filter(p=>p.lead_id===lead.id).length||undefined],['vault','Vault',<KeyRound key="v" size={15}/>],['files','Files',<FileText key="f" size={15}/>,data.files.length],['activity','Activity',<History key="a" size={15}/>]];
  if(data.invoices)tabs.push(['invoices','Invoices',<Receipt key="i" size={15}/>,data.invoices.length]);
  const name=lead.company||lead.name;
  return <div className="zn-client">
@@ -59,6 +60,7 @@ export default function ClientSpace({data}:{data:SpaceData}){
    {tab==='overview'&&<Overview data={data} onAct={act} onTab={setTab}/>}
    {tab==='tasks'&&<ProjectBoard leadId={lead.id}/>}
    {tab==='projects'&&<ClientProjects leadId={lead.id}/>}
+   {tab==='vault'&&<ClientVault leadId={lead.id}/>}
    {tab==='files'&&<Files data={data}/>}
    {tab==='activity'&&<Activity data={data}/>}
    {tab==='invoices'&&data.invoices&&<div className="zn-pane"><div className="zn-pane-inner">
