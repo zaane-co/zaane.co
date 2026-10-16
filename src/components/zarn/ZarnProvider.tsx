@@ -102,7 +102,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
 
  // Anything sent while this person was offline counts as delivered once ZARN is open again.
  useEffect(()=>{
-  const mark=()=>{if(document.visibilityState==='visible')void db.rpc('zarn_mark_delivered',{c:null});};
+  const mark=()=>{if(document.visibilityState==='visible')void db.rpc('zarn_mark_delivered',{c:null}).then(()=>{});};
   mark();document.addEventListener('visibilitychange',mark);window.addEventListener('online',mark);
   return()=>{document.removeEventListener('visibilitychange',mark);window.removeEventListener('online',mark);};
  },[db]);
@@ -116,7 +116,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
     listeners.current.forEach(fn=>fn({table:'zarn_messages',type:p.eventType,row}));
     if(p.eventType!=='INSERT'||row.user_id===me.user_id)return;
     // This app has the message, so the sender's tick moves from Sent to Delivered.
-    if(membershipRef.current[row.channel_id])void db.rpc('zarn_mark_delivered',{c:row.channel_id});
+    if(membershipRef.current[row.channel_id])void db.rpc('zarn_mark_delivered',{c:row.channel_id}).then(()=>{});
     const mention=row.body.includes(`<@${me.user_id}>`)||row.body.includes('<!channel>');
     if(row.parent_id){
      // A reply inside a thread. DMs and client spaces: counts and notifies like any message there. Channels: only when you're tagged

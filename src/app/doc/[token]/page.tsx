@@ -16,7 +16,7 @@ export default async function Page({params}:{params:Promise<{token:string}>}){
  if(l.password_hash&&!verifyUnlock(token,(await cookies()).get(cookieName(token))?.value))return <main className="docpub"><DocUnlock token={token}/></main>;
  const {data:doc}=await db.from('zarn_docs').select('title,content,updated_at').eq('id',l.doc_id).maybeSingle();
  if(!doc)notFound();
- void db.from('zarn_doc_links').update({views:l.views+1}).eq('id',l.id);
+ await db.from('zarn_doc_links').update({views:l.views+1}).eq('id',l.id);
  return <main className="docpub"><article className="docpub-doc">
   <h1>{doc.title||'Untitled'}</h1>
   <div className="docpub-body" dangerouslySetInnerHTML={{__html:cleanHtml(doc.content).replaceAll('/api/zarn/editor-image?k=',`/api/zarn/editor-image?t=${token}&k=`)}}/>

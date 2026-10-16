@@ -11,6 +11,9 @@ import {ImagePlus,Bold,Check,ChevronLeft,Code2,Heading1,Heading2,Italic,Link2,Li
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import ShareDoc from './ShareDoc';
+import {Avatar} from './format';
+import Collaboration from '@tiptap/extension-collaboration';
+import {DocSync} from './doc-sync';
 import {usePictureClick} from './ImageLightbox';
 import Image from '@tiptap/extension-image';
 import {imageTools} from './editor-images';
@@ -30,10 +33,30 @@ export default function DocPage({id}:{id:string}){
  },[db,id]);
  if(doc===undefined)return <div className="zn-page"><p className="zn-loading">Loading…</p></div>;
  if(!doc||!role)return <div className="zn-page"><div className="zn-empty-state"><h2>Document not found</h2><p>It may have been deleted, or it isn’t shared with you.</p><Link className="zn-btn" href="/zarn/docs">Back to Docs</Link></div></div>;
- return <Editing doc={doc} role={role} meId={me.user_id}/>;
+ return <Collab doc={doc} role={role} meId={me.user_id}/>;
 }
-function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
- const {db}=useZarn(),router=useRouter(),confirm=useConfirm(),pics=usePictureClick();
+// Opens the live copy of the document (everyone's edits merged) before showing the editor.
+function Collab({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
+ const {db}=useZarn();
+ const [ready,setReady]=useState<{sync:DocSync|null}|null>(null);
+ useEffect(()=>{
+  const s=new DocSync(db,doc.id,role!=='view');let live=true;
+  s.start(doc.content).then(mode=>{if(live)setReady({sync:mode==='collab'?s:null});}).catch(()=>{if(live)setReady({sync:null});});
+  return()=>{live=false;void s.destroy();};
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[db,doc.id,role]);
+ if(!ready)return <div className="zn-page"><p className="zn-loading">Opening…</p></div>;
+ return <Editing doc={doc} role={role} meId={meId} sync={ready.sync}/>;
+}
+function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSync|null}){
+ const {db,people}=useZarn(),router=useRouter(),confirm=useConfirm(),pics=usePictureClick();
+ // Who else has this document open right now.
+ const [here,setHere]=useState<string[]>([]);
+ useEffect(()=>{
+  const ch=db.channel(`zarn-docpresence-${doc.id}`,{config:{presence:{key:meId}}});
+  ch.on('presence',{event:'sync'},()=>setHere(Object.keys(ch.presenceState()).filter(u=>u!==meId))).subscribe(async(s:string)=>{if(s==='SUBSCRIBED')await ch.track({at:Date.now()});});
+  return()=>{void db.removeChannel(ch);};
+ },[db,doc.id,meId]);
  const canEdit=role==='owner'||role==='edit';
  const [title,setTitle]=useState(doc.title),[state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
  const editorRef=useRef<Editor|null>(null),fileRef=useRef<HTMLInputElement>(null);
@@ -48,8 +71,8 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
  },[db,doc.id,meId]);
  const queue=useCallback(()=>{setState('saving');if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void save(),1200);},[save]);
  const editor=useEditor({
-  immediatelyRender:false,shouldRerenderOnTransaction:true,editable:canEdit,content:doc.content,
-  extensions:[StarterKit.configure({link:false,underline:false}),Underline,Image,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:canEdit?'Start writing…':''})],
+  immediatelyRender:false,shouldRerenderOnTransaction:true,editable:canEdit,...(sync?{}:{content:doc.content}),
+  extensions:[StarterKit.configure({link:false,underline:false,...(sync?{undoRedo:false}:{})}),...(sync?[Collaboration.configure({document:sync.ydoc,field:'default'})]:[]),Underline,Image,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:canEdit?'Start writing…':''})],
   editorProps:{attributes:{class:'zd-prose','aria-label':'Document'},...tools.handlers},
   onCreate:({editor:e})=>{editorRef.current=e;},
   onUpdate:({editor:e})=>{latest.current.content=e.getHTML();queue();},
@@ -64,6 +87,7 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
   <header className="zd-head">
    <Link href="/zarn/docs" className="zn-icon" aria-label="Back to Docs"><ChevronLeft size={20}/></Link>
    <input className="zd-title" value={title} readOnly={!canEdit} maxLength={200} placeholder="Untitled" aria-label="Title" onChange={e=>{setTitle(e.target.value);latest.current.title=e.target.value;queue();}}/>
+   {here.length>0&&<span className="zd-here" title={here.map(u=>people[u]?.display_name??'Someone').join(', ')+' also has this open'}>{here.slice(0,4).map(u=><Avatar key={u} m={people[u]} size={24}/>)}{here.length>4&&<em>+{here.length-4}</em>}</span>}
    <span className={`zd-state${state==='error'?' is-error':''}`}>{!canEdit?'View only':state==='saving'?<><Loader2 size={13} className="zn-spin"/>Saving…</>:state==='error'?'Not saved. Retry by typing.':<><Check size={13}/>Saved</>}</span>
    {role==='owner'&&<><button type="button" className="zn-btn" onClick={()=>setSharing(true)}><Share2 size={14}/>Share</button><button type="button" className="zd-del" aria-label="Delete document" data-tip="Delete" onClick={()=>void remove()}><Trash2 size={16}/></button></>}
   </header>

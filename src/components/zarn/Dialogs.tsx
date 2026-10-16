@@ -2,7 +2,7 @@
 import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Check,Hash,Lock,Search as SearchIcon,X} from 'lucide-react';
+import {Check,FileText,Hash,Lock,Search as SearchIcon,X} from 'lucide-react';
 import {channelHref,channelSlug,clearAt,clearOptions,liveStatus,statusPresets,usernameOk,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
@@ -65,19 +65,23 @@ export function Browse({onClose}:{onClose:()=>void}){
 
 export function SearchDialog({onClose}:{onClose:()=>void}){
  const {db,me,people,channels,title}=useZarn(),router=useRouter();
- const [q,setQ]=useState(''),[rows,setRows]=useState<ZMessage[]>([]),[busy,setBusy]=useState(false);
+ const [q,setQ]=useState(''),[rows,setRows]=useState<ZMessage[]>([]),[busy,setBusy]=useState(false),[docs,setDocs]=useState<{id:string;title:string;snippet:string}[]>([]);
  // Past conversations with deactivated people are hidden everywhere else; searching their name finds them.
  const past=q.trim().length>=2?channels.filter(c=>c.kind==='dm'&&(c.dm_key??'').split(',').some(id=>id!==me.user_id&&people[id]?.deactivated_at&&people[id]!.display_name.toLowerCase().includes(q.trim().toLowerCase()))):[];
  useEffect(()=>{
   const s=q.trim();if(s.length<2)return;
-  const t=setTimeout(async()=>{setBusy(true);const {data}=await db.from('zarn_messages').select('*').ilike('body',`%${s.replace(/[%_]/g,'')}%`).is('deleted_at',null).order('created_at',{ascending:false}).limit(30);setRows((data??[]) as ZMessage[]);setBusy(false);},250);
+  const t=setTimeout(async()=>{setBusy(true);const term=s.replace(/[%_,()]/g,'');const {data}=await db.from('zarn_messages').select('*').ilike('body',`%${term}%`).is('deleted_at',null).order('created_at',{ascending:false}).limit(30);setRows((data??[]) as ZMessage[]);
+   // Documents you can open, matched on title or text.
+   const {data:dd}=await db.from('zarn_docs').select('id,title,content').or(`title.ilike.%${term}%,content.ilike.%${term}%`).order('updated_at',{ascending:false}).limit(8);
+   setDocs(((dd??[]) as {id:string;title:string;content:string}[]).map(d=>{const text=d.content.replace(/<[^>]+>/g,' ').replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g,' ').replace(/\s+/g,' ').trim(),i=text.toLowerCase().indexOf(term.toLowerCase());return {id:d.id,title:d.title||'Untitled',snippet:i<0?text.slice(0,110):(i>40?'…':'')+text.slice(Math.max(0,i-40),i+90)};}));
+   setBusy(false);},250);
   return()=>clearTimeout(t);
  },[q,db]);
  return <Modal title="Search ZARN" onClose={onClose} wide>
-  <span className="zn-prefix"><SearchIcon size={16}/><input className="zn-input" autoFocus placeholder="Search messages" value={q} onChange={e=>setQ(e.target.value)}/></span>
-  <ul className="zn-list zn-list-scroll">{past.map(c=>{const o=(c.dm_key??'').split(',').find(id=>id!==me.user_id)!;return <li key={c.id}><button type="button" onClick={()=>{onClose();router.push(channelHref(c,c.id));}}><Avatar m={people[o]} size={30}/><span><b>{people[o]?.display_name}</b><small>Deactivated · open past conversation</small></span></button></li>;})}{(q.trim().length>=2?rows:[]).map(m=>{const c=channels.find(x=>x.id===m.channel_id);return <li key={m.id}><button type="button" onClick={()=>{onClose();router.push(`${channelHref(c,m.channel_id)}${m.parent_id?'':`#m-${m.id}`}`);}}>
+  <span className="zn-prefix"><SearchIcon size={16}/><input className="zn-input" autoFocus placeholder="Search messages and docs" value={q} onChange={e=>setQ(e.target.value)}/></span>
+  <ul className="zn-list zn-list-scroll">{q.trim().length>=2&&docs.map(d=><li key={d.id}><button type="button" onClick={()=>{onClose();router.push(`/zarn/docs/${d.id}`);}}><span className="zd-ico"><FileText size={16}/></span><span><b>{d.title} <small>Doc</small></b><small className="zn-snippet">{d.snippet}</small></span></button></li>)}{past.map(c=>{const o=(c.dm_key??'').split(',').find(id=>id!==me.user_id)!;return <li key={c.id}><button type="button" onClick={()=>{onClose();router.push(channelHref(c,c.id));}}><Avatar m={people[o]} size={30}/><span><b>{people[o]?.display_name}</b><small>Deactivated · open past conversation</small></span></button></li>;})}{(q.trim().length>=2?rows:[]).map(m=>{const c=channels.find(x=>x.id===m.channel_id);return <li key={m.id}><button type="button" onClick={()=>{onClose();router.push(`${channelHref(c,m.channel_id)}${m.parent_id?'':`#m-${m.id}`}`);}}>
    <Avatar m={people[m.user_id??'']} size={30}/><span><b>{people[m.user_id??'']?.display_name??'CRM'} <small>in {c?(c.kind==='dm'||c.kind==='client'?title(c):`#${c.name}`):'a channel'} · {dayOf(m.created_at)} {timeOf(m.created_at)}</small></b><small className="zn-snippet">{plain(m.body,people).slice(0,160)}</small></span></button></li>;})}
-   {q.trim().length>=2&&!busy&&!rows.length&&<li className="zn-empty-row">No messages found.</li>}</ul>
+   {q.trim().length>=2&&!busy&&!rows.length&&!docs.length&&<li className="zn-empty-row">Nothing found.</li>}</ul>
  </Modal>;
 }
 
