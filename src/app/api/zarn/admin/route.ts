@@ -93,7 +93,13 @@ export async function POST(request:Request){
   case 'deactivate':case 'reactivate':{
    if(b.user_id===me.id)return fail('You can’t deactivate yourself.');
    const {error}=await db.from('zarn_members').update({deactivated_at:b.action==='deactivate'?new Date().toISOString():null}).eq('user_id',b.user_id);
-   return error?fail('Could not update this member.'):Response.json({ok:true});
+   if(error)return fail('Could not update this member.');
+   // A deactivated person stops getting notifications and calls on their devices; they sign up for them again when reactivated.
+   if(b.action==='deactivate'){
+    await db.from('zarn_push_subscriptions').delete().eq('user_id',b.user_id);
+    await db.from('zarn_calls').update({status:'ended',ended_at:new Date().toISOString()}).in('status',['ringing','active']).or(`caller_id.eq.${b.user_id},callee_id.eq.${b.user_id}`);
+   }
+   return Response.json({ok:true});
   }
   case 'remove':{
    if(b.user_id===me.id)return fail('You can’t remove yourself.');

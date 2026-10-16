@@ -28,7 +28,7 @@ export async function POST(request:Request){
  const who=names[me.user_id]??'ZARN';
  const title=ch.kind==='dm'?who:ch.kind==='client'?`${who} in a client space`:`${who} in #${ch.name??''}`;
  const everyone=String(m.body).includes('<!channel>');
- const targets=mem.filter(r=>{const mention=everyone||String(m.body).includes(`<@${r.user_id}>`);return mention||(!r.muted&&(ch.kind==='dm'||ch.kind==='client'));}).map(r=>r.user_id);
+ const targets=mem.filter(r=>{const mention=everyone||String(m.body).includes(`<@${r.user_id}>`);return mention||(!r.muted&&(ch.kind==='dm'||ch.kind==='client'));}).map(r=>r.user_id).filter(u=>names[u]);
  if(!targets.length)return Response.json({ok:true,sent:0});
  const {data:subs}=await svc.from('zarn_push_subscriptions').select('endpoint,p256dh,auth,user_id').in('user_id',targets);
  if(!subs?.length)return Response.json({ok:true,sent:0});

@@ -6,7 +6,9 @@ export async function pushTo(userIds:string[],payload:Record<string,unknown>){
  const pub=process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,priv=process.env.VAPID_PRIVATE_KEY;
  if(!pub||!priv||!userIds.length)return 0;
  const svc=serviceClient();
- const {data:subs}=await svc.from('zarn_push_subscriptions').select('endpoint,p256dh,auth').in('user_id',userIds);
+ const {data:active}=await svc.from('zarn_members').select('user_id').in('user_id',userIds).is('deactivated_at',null);
+ const live=(active??[]).map(a=>a.user_id);if(!live.length)return 0;
+ const {data:subs}=await svc.from('zarn_push_subscriptions').select('endpoint,p256dh,auth').in('user_id',live);
  if(!subs?.length)return 0;
  webpush.setVapidDetails(process.env.VAPID_SUBJECT||'mailto:nnamdi@zaane.co',pub,priv);
  let sent=0;
