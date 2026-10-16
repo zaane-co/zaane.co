@@ -103,8 +103,8 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
      return channel.topic?<p className="zn-topic" title={channel.topic}>{channel.topic}</p>:null;
     })()}
     <div className="zn-head-actions">
-     {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined?<button type="button" aria-label="Voice call" data-tip={call.busy?'You’re on a call':'Voice call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!)}><Phone size={16}/></button>:null;})()}
-     {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined?<button type="button" aria-label="Video call" data-tip={call.busy?'You’re on a call':'Video call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!,{video:true})}><Video size={16}/></button>:null;})()}
+     {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined&&!people[o[0]!]?.deactivated_at?<button type="button" aria-label="Voice call" data-tip={call.busy?'You’re on a call':'Voice call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!)}><Phone size={16}/></button>:null;})()}
+     {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined&&!people[o[0]!]?.deactivated_at?<button type="button" aria-label="Video call" data-tip={call.busy?'You’re on a call':'Video call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!,{video:true})}><Video size={16}/></button>:null;})()}
      {pinned.length>0&&<button type="button" data-tip="Pinned messages" onClick={()=>setDetails(true)}><Pin size={16}/><span>{pinned.length}</span></button>}
      {joined&&<button type="button" aria-label={membership[id]?.starred?'Unstar':'Star'} data-tip={membership[id]?.starred?'Unstar':'Star'} className={membership[id]?.starred?'is-on':''} onClick={async()=>{await db.from('zarn_channel_members').update({starred:!membership[id]?.starred}).eq('channel_id',id).eq('user_id',me.user_id);await z.reload();}}><Star size={16}/></button>}
      <button type="button" aria-label="Channel details" data-tip="Details" onClick={()=>setDetails(true)}><Info size={16}/></button>
@@ -119,7 +119,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
     })}
    </div>
    <div className="zn-typing">{typers.length>0&&<>{`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></>}</div>
-   {canPost?<Composer channelId={id} placeholder={`Message ${channel.kind==='dm'?title(channel):channel.kind==='client'?`the ${title(channel)} team`:'#'+channel.name}`} onSent={()=>{stick.current=true;}} onTyping={onTyping} disabled={channel.archived_at?'This channel is archived.':undefined}/>
+   {canPost?<Composer channelId={id} placeholder={`Message ${channel.kind==='dm'?title(channel):channel.kind==='client'?`the ${title(channel)} team`:'#'+channel.name}`} onSent={()=>{stick.current=true;}} onTyping={onTyping} disabled={channel.archived_at?'This channel is archived.':channel.kind==='dm'&&(channel.dm_key??'').split(',').some(u=>u!==me.user_id&&people[u]?.deactivated_at)?'This person’s account was deactivated, so you can’t message them.':undefined}/>
     :<div className="zn-join"><p>You’re previewing <b>#{channel.name}</b>.</p><button type="button" className="zn-btn is-primary" onClick={()=>void join()}>Join channel</button></div>}
   </div>
   {thread&&<Thread parent={thread} onClose={()=>setThread(null)}/>}

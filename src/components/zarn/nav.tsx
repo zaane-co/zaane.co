@@ -22,7 +22,8 @@ export function useNav(){
  const live=channels.filter(c=>!c.archived_at),mine=live.filter(c=>membership[c.id]);
  const starred=mine.filter(c=>c.kind!=='client'&&membership[c.id]?.starred);
  const rooms=mine.filter(c=>(c.kind==='public'||c.kind==='private')&&!membership[c.id]?.starred).sort((a,b)=>(a.name??'').localeCompare(b.name??''));
- const dms=mine.filter(c=>c.kind==='dm').sort((a,b)=>(unread[b.id]?.unread??0)-(unread[a.id]?.unread??0));
+ const gone=(c:ZChannel)=>(c.dm_key??'').split(',').some(id=>id!==me.user_id&&z.people[id]?.deactivated_at);
+ const dms=mine.filter(c=>c.kind==='dm').sort((a,b)=>Number(gone(a))-Number(gone(b))||(unread[b.id]?.unread??0)-(unread[a.id]?.unread??0));
  const clients=live.filter(c=>c.kind==='client'&&(membership[c.id]||staffAdmin)).sort((a,b)=>title(a).localeCompare(title(b)));
  const count=(list:ZChannel[],k:'unread'|'mentions')=>list.reduce((t,c)=>t+(membership[c.id]?.muted&&k==='unread'?0:unread[c.id]?.[k]??0),0);
  const badges={
@@ -42,13 +43,14 @@ export function ChannelRow({c,big}:{c:ZChannel;big?:boolean}){
  const u=unread[c.id],muted=membership[c.id]?.muted,href=channelPath(c),isActive=pathname===href;
  const other=c.kind==='dm'?(c.dm_key??'').split(',').find(id=>id!==me.user_id):undefined;
  const lead=c.kind==='client'&&c.lead_id?z.lead(c.lead_id):undefined;
+ const gone=c.kind==='dm'&&!!people[other??'']?.deactivated_at;
  const icon=c.kind==='dm'?<Avatar m={people[other??me.user_id]} size={big?36:20} online={online.has(other??me.user_id)}/>
   :c.kind==='client'?<i className="zn-client-dot" style={{background:lead?.stage_color??'#52525b'}}/>
   :c.kind==='private'?<Lock size={big?17:15}/>:<Hash size={big?18:15}/>;
  // Every unread message counts (muted conversations only show @mentions). Mentions use the accent colour, plain unread a neutral one.
  const badge=muted?u?.mentions??0:u?.unread??0,mentioned=!!u?.mentions;
- return <Link href={href} className={`zn-nav-item${big?' is-big':''}${isActive?' is-active':''}${u?.unread&&!muted?' is-unread':''}${muted?' is-muted':''}`}>
+ return <Link href={href} className={`zn-nav-item${big?' is-big':''}${isActive?' is-active':''}${u?.unread&&!muted?' is-unread':''}${muted||gone?' is-muted':''}`}>
   {icon}<span>{title(c)}{c.kind==='dm'&&other&&<StatusMark m={people[other]}/>}{big&&c.kind==='client'&&lead?.stage_label&&<small>{lead.stage_label}</small>}{big&&c.kind==='dm'&&<small>{online.has(other??'')?'Online':people[other??'']?.title||'Direct message'}</small>}</span>
-  {badge?<em className={`zn-badge${mentioned?'':' is-soft'}`}>{badge>99?'99+':badge}</em>:!membership[c.id]&&c.kind==='client'?<em className="zn-admin-eye" title="You can see this as an admin">admin</em>:null}
+  {gone?<em className="zn-admin-eye">Deactivated</em>:badge?<em className={`zn-badge${mentioned?'':' is-soft'}`}>{badge>99?'99+':badge}</em>:!membership[c.id]&&c.kind==='client'?<em className="zn-admin-eye" title="You can see this as an admin">admin</em>:null}
  </Link>;
 }
