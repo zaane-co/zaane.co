@@ -171,7 +171,7 @@ function micDown(e:React.PointerEvent){
    <button type="button" aria-label="Attach files" data-tip="Attach files (4 MB each)" onClick={()=>fileInput.current?.click()}><Paperclip size={17}/></button>
    <input ref={fileInput} type="file" multiple hidden onChange={e=>{void addFiles(e.target.files);e.target.value='';}}/>
    {!isDm&&<button type="button" aria-label="Mention someone" data-tip="Mention someone" onClick={()=>{const el=box.current!;const pos=el.selectionStart;const v=text.slice(0,pos)+(pos&&!/\s$/.test(text.slice(0,pos))?' @':'@')+text.slice(pos);onChange(v,v.length-(text.length-pos));el.focus();}}><AtSign size={17}/></button>}
-   {me.can_view_crm&&<button type="button" aria-label="Attach a CRM lead" data-tip="Share a CRM lead" onClick={()=>setLeadPicker(true)}><Briefcase size={17}/></button>}
+   {(me.staffRole==='super_admin'||me.staffRole==='admin'||me.staffRole==='sales')&&channels.find(c=>c.id===channelId)?.kind!=='client'&&<button type="button" aria-label="Attach a CRM lead" data-tip="Share a CRM lead" onClick={()=>setLeadPicker(true)}><Briefcase size={17}/></button>}
    <small className="zn-hint">*bold* _italic_ `code` · Shift+Enter for a new line</small>
    {hasContent
     ?<button type="button" className="zn-send" aria-label="Send" disabled={sending} onMouseDown={e=>e.preventDefault()} onClick={()=>void send()}><Send size={17}/></button>
