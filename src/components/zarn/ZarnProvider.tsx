@@ -155,9 +155,18 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  useEffect(()=>{
   const total=Object.entries(unread).reduce((t,[id,u])=>t+(membership[id]?.muted?u.mentions:u.unread),0);
   document.title=total?`(${total}) ZARN`:'ZARN';
+  // The app icon shows what we notify about: unread DMs and client chats plus @mentions anywhere (same rule the server uses for pushes),
+  // so the number stays right after the app is closed.
   const nav=navigator as Navigator&{setAppBadge?:(n?:number)=>Promise<void>;clearAppBadge?:()=>Promise<void>};
-  if(total)void nav.setAppBadge?.(total).catch(()=>{});else void nav.clearAppBadge?.().catch(()=>{});
- },[unread,membership]);
+  const badge=Object.entries(unread).reduce((t,[id,u])=>{const k=channels.find(c=>c.id===id)?.kind;return t+(membership[id]?.muted||(k!=='dm'&&k!=='client')?u.mentions:u.unread);},0);
+  // Not before the real counts have loaded: offline, the icon keeps its last number instead of being wiped.
+  const apply=()=>{if(!unreadReady.current)return;if(badge)void nav.setAppBadge?.(badge).catch(()=>{});else void nav.clearAppBadge?.().catch(()=>{});};
+  apply();
+  // Leaving the app re-applies it, so the icon keeps the right count while closed.
+  const hide=()=>{if(document.visibilityState==='hidden')apply();};
+  document.addEventListener('visibilitychange',hide);window.addEventListener('pagehide',apply);
+  return()=>{document.removeEventListener('visibilitychange',hide);window.removeEventListener('pagehide',apply);};
+ },[unread,membership,channels]);
  // Notifications that were sent for a conversation disappear from the phone's notification list once it has been read.
  useEffect(()=>{
   if(!unreadReady.current||!('serviceWorker' in navigator))return;
