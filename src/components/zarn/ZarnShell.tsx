@@ -15,6 +15,7 @@ import ProfileSheet from './ProfileSheet';
 import {useSound} from '@/lib/zarn-sound';
 import SoundDialog from './SoundDialog';
 import Invites from './Invites';
+import NotifyPrompt from './NotifyPrompt';
 import {usePushState} from '@/lib/zarn-push-client';
 import CallProvider from './CallProvider';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
@@ -154,6 +155,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
    <button type="button" className={`zn-fab${quick?' is-open':''}`} aria-label={quick?'Close quick actions':'Quick actions'} aria-expanded={quick} onClick={()=>setQuick(v=>!v)}><Plus size={26}/></button>
   </div>
   {profileId&&<ProfileSheet userId={profileId} onClose={()=>setProfileId(null)} onEdit={()=>{setProfileId(null);setDialog('profile');}}/>}
+  <NotifyPrompt installMode={installMode} onInstall={()=>setDialog('install')}/>
   {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {newProject&&<NewProject onClose={()=>setNewProject(false)}/>}

@@ -39,6 +39,9 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
  const [rec,setRec]=useState(false),[recSecs,setRecSecs]=useState(0),[recBusy,setRecBusy]=useState(false);
  const recorder=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),recStream=useRef<MediaStream|null>(null),recTimer=useRef<ReturnType<typeof setInterval>|null>(null),recStart=useRef(0),discard=useRef(false);
  const MAX_VOICE=180;
+ // Press and hold the mic to record, release to send, slide left to cancel. A quick tap keeps recording until you press send.
+ const [holding,setHolding]=useState(false),[slide,setSlide]=useState(false);
+ const hold=useRef<{t:number;x:number;cancel:boolean}|null>(null),stopAfterStart=useRef<'send'|'cancel'|null>(null);
  const stopTracks=()=>{recStream.current?.getTracks().forEach(t=>t.stop());recStream.current=null;if(recTimer.current)clearInterval(recTimer.current);recTimer.current=null;};
  async function startRec(){
   if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){setError('Voice notes aren’t supported on this browser.');return;}
@@ -53,10 +56,27 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
    r.onstop=()=>{const secs=Math.max(1,Math.round((Date.now()-recStart.current)/1000));stopTracks();if(discard.current){setRec(false);return;}void sendVoice(new Blob(chunks.current,{type:r.mimeType||mime||'audio/webm'}),secs);};
    recStart.current=Date.now();r.start();recorder.current=r;setRec(true);setRecSecs(0);
    recTimer.current=setInterval(()=>{const secs=Math.round((Date.now()-recStart.current)/1000);setRecSecs(secs);if(secs>=MAX_VOICE)finishRec();},250);
+   // The finger was already lifted while the microphone permission was being asked.
+   if(stopAfterStart.current){const a=stopAfterStart.current;stopAfterStart.current=null;if(a==='cancel')cancelRec();else finishRec();}
   }catch{stopTracks();setError('Allow microphone access to record voice notes.');}
  }
  function finishRec(){if(recorder.current?.state==='recording')recorder.current.stop();}
  function cancelRec(){discard.current=true;if(recorder.current?.state==='recording')recorder.current.stop();else{stopTracks();setRec(false);}}
+function micDown(e:React.PointerEvent){
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  e.preventDefault();
+  hold.current={t:Date.now(),x:e.clientX,cancel:false};setHolding(true);stopAfterStart.current=null;
+  const move=(ev:PointerEvent)=>{const h=hold.current;if(!h)return;h.cancel=ev.clientX-h.x<-70;setSlide(h.cancel);};
+  const up=()=>{
+   window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);
+   const h=hold.current;hold.current=null;setHolding(false);setSlide(false);
+   if(!h||Date.now()-h.t<450)return; // a tap: stay in recording mode
+   const action=h.cancel?'cancel':'send';
+   if(recorder.current?.state==='recording'){if(action==='cancel')cancelRec();else finishRec();}else stopAfterStart.current=action;
+  };
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+  void startRec();
+ }
  async function sendVoice(blob:Blob,secs:number){
   setRecBusy(true);
   try{
@@ -124,7 +144,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
   {rec?<div className="zn-rec" role="group" aria-label="Recording a voice note">
    <button type="button" className="zn-rec-cancel" aria-label="Discard recording" disabled={recBusy} onClick={cancelRec}><Trash2 size={18}/></button>
    <span className="zn-rec-dot"/><time>{Math.floor(recSecs/60)}:{String(recSecs%60).padStart(2,'0')}</time>
-   <span className="zn-rec-hint">{recBusy?'Sending…':`Recording · up to ${MAX_VOICE/60} min`}</span>
+   <span className={`zn-rec-hint${slide?' is-cancel':''}`}>{recBusy?'Sending…':holding?(slide?'Release to cancel':'‹ Slide to cancel · release to send'):`Recording · up to ${MAX_VOICE/60} min`}</span>
    <button type="button" className="zn-send" aria-label="Send voice note" disabled={recBusy} onClick={finishRec}>{recBusy?<Loader2 size={17} className="zn-spin"/>:<Send size={17}/>}</button>
   </div>:<>
   <textarea ref={box} rows={1} value={text} placeholder={placeholder} maxLength={8000} onChange={e=>onChange(e.target.value,e.target.selectionStart)} onKeyDown={onKey} onPaste={e=>{if(e.clipboardData.files.length){e.preventDefault();void addFiles(e.clipboardData.files);}}} aria-label="Message"/>
@@ -136,7 +156,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
    <small className="zn-hint">*bold* _italic_ `code` · Shift+Enter for a new line</small>
    {hasContent
     ?<button type="button" className="zn-send" aria-label="Send" disabled={sending} onMouseDown={e=>e.preventDefault()} onClick={()=>void send()}><Send size={17}/></button>
-    :<button type="button" className="zn-send is-mic" aria-label="Record a voice note" data-tip="Record a voice note" onMouseDown={e=>e.preventDefault()} onClick={()=>void startRec()}><Mic size={18}/></button>}
+    :<button type="button" className="zn-send is-mic" aria-label="Record a voice note" data-tip="Record a voice note" onPointerDown={micDown} onContextMenu={e=>e.preventDefault()} onClick={e=>{if(e.detail===0)void startRec();}}><Mic size={18}/></button>}
   </div>
   </>}
   {error&&<p className="zn-error">{error}</p>}
