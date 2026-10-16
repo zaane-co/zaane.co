@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useSyncExternalStore} from 'react';
+import {useRouter} from 'next/navigation';
 // Registers the ZARN service worker (installable app + offline screen). Scoped to /zarn so the public site is unaffected.
 type InstallEvent=Event&{prompt:()=>Promise<void>;userChoice:Promise<{outcome:string}>};
 let deferred:InstallEvent|null=null;
@@ -18,6 +19,16 @@ export function useInstall(){
  return {mode,install};
 }
 export default function ZarnPwa(){
+ const router=useRouter();
+ // Tapping a notification goes to that exact conversation: a message from the service worker (app already open) or a saved target (app was closed).
+ useEffect(()=>{
+  const clear=()=>{void caches?.open('zarn-nav').then(c=>c.delete('/__nav')).catch(()=>{});};
+  const go=(url:string)=>{if(typeof url==='string'&&url.startsWith('/zarn'))router.push(url);clear();};
+  const onMsg=(e:MessageEvent)=>{if(e.data?.type==='zarn-open')go(e.data.url);};
+  navigator.serviceWorker?.addEventListener('message',onMsg);
+  void (async()=>{try{const c=await caches.open('zarn-nav');const r=await c.match('/__nav');if(!r)return;const d=await r.json();if(Date.now()-d.at<2*60*1000)go(d.url);else clear();}catch{}})();
+  return()=>navigator.serviceWorker?.removeEventListener('message',onMsg);
+ },[router]);
  useEffect(()=>{if('serviceWorker' in navigator&&process.env.NODE_ENV==='production')void navigator.serviceWorker.register('/zarn-sw.js',{scope:'/zarn'}).catch(()=>{});},[]);
  return null;
 }

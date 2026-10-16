@@ -6,7 +6,7 @@ self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll([OFFLINE, '/zarn-icons/icon-192.png'])).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== 'zarn-nav').map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   if (e.request.mode !== 'navigate') return;
@@ -32,9 +32,11 @@ self.addEventListener('notificationclick', e => {
   e.notification.close();
   const url = (e.notification.data && e.notification.data.url) || '/zarn';
   e.waitUntil((async () => {
+    // Remember where to go: on iPhone a closed app always opens at its home page, so the app reads this when it starts.
+    try { const c = await caches.open('zarn-nav'); await c.put('/__nav', new Response(JSON.stringify({ url, at: Date.now() }))); } catch (_) {}
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const w = wins.find(c => c.url.includes('/zarn'));
-    if (w) { await w.focus(); if ('navigate' in w) { try { await w.navigate(url); } catch (_) {} } return; }
+    if (w) { try { await w.focus(); } catch (_) {} w.postMessage({ type: 'zarn-open', url }); return; }
     await self.clients.openWindow(url);
   })());
 });
