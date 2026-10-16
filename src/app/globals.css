@@ -2827,3 +2827,16 @@ body:has(.za-admin,.admin-login,.za-invoice-page,.zarn,.zarn-auth) [data-edge-bl
 .docpub-body pre{background:#f4f4f5;border-radius:10px;padding:14px;overflow-x:auto;font-size:14px;margin:0 0 1em}.docpub-body code{font-family:ui-monospace,Menlo,monospace;font-size:.92em}
 .docpub-body a{color:#c40a3a;text-decoration:underline}.docpub-body img{max-width:100%;border-radius:8px}.docpub-body hr{border:0;border-top:1px solid #e4e4e7;margin:1.6em 0}
 @media(max-width:640px){.docpub-doc{padding:26px 20px}.docpub-doc h1{font-size:26px}}
+/* Client secure handover page */
+.vs-doc{align-self:flex-start}.vs-lead{color:#52525b;font-size:14.5px;line-height:1.6;margin:-8px 0 22px}
+.vs-list{display:flex;flex-direction:column;gap:14px}.vs-err{color:#c40a3a;font-size:13.5px}
+.vs-item{border:1px solid #e4e4e7;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;background:#fafafa}
+.vs-item h2{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;flex-wrap:wrap}.vs-item h2 a{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:500;color:#52525b;text-decoration:underline}
+.vs-row{display:grid;grid-template-columns:76px minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;background:#fff;border:1px solid #ececef;font-size:14px}
+.vs-row small{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#71717a}.vs-row span,.vs-row pre{overflow:hidden;text-overflow:ellipsis;word-break:break-all}
+.vs-row pre{grid-column:2/-1;margin:6px 0 0;padding:12px;border-radius:8px;background:#f4f4f5;font:12.5px/1.6 ui-monospace,Menlo,monospace;white-space:pre-wrap;max-height:300px;overflow:auto}
+.vs-row.is-env{grid-template-columns:76px minmax(0,1fr) auto auto}.vs-row.is-env pre{grid-row:2}
+.vs-secret{font-family:ui-monospace,Menlo,monospace}
+.vs-row button,.vs-btn{height:30px;min-width:30px;border-radius:8px;border:0;background:#f4f4f5;color:#27272a;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 8px;font-size:13px;font-weight:600;cursor:pointer}
+.vs-btn{background:#c40a3a;color:#fff;text-decoration:none;padding:0 12px;grid-column:3/-1}
+.vs-note{font-size:13px;color:#52525b;line-height:1.5;white-space:pre-wrap}

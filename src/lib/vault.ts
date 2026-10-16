@@ -15,3 +15,14 @@ export function decrypt(stored:string){
  const d=createDecipheriv('aes-256-gcm',k,Buffer.from(iv,'base64'));d.setAuthTag(Buffer.from(tag,'base64'));
  return Buffer.concat([d.update(Buffer.from(data,'base64')),d.final()]).toString('utf8');
 }
+// Files are encrypted the same way: iv (12) + auth tag (16) + ciphertext, as one binary blob.
+export function encryptBytes(plain:Buffer){
+ const k=key();if(!k)throw new Error('Vault key missing');
+ const iv=randomBytes(12),c=createCipheriv('aes-256-gcm',k,iv),enc=Buffer.concat([c.update(plain),c.final()]);
+ return Buffer.concat([iv,c.getAuthTag(),enc]);
+}
+export function decryptBytes(blob:Buffer){
+ const k=key();if(!k)throw new Error('Vault key missing');
+ const d=createDecipheriv('aes-256-gcm',k,blob.subarray(0,12));d.setAuthTag(blob.subarray(12,28));
+ return Buffer.concat([d.update(blob.subarray(28)),d.final()]);
+}
