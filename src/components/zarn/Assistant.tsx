@@ -101,7 +101,7 @@ export default function Assistant({onClose}:{onClose:()=>void}){
     {!loading&&!items.length&&<div className="zai-empty"><Sparkles size={26}/><h2>How can I help?</h2><p>Ask what you missed, find an old chat, message someone, or have me create and assign work. I always ask before changing or sending anything.</p>
      <div className="zai-chips">{suggestions.map(s=><button key={s} type="button" onClick={()=>void send(s)}>{s}</button>)}</div></div>}
     {items.map(i=><div key={i.id} className={`zai-msg is-${i.role}${i.error?' is-error':''}`}>
-     <p>{i.content}</p>
+     {i.role==='assistant'?<AiText text={i.content}/>:<p>{i.content}</p>}
      {i.proposal&&<div className={`zai-proposal is-${i.state}`}>
       <span>{i.proposal.summary}</span>
       {i.state==='pending'?<div><button type="button" className="zn-btn is-primary" disabled={busy} onClick={()=>void confirm(i)}><Check size={14}/>Confirm</button><button type="button" className="zn-btn" disabled={busy} onClick={()=>void cancel(i)}>Cancel</button></div>
@@ -116,4 +116,18 @@ export default function Assistant({onClose}:{onClose:()=>void}){
     <button type="submit" className="zn-btn is-primary" disabled={busy||!text.trim()} aria-label="Send"><Send size={15}/></button>
    </form></>}
   </aside></>;
+}
+
+// Replies come back with light markdown (bold and bullet lists). Show that as formatting instead of stars.
+function AiText({text}:{text:string}){
+ const bold=(t:string)=>t.split(/(\*\*[^*]+\*\*)/g).map((part,k)=>/^\*\*[^*]+\*\*$/.test(part)?<strong key={k}>{part.slice(2,-2)}</strong>:part);
+ const blocks:React.ReactNode[]=[];let list:string[]=[];
+ const flush=()=>{if(list.length){blocks.push(<ul key={`u${blocks.length}`} className="zai-list">{list.map((x,k)=><li key={k}>{bold(x)}</li>)}</ul>);list=[];}};
+ for(const line of text.split('\n')){
+  const m=line.match(/^\s*[*-]\s+(.*)$/);
+  if(m){list.push(m[1]!);continue;}
+  flush();if(line.trim())blocks.push(<p key={`p${blocks.length}`}>{bold(line)}</p>);
+ }
+ flush();
+ return <>{blocks}</>;
 }

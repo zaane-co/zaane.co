@@ -11,7 +11,7 @@ import {subscribePush} from '@/lib/zarn-push-client';
 
 export type ZEvent={table:'zarn_messages';type:'INSERT'|'UPDATE'|'DELETE';row:ZMessage}|{table:'zarn_reactions';type:'INSERT'|'DELETE';row:ZReaction};
 type Unread=Record<string,{unread:number;mentions:number}>;
-export type ZProject={id:string;name:string;description:string;color:string;lead_id:string|null;created_by:string|null;created_at:string};
+export type ZProject={id:string;name:string;description:string;color:string;lead_id:string|null;brief:string;created_by:string|null;created_at:string};
 export type ZStatus={key:string;label:string;color:string;position:number;builtin:boolean;created_by:string|null};
 const DEFAULT_STATUSES:ZStatus[]=[{key:'todo',label:'To-do',color:'#71717a',position:0,builtin:true,created_by:null},{key:'in_progress',label:'On progress',color:'#2563eb',position:1,builtin:true,created_by:null},{key:'in_review',label:'In review',color:'#d97706',position:2,builtin:true,created_by:null},{key:'done',label:'Done',color:'#16a34a',position:3,builtin:true,created_by:null}];
 export type TodoStatus='todo'|'in_progress'|'done';
@@ -177,7 +177,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  const reloadStatuses=useCallback(async()=>{const {data}=await db.from('zarn_task_statuses').select('key,label,color,position,builtin,created_by').order('position');if(data?.length)setTaskStatuses(data as ZStatus[]);},[db]);
  // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
  useEffect(()=>{void reloadStatuses();const ch=db.channel('zarn-statuses').on('postgres_changes',{event:'*',schema:'public',table:'zarn_task_statuses'},()=>{void reloadStatuses();}).subscribe();return()=>{void db.removeChannel(ch);};},[db,reloadStatuses]);
- const reloadProjects=useCallback(async()=>{const {data}=await db.from('zarn_projects').select('id,name,description,color,lead_id,created_by,created_at').order('created_at');setProjects((data??[]) as ZProject[]);},[db]);
+ const reloadProjects=useCallback(async()=>{const {data}=await db.from('zarn_projects').select('id,name,description,color,lead_id,brief,created_by,created_at').order('created_at');setProjects((data??[]) as ZProject[]);},[db]);
  useEffect(()=>{if(me.account_type!=='guest')void reloadProjects();else setProjects([]);},[reloadProjects,me.account_type]);
 
  // Open tasks assigned to you that are due today or already late, for the sidebar badge.

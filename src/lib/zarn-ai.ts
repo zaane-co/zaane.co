@@ -22,8 +22,8 @@ const tools=[
  fn('list_projects','List the projects the user belongs to.'),
  fn('find_people','Find teammates by name. Use before assigning work to check who exists.',{query:{type:'string'}},['query']),
  fn('unread_summary','Get the messages the user has not read yet, grouped by conversation, so they can be summarised.'),
- fn('create_task','Propose creating a task. The user must confirm before it is created.',{title:{type:'string'},description:{type:'string'},project:{type:'string',description:'Project name. Omit for a personal task.'},assignees:{type:'array',items:{type:'string'},description:'Teammate names. Omit to assign to the user.'},due_at:{type:'string',description:'YYYY-MM-DD'},priority:{type:'string',enum:['low','medium','high']},status:{type:'string',enum:['todo','in_progress','in_review','done']}},['title']),
- fn('update_task','Propose changing an existing task. The user must confirm first.',{task:{type:'string',description:'Task title or id from list_my_tasks.'},status:{type:'string',enum:['todo','in_progress','in_review','done']},due_at:{type:'string',description:'YYYY-MM-DD'},priority:{type:'string',enum:['low','medium','high']},add_assignees:{type:'array',items:{type:'string'}},remove_assignees:{type:'array',items:{type:'string'}}},['task']),
+ fn('create_task','Propose creating a task. The user must confirm before it is created.',{title:{type:'string'},description:{type:'string'},project:{type:'string',description:'Project name. Omit for a personal task.'},assignees:{type:'array',items:{type:'string'},description:'Teammate names. Omit to assign to the user.'},start_at:{type:'string',description:'YYYY-MM-DD, the day work begins'},due_at:{type:'string',description:'YYYY-MM-DD, the deadline'},priority:{type:'string',enum:['low','medium','high']},status:{type:'string',description:'Status name, e.g. To-do, On progress, In review, Done, or a custom status the team added. Omit for To-do.'}},['title']),
+ fn('update_task','Propose changing an existing task. The user must confirm first.',{task:{type:'string',description:'Task title or id from list_my_tasks.'},status:{type:'string',description:'Status name, e.g. To-do, On progress, In review, Done, or a custom status.'},start_at:{type:'string',description:'YYYY-MM-DD, the day work begins'},due_at:{type:'string',description:'YYYY-MM-DD'},priority:{type:'string',enum:['low','medium','high']},add_assignees:{type:'array',items:{type:'string'}},remove_assignees:{type:'array',items:{type:'string'}}},['task']),
 
  fn('search_messages','Search the user\'s past chats (channels and DMs they can read), including months ago. Matches words in the message text. Returns message ids so a result can be forwarded.',{query:{type:'string',description:'Words to look for, e.g. "pricing deadline". Try synonyms if nothing is found.'},person:{type:'string',description:'Only messages from this teammate or in the DM with them.'},channel:{type:'string',description:'Only this channel name.'},from:{type:'string',description:'YYYY-MM-DD, earliest date.'},to:{type:'string',description:'YYYY-MM-DD, latest date.'}}),
  fn('get_chat','Read a stretch of one conversation in order: the DM with a teammate, or a channel. Use it to summarise or recall a conversation.',{person:{type:'string'},channel:{type:'string'},from:{type:'string',description:'YYYY-MM-DD'},to:{type:'string',description:'YYYY-MM-DD'},limit:{type:'number',description:'Max messages, default 40.'}}),
@@ -53,9 +53,9 @@ export const systemPrompt=(me:Me,memories:string[]=[])=>`You are the ZARN assist
 
 const uuid=z.uuid();
 const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const status=z.enum(['todo','in_progress','in_review','done']),priority=z.enum(['low','medium','high']);
-const createArgs=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(4000).default(''),project_id:uuid.nullable().default(null),project_label:z.string().default(''),assignee_ids:z.array(uuid).max(10),assignee_labels:z.array(z.string()).default([]),due_at:date.nullable().default(null),priority:priority.default('medium'),status:status.default('todo')});
-const updateArgs=z.object({task_id:uuid,task_label:z.string().default(''),status:status.optional(),due_at:date.nullable().optional(),priority:priority.optional(),add_ids:z.array(uuid).max(10).default([]),remove_ids:z.array(uuid).max(10).default([]),add_labels:z.array(z.string()).default([]),remove_labels:z.array(z.string()).default([])});
+const status=z.string().regex(/^[a-z0-9_]{1,48}$/),priority=z.enum(['low','medium','high']);
+const createArgs=z.object({title:z.string().trim().min(1).max(200),description:z.string().max(4000).default(''),project_id:uuid.nullable().default(null),project_label:z.string().default(''),assignee_ids:z.array(uuid).max(10),assignee_labels:z.array(z.string()).default([]),start_at:date.nullable().default(null),due_at:date.nullable().default(null),priority:priority.default('medium'),status:status.default('todo')});
+const updateArgs=z.object({task_id:uuid,task_label:z.string().default(''),status:status.optional(),start_at:date.nullable().optional(),due_at:date.nullable().optional(),priority:priority.optional(),add_ids:z.array(uuid).max(10).default([]),remove_ids:z.array(uuid).max(10).default([]),add_labels:z.array(z.string()).default([]),remove_labels:z.array(z.string()).default([])});
 
 const postArgs=z.object({target_kind:z.enum(['person','channel']),target_id:uuid,label:z.string().default(''),text:z.string().trim().min(1).max(4000)});
 const rememberArgs=z.object({fact:z.string().trim().min(1).max(300)});
@@ -233,12 +233,21 @@ async function propose(me:Me,name:string,a:Record<string,unknown>):Promise<{prop
   }
   const names=Array.isArray(a.assignees)?a.assignees.map(String):[];
   const {out,errors:pe}=matchPeople(list,names);errors.push(...pe);
+  // Status names (including custom ones the team added) are matched against the real list.
+  let statusKey='todo';
+  if(typeof a.status==='string'&&a.status.trim()){
+   const want=a.status.trim().toLowerCase(),{data:sts}=await me.db.from('zarn_task_statuses').select('key,label');
+   const hit=((sts??[]) as {key:string;label:string}[]).find(x=>x.key===want||x.label.toLowerCase()===want||x.key===want.replace(/[\s-]+/g,'_'));
+   if(hit)statusKey=hit.key;else errors.push(`There is no status called “${a.status}”.`);
+  }
+  const startOk=typeof a.start_at==='string'&&date.safeParse(a.start_at).success?a.start_at:null,dueOk=typeof a.due_at==='string'&&date.safeParse(a.due_at).success?a.due_at:null;
+  if(startOk&&dueOk&&startOk>dueOk)errors.push('The start date can’t be after the due date.');
   if(errors.length)return {error:errors.join(' ')};
   const assignees=out.length?out:[{id:me.user_id,label:'you'}];
-  const args={title,description:typeof a.description==='string'?a.description:'',project_id,project_label,assignee_ids:assignees.map(x=>x.id),assignee_labels:assignees.map(x=>x.label),due_at:typeof a.due_at==='string'&&date.safeParse(a.due_at).success?a.due_at:null,priority:priority.safeParse(a.priority).success?a.priority:'medium',status:status.safeParse(a.status).success?a.status:'todo'};
+  const args={title,description:typeof a.description==='string'?a.description:'',project_id,project_label,assignee_ids:assignees.map(x=>x.id),assignee_labels:assignees.map(x=>x.label),start_at:startOk,due_at:dueOk,priority:priority.safeParse(a.priority).success?a.priority:'medium',status:statusKey};
   const parsed=createArgs.safeParse(args);if(!parsed.success)return {error:'Those details were not valid.'};
   const p=parsed.data;
-  return {proposal:{tool:'create_task',args:p,summary:`Create “${p.title}”${p.project_label?` in ${p.project_label}`:' as a personal task'}, assigned to ${p.assignee_labels.join(', ')}${p.due_at?`, due ${p.due_at}`:''}, ${p.priority} priority.`}};
+  return {proposal:{tool:'create_task',args:p,summary:`Create “${p.title}”${p.project_label?` in ${p.project_label}`:' as a personal task'}, assigned to ${p.assignee_labels.join(', ')}${p.start_at?`, starting ${p.start_at}`:''}${p.due_at?`, due ${p.due_at}`:''}${p.status!=='todo'?`, status ${p.status.replace(/_/g,' ')}`:''}, ${p.priority} priority.`}};
  }
  if(name==='update_task'){
   const q=String(a.task??'').trim();if(!q)return {error:'Which task?'};
@@ -249,12 +258,17 @@ async function propose(me:Me,name:string,a:Record<string,unknown>):Promise<{prop
   const add=matchPeople(list,Array.isArray(a.add_assignees)?a.add_assignees.map(String):[]),rem=matchPeople(list,Array.isArray(a.remove_assignees)?a.remove_assignees.map(String):[]);
   const errs=[...add.errors,...rem.errors];if(errs.length)return {error:errs.join(' ')};
   const args:Record<string,unknown>={task_id:hits[0].id,task_label:hits[0].title,add_ids:add.out.map(x=>x.id),add_labels:add.out.map(x=>x.label),remove_ids:rem.out.map(x=>x.id),remove_labels:rem.out.map(x=>x.label)};
-  if(status.safeParse(a.status).success)args.status=a.status;
+  if(typeof a.status==='string'&&a.status.trim()){
+   const want=a.status.trim().toLowerCase(),{data:sts}=await me.db.from('zarn_task_statuses').select('key,label');
+   const hit=((sts??[]) as {key:string;label:string}[]).find(x=>x.key===want||x.label.toLowerCase()===want||x.key===want.replace(/[\s-]+/g,'_'));
+   if(!hit)return {error:`There is no status called “${a.status}”.`};args.status=hit.key;
+  }
+  if(typeof a.start_at==='string'&&date.safeParse(a.start_at).success)args.start_at=a.start_at;
   if(typeof a.due_at==='string'&&date.safeParse(a.due_at).success)args.due_at=a.due_at;
   if(priority.safeParse(a.priority).success)args.priority=a.priority;
   const parsed=updateArgs.safeParse(args);if(!parsed.success)return {error:'Those details were not valid.'};
   const p=parsed.data,bits:string[]=[];
-  if(p.status)bits.push(`status to ${p.status.replace('_',' ')}`);if(p.due_at)bits.push(`due date to ${p.due_at}`);if(p.priority)bits.push(`priority to ${p.priority}`);
+  if(p.status)bits.push(`status to ${p.status.replace('_',' ')}`);if(p.start_at)bits.push(`start date to ${p.start_at}`);if(p.due_at)bits.push(`due date to ${p.due_at}`);if(p.priority)bits.push(`priority to ${p.priority}`);
   if(p.add_labels.length)bits.push(`add ${p.add_labels.join(', ')}`);if(p.remove_labels.length)bits.push(`remove ${p.remove_labels.join(', ')}`);
   if(!bits.length)return {error:'Nothing to change was given.'};
   return {proposal:{tool:'update_task',args:p,summary:`Update “${p.task_label}”: set ${bits.join('; ')}.`}};
@@ -288,14 +302,14 @@ async function propose(me:Me,name:string,a:Record<string,unknown>):Promise<{prop
 export async function execute(me:Me,tool:string,raw:unknown):Promise<{reply:string;posted?:string}>{
  if(tool==='create_task'){
   const p=createArgs.parse(raw);
-  const {data,error}=await me.db.from('zarn_tasks').insert({title:p.title,description:p.description,status:p.status,priority:p.priority,due_at:p.due_at,project_id:p.project_id,created_by:me.user_id,position:Date.now()/1000}).select('id').single();
+  const {data,error}=await me.db.from('zarn_tasks').insert({title:p.title,description:p.description,status:p.status,priority:p.priority,start_at:p.start_at,due_at:p.due_at,project_id:p.project_id,created_by:me.user_id,position:Date.now()/1000}).select('id').single();
   if(error||!data)throw new Error('You can’t create tasks there.');
   if(p.assignee_ids.length){const {error:e}=await me.db.from('zarn_task_assignees').insert(p.assignee_ids.map(u=>({task_id:data.id,user_id:u,project_id:p.project_id})));if(e)throw new Error('The task was created, but some people couldn’t be assigned (they may not be in that project).');}
   return {reply:`Created “${p.title}”.`};
  }
  if(tool==='update_task'){
   const p=updateArgs.parse(raw),patch:Record<string,unknown>={};
-  if(p.status)patch.status=p.status;if(p.due_at!==undefined)patch.due_at=p.due_at;if(p.priority)patch.priority=p.priority;
+  if(p.status)patch.status=p.status;if(p.start_at!==undefined)patch.start_at=p.start_at;if(p.due_at!==undefined)patch.due_at=p.due_at;if(p.priority)patch.priority=p.priority;
   const {data:t}=await me.db.from('zarn_tasks').select('id,project_id').eq('id',p.task_id).maybeSingle();
   if(!t)throw new Error('That task isn’t available any more.');
   if(Object.keys(patch).length){const {error}=await me.db.from('zarn_tasks').update({...patch,updated_at:new Date().toISOString()}).eq('id',p.task_id);if(error)throw new Error('Could not change that task.');}

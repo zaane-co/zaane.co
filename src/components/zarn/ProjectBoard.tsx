@@ -2,10 +2,11 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
+import {FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
 import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal,PeoplePicker} from './Dialogs';
 import AddStatusDialog from './AddStatusDialog';
+import ProjectBrief from './ProjectBrief';
 import AssigneePicker from './AssigneePicker';
 import {NewProject} from './Projects';
 import {Avatar,dayOf,timeOf} from './format';
@@ -17,7 +18,7 @@ export type TaskStatus=string;
 type Priority='low'|'medium'|'high';
 type Task={id:string;project_id:string|null;title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string|null;due_at:string|null;position:number;created_by:string|null;created_at:string};
 type Comment={id:string;task_id:string;user_id:string|null;body:string;created_at:string};
-type View='kanban'|'timeline'|'list'|'saved';
+type View='kanban'|'timeline'|'list'|'saved'|'brief';
 type Form={title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string;due_at:string;project_id:string;assignees:string[]};
 
 const BASE_STATUSES:{key:TaskStatus;label:string;color:string}[]=[{key:'todo',label:'To-do',color:'#71717a'},{key:'in_progress',label:'On progress',color:'#2563eb'},{key:'in_review',label:'In review',color:'#d97706'},{key:'done',label:'Done',color:'#16a34a'}];
@@ -50,7 +51,7 @@ export default function ProjectBoard({id}:{id?:string}){
  const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
  const [formMembers,setFormMembers]=useState<string[]|null>(null);
 
- useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved'))setView(v);},[mine]);
+ useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!mine&&v==='brief'))setView(v);},[mine]);
  const pick=(v:View)=>{setView(v);window.history.replaceState(null,'',`?view=${v}`);};
  const everyone=useMemo(()=>team.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member').map(m=>m.user_id),[team]);
 
@@ -58,7 +59,7 @@ export default function ProjectBoard({id}:{id?:string}){
   let taskRows:Task[]=[];
   if(id){
    const [{data:pr},{data:pm},{data:tk}]=await Promise.all([
-    db.from('zarn_projects').select('id,name,description,color,created_by,created_at').eq('id',id).maybeSingle(),
+    db.from('zarn_projects').select('id,name,description,color,lead_id,brief,created_by,created_at').eq('id',id).maybeSingle(),
     db.from('zarn_project_members').select('user_id').eq('project_id',id),
     db.from('zarn_tasks').select('*').eq('project_id',id).order('position'),
    ]);
@@ -203,7 +204,7 @@ export default function ProjectBoard({id}:{id?:string}){
  })();
 
  const openTask=tasks.find(t=>t.id===open);
- const views:[View,string,React.ReactNode][]=[['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as [View,string,React.ReactNode]]:[])];
+ const views:[View,string,React.ReactNode][]=[['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as [View,string,React.ReactNode]]:[['brief','Brief',<FileText key="b" size={15}/>] as [View,string,React.ReactNode]])];
  return <div className="zn-page zp-page">
   <header className="zp-head">
    {mine?<div className="zp-title"><span className="zp-badge is-ink"><ListChecks size={22}/></span><div><h1>To-dos</h1><p>Tasks you created or were assigned, across every project.</p></div></div>
@@ -223,7 +224,7 @@ export default function ProjectBoard({id}:{id?:string}){
     <button type="button" className="zp-btn is-dark" onClick={()=>add()}><Plus size={15}/>New Task</button>
    </div>}
   </div>
-  <div className="zp-body" data-lenis-prevent>{view==='saved'?<SavedMessages/>:empty??(view==='list'?listView:view==='kanban'?kanbanView:timelineView)}</div>
+  <div className="zp-body" data-lenis-prevent>{view==='saved'?<SavedMessages/>:view==='brief'&&project?<ProjectBrief project={project} canEdit={canManage} onSaved={b=>setProject(p=>p&&{...p,brief:b})} clientName={project.lead_id?(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project.lead_id);return c?z.title(c):'';})():''}/>:empty??(view==='list'?listView:view==='kanban'?kanbanView:timelineView)}</div>
 
   {form&&<Modal title="New task" onClose={()=>setForm(null)} wide><form className="zn-modal-body" onSubmit={create}>
    <label className="zn-label">Task name<input className="zn-input" autoFocus maxLength={200} value={form.title} onChange={e=>setForm(f=>f&&{...f,title:e.target.value})} placeholder="What needs doing?"/></label>
