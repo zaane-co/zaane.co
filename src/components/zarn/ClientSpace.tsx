@@ -2,6 +2,7 @@
 import Dropdown from '@/components/ui/Dropdown';
 import {useConfirm} from './ConfirmProvider';
 import ClientProjects from './ClientProjects';
+import ClientBrief from './ClientBrief';
 import {useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
 import {FolderKanban,AlarmClock,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Plus,Receipt,ListChecks,LayoutGrid,History,Trash2,UserPlus,X} from 'lucide-react';
@@ -13,7 +14,7 @@ import LeadFiles,{type LeadFile} from '@/components/files/LeadFiles';
 import ChannelView from './ChannelView';
 import {Avatar} from './format';
 
-type Lead={id:string;name:string;company:string;email:string;phone:string;website:string;service_interested:string;budget_range:string;message:string;project_description:string;status:string;deal_value:number|null;currency:string;categories:string[];owner_id:string|null;created_at:string;last_activity_at:string};
+type Lead={id:string;brief_html:string;name:string;company:string;email:string;phone:string;website:string;service_interested:string;budget_range:string;message:string;project_description:string;status:string;deal_value:number|null;currency:string;categories:string[];owner_id:string|null;created_at:string;last_activity_at:string};
 export type SpaceData={
  files:LeadFile[];me:string;
  lead:Lead;channelId:string;stages:{key:string;label:string;color:string;kind:string;position:number}[];team:string[];
@@ -77,8 +78,7 @@ function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=
  const stage=data.stages.find(s=>s.key===lead.status);
  const open=data.tasks.filter(t=>!t.done_at),got=data.materials.filter(m=>m.received_at).length;
  const name=(id:string|null)=>id?(z.people[id]?.display_name??data.names[id]??'Someone'):'Unassigned';
- const brief=lead.project_description||lead.message;
- return <div className="zn-pane"><div className="zn-pane-inner zn-ov">
+  return <div className="zn-pane"><div className="zn-pane-inner zn-ov">
   <div className="zn-ov-stats">
    <div><small>Stage</small><b><i style={{background:stage?.color??'#52525b'}}/>{stage?.label??lead.status}</b></div>
    {isAdmin&&<div><small>Deal value</small><b>{lead.deal_value!=null?money(Number(lead.deal_value),lead.currency):<span className="zn-muted">Not set</span>}</b></div>}
@@ -90,7 +90,7 @@ function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=
    <div className="zn-ov-main">
     <section className="zn-card">
      <div className="zn-card-head"><h3>Project brief</h3>{lead.service_interested&&<span className="zn-cat">{lead.service_interested}</span>}</div>
-     {brief?<p className="zn-pre">{brief}</p>:<p className="zn-empty-line">No brief yet.{data.canStudio?' Add one in the Studio admin (Leads → Project).':''}</p>}
+     <ClientBrief lead={lead} canEdit/>
      {lead.categories.length>0&&<div className="zn-cats">{lead.categories.map(c=><span key={c} className="zn-cat">{c}</span>)}</div>}
     </section>
     <section className="zn-card">

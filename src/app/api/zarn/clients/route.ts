@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
+import {cleanHtml} from '@/lib/blog-html';
 import {canAddClients,canManageTeams,clientAccess,isStudioAdmin} from '@/lib/zarn-clients';
 import {currencies} from '@/lib/crm';
 // Client spaces in ZARN. A client is a CRM lead plus a private conversation for the staff assigned to it.
@@ -13,6 +14,7 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('task_add'),lead_id:id,title:z.string().trim().min(1,'Give the task a title.').max(300),due_at:z.iso.datetime({offset:true}).nullable().default(null),assignee_id:id.nullable().default(null)}),
  z.object({action:z.literal('task_toggle'),lead_id:id,id,done:z.boolean()}),
  z.object({action:z.literal('task_delete'),lead_id:id,id}),
+ z.object({action:z.literal('brief'),lead_id:id,html:z.string().max(100000)}),
  z.object({action:z.literal('note'),lead_id:id,body:z.string().trim().min(1).max(5000)}),
 ]);
 const fail=(error:string,status=400)=>Response.json({error},{status});
@@ -80,6 +82,13 @@ export async function POST(request:Request){
   case 'task_delete':{
    const {error}=await db.from('lead_tasks').delete().eq('id',b.id).eq('lead_id',b.lead_id);
    return error?fail('Could not delete the task.'):Response.json({ok:true});
+  }
+  case 'brief':{
+   const {allowed}=await clientAccess(me,b.lead_id);if(!allowed)return fail('You can’t edit this client’s brief.',403);
+   const html=cleanHtml(b.html);
+   const plain=html.replace(/<\/(p|h1|h2|h3|li|blockquote|pre)>/g,'\n').replace(/<br\s*\/?>/g,'\n').replace(/<[^>]+>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/\n{3,}/g,'\n\n').trim().slice(0,4000);
+   const {error}=await db.from('leads').update({brief_html:html,project_description:plain}).eq('id',b.lead_id);
+   return error?fail('Could not save the brief.'):Response.json({ok:true,html});
   }
   case 'note':{
    const {error}=await db.from('lead_activities').insert({lead_id:b.lead_id,kind:'note',body:b.body,author_id:me.user_id});

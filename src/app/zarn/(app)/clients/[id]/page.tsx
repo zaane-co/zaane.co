@@ -11,7 +11,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
  const {db,channel,allowed}=await clientAccess(me,id);
  if(!channel||!allowed)notFound();
  const [{data:lead},{data:stages},{data:team},{data:tasks},{data:materials},{data:activities},invoices,{data:staff},{data:files}]=await Promise.all([
-  db.from('leads').select('id,name,company,email,phone,website,service_interested,budget_range,message,project_description,status,deal_value,currency,categories,owner_id,created_at,last_activity_at').eq('id',id).single(),
+  db.from('leads').select('id,name,company,email,phone,website,service_interested,brief_html,budget_range,message,project_description,status,deal_value,currency,categories,owner_id,created_at,last_activity_at').eq('id',id).single(),
   db.from('pipeline_stages').select('key,label,color,kind,position'),
   db.from('zarn_channel_members').select('user_id').eq('channel_id',channel.id),
   db.from('lead_tasks').select('id,title,due_at,done_at,assignee_id,created_at').eq('lead_id',id).order('done_at',{nullsFirst:true}).order('due_at',{nullsFirst:false}),

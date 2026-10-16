@@ -64,7 +64,7 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
   {sharing&&<ShareDoc docId={doc.id} onClose={()=>setSharing(false)}/>}
  </div>;
 }
-function Toolbar({editor,linkOpen,setLinkOpen,url,setUrl}:{editor:Editor;linkOpen:boolean;setLinkOpen:(v:boolean)=>void;url:string;setUrl:(v:string)=>void}){
+export function Toolbar({editor,linkOpen,setLinkOpen,url,setUrl}:{editor:Editor;linkOpen:boolean;setLinkOpen:(v:boolean)=>void;url:string;setUrl:(v:string)=>void}){
  const b=(label:string,icon:React.ReactNode,active:boolean,run:()=>void)=><button key={label} type="button" className={active?'is-on':''} aria-label={label} aria-pressed={active} data-tip={label} onMouseDown={e=>e.preventDefault()} onClick={run}>{icon}</button>;
  function applyLink(){
   const href=url.trim();

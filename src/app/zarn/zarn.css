@@ -1203,3 +1203,9 @@ html[data-kb] .zn-prompt{display:none}
 .zcp-main{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}.zcp-main b{font-size:15px}.zcp-main small{font-size:12.5px;color:var(--z-muted)}
 .zcp-bar{display:block;height:6px;border-radius:999px;background:var(--z-panel-2);overflow:hidden}.zcp-bar i{display:block;height:100%;border-radius:999px}
 .zp-client-link{color:var(--z-muted);text-decoration:underline;text-underline-offset:2px}.zp-client-link:hover{color:var(--z-fg)}
+/* Client brief (formatted, editable) */
+.zcb{display:flex;flex-direction:column;gap:10px}
+.zcb-view,.zcb-prose{min-height:0;font-size:14.5px;line-height:1.65}
+.zcb-edit{border:1px solid var(--z-border);border-radius:12px;background:var(--z-input);padding:12px 14px;min-height:180px}
+.zcb-edit .zcb-prose{min-height:150px}
+.zcb-edit-btn{align-self:flex-start}
