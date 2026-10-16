@@ -42,6 +42,8 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
  useEffect(()=>{void load().then(rows=>{setMessages(rows);setLoading(false);});},[load]);
  useEffect(()=>{setActive(id);if(joined)markRead(id);return()=>setActive(null);},[id,joined,markRead,setActive]);
+ // Tells the app which thread is on screen, so replies you're already reading don't ring or notify.
+ useEffect(()=>{z.setActiveThread(thread?.id??null);return()=>z.setActiveThread(null);},[thread?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
  // Live updates for this channel.
  useEffect(()=>subscribe((e:ZEvent)=>{

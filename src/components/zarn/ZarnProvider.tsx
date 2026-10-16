@@ -26,7 +26,7 @@ type Ctx={
  db:ReturnType<typeof browserClient>;reload:()=>Promise<void>;markRead:(channelId:string)=>void;subscribe:(fn:(e:ZEvent)=>void)=>()=>void;
  active:string|null;setActive:(id:string|null)=>void;title:(c:ZChannel)=>string;lead:(id:string)=>ZLead|undefined;loadLead:(id:string,force?:boolean)=>void;
  openDm:(ids:string[])=>Promise<void>;notifyOn:boolean;enableNotify:()=>void;emit:(e:ZEvent)=>void;
- projects:ZProject[]|null;reloadProjects:()=>Promise<void>;taskStatuses:ZStatus[];reloadStatuses:()=>Promise<void>;dueTasks:number;refreshDue:()=>Promise<void>;
+ projects:ZProject[]|null;reloadProjects:()=>Promise<void>;setActiveThread:(id:string|null)=>void;taskStatuses:ZStatus[];reloadStatuses:()=>Promise<void>;dueTasks:number;refreshDue:()=>Promise<void>;
  todos:ZTodo[]|null;saved:Record<string,string>;toggleSaved:(m:{id:string;channel_id:string})=>Promise<void>;addTodo:(fields:TodoFields&{body:string})=>Promise<void>;updateTodo:(id:string,patch:TodoFields)=>Promise<void>;removeTodo:(id:string)=>Promise<void>;
 };
 const ZarnCtx=createContext<Ctx|null>(null);
@@ -40,6 +40,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  const [active,setActive]=useState<string|null>(null);
  const [leads,setLeads]=useState<Record<string,ZLead>>(()=>Object.fromEntries((initial.leads??[]).map(l=>[l.id,l])));
  const listeners=useRef(new Set<(e:ZEvent)=>void>());
+ const activeThreadRef=useRef<string|null>(null);
  const unreadReady=useRef(false),memberTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const activeRef=useRef(active);useEffect(()=>{activeRef.current=active;},[active]);
  const people=useMemo(()=>Object.fromEntries(members.map(m=>[m.user_id,m])),[members]);
@@ -55,6 +56,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
   if(open&&document.visibilityState==='visible'&&(map[open]?.unread||map[open]?.mentions)){map[open]={unread:0,mentions:0};void db.rpc('zarn_mark_read',{c:open}).then(()=>{});}
   setUnread(map);unreadReady.current=true;
  },[db]);
+ const setActiveThread=useCallback((id:string|null)=>{activeThreadRef.current=id;},[]);
  const [invites,setInvites]=useState<ZInvite[]>([]);
  const reloadInvites=useCallback(async()=>{
   try{const r=await fetch('/api/zarn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'invites'})});const d=await r.json();if(r.ok)setInvites(d.invites??[]);}catch{}
@@ -112,10 +114,29 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
    .on('postgres_changes',{event:'*',schema:'public',table:'zarn_messages'},(p:Change)=>{
     const row=(p.eventType==='DELETE'?p.old:p.new) as unknown as ZMessage;
     listeners.current.forEach(fn=>fn({table:'zarn_messages',type:p.eventType,row}));
-    if(p.eventType!=='INSERT'||row.parent_id||row.user_id===me.user_id)return;
+    if(p.eventType!=='INSERT'||row.user_id===me.user_id)return;
     // This app has the message, so the sender's tick moves from Sent to Delivered.
     if(membershipRef.current[row.channel_id])void db.rpc('zarn_mark_delivered',{c:row.channel_id});
     const mention=row.body.includes(`<@${me.user_id}>`)||row.body.includes('<!channel>');
+    if(row.parent_id){
+     // A reply inside a thread. DMs and client spaces: counts and notifies like any message there. Channels: only when you're tagged
+     // or it's a reply to your own message.
+     if(row.channel_id===activeRef.current&&document.visibilityState==='visible'&&activeThreadRef.current===row.parent_id)return;
+     const ch=channelsRef.current.find(x=>x.id===row.channel_id),always=ch?.kind==='dm'||ch?.kind==='client',muted=!!membershipRef.current[row.channel_id]?.muted;
+     void (async()=>{
+      let relevant=always||mention;
+      if(!relevant){const {data:par}=await db.from('zarn_messages').select('user_id').eq('id',row.parent_id!).maybeSingle();relevant=(par as {user_id:string|null}|null)?.user_id===me.user_id;}
+      if(!relevant||muted)return;
+      playChime();
+      if(always||mention)setUnread(u=>({...u,[row.channel_id]:{unread:(u[row.channel_id]?.unread??0)+(always?1:0),mentions:(u[row.channel_id]?.mentions??0)+(mention?1:0)}}));
+      if(document.visibilityState!=='visible'&&'Notification' in window&&Notification.permission==='granted'){
+       const who=peopleRef.current[row.user_id??'']?.display_name??'ZARN';
+       const n=new Notification(`${who} replied in a thread`,{body:plain(row.body,peopleRef.current).slice(0,140)||'Sent an attachment',tag:row.id});
+       n.onclick=()=>{window.focus();router.push(channelHref(ch,row.channel_id));};
+      }
+     })();
+     return;
+    }
     if(row.channel_id===activeRef.current&&document.visibilityState==='visible')return;
     // Sound for DMs, client spaces and @mentions (not every channel message), unless the conversation is muted.
     {const ch=channelsRef.current.find(x=>x.id===row.channel_id);if((mention||ch?.kind==='dm'||ch?.kind==='client'||getSound().scope==='all')&&!membershipRef.current[row.channel_id]?.muted)playChime();}
@@ -228,7 +249,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
 
  // Local echo: your own messages and reactions show instantly; the realtime copy is de-duplicated by id.
  const emit=useCallback((e:ZEvent)=>{listeners.current.forEach(fn=>fn(e));},[]);
- const value=useMemo<Ctx>(()=>({invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
-  [invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
+ const value=useMemo<Ctx>(()=>({invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,setActiveThread,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
+  [invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,setActiveThread,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
  return <ZarnCtx.Provider value={value}>{children}</ZarnCtx.Provider>;
 }
