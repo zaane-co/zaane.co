@@ -8,6 +8,7 @@ import {Modal,PeoplePicker} from './Dialogs';
 import {Avatar,dayOf,timeOf} from './format';
 import SavedMessages from './SavedMessages';
 import Dropdown from '@/components/ui/Dropdown';
+import {useConfirm} from './ConfirmProvider';
 
 export type TaskStatus='todo'|'in_progress'|'in_review'|'done';
 type Priority='low'|'medium'|'high';
@@ -37,7 +38,7 @@ function Stack({ids,max=3}:{ids:string[];max?:number}){
 // Tasks as a list, kanban or timeline. With an id it is one project; without one it is "My tasks":
 // everything you created or were assigned, across projects and on its own.
 export default function ProjectBoard({id}:{id?:string}){
- const z=useZarn(),{db,me,people,members:team,projects,reloadProjects,refreshDue}=z,router=useRouter();
+ const z=useZarn(),{db,me,people,members:team,projects,reloadProjects,refreshDue}=z,router=useRouter(),confirm=useConfirm();
  const mine=!id;
  const [project,setProject]=useState<ZProject|null|undefined>(mine?null:undefined),[members,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
  const [view,setView]=useState<View>('list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
@@ -122,7 +123,7 @@ export default function ProjectBoard({id}:{id?:string}){
  }
  async function removeMember(userId:string){
   const self=userId===me.user_id,name=people[userId]?.display_name??'this person';
-  if(!window.confirm(self?`Leave “${project?.name}”?`:`Remove ${name} from “${project?.name}”? They will also be taken off its tasks.`))return;
+  if(!await confirm({title:self?'Leave this project?':`Remove ${name}?`,message:self?`You will no longer see “${project?.name}” or its tasks.`:`${name} will lose access to “${project?.name}” and be taken off its tasks.`,confirm:self?'Leave':'Remove',danger:true}))return;
   const {error:err}=await db.from('zarn_project_members').delete().eq('project_id',id!).eq('user_id',userId);
   if(err){setError('Could not remove them.');return;}
   await db.from('zarn_task_assignees').delete().eq('project_id',id!).eq('user_id',userId);
@@ -131,7 +132,7 @@ export default function ProjectBoard({id}:{id?:string}){
   if(self){await reloadProjects();router.push('/zarn/projects');}
  }
  async function deleteProject(){
-  if(!window.confirm(`Delete “${project?.name}” and all its tasks? This can’t be undone.`))return;
+  if(!await confirm({title:'Delete this project?',message:`“${project?.name}” and all its tasks will be deleted. This can’t be undone.`,confirm:'Delete project',danger:true}))return;
   await db.from('zarn_projects').delete().eq('id',id!);await reloadProjects();router.push('/zarn/projects');
  }
  const add=(s:TaskStatus='todo')=>{setError('');setForm(blank(s,me.user_id,id??''));};
@@ -239,7 +240,7 @@ export default function ProjectBoard({id}:{id?:string}){
 
 // Details panel: edit everything about a task in place and talk about it in comments.
 function TaskDrawer({task,assignees,typeOptions,projectLabel,loadMembers,onClose,onPatch,onToggle,onDelete}:{task:Task;assignees:string[];typeOptions:string[];projectLabel:string;loadMembers:()=>Promise<string[]>;onClose:()=>void;onPatch:(v:Partial<Pick<Task,'title'|'description'|'status'|'type'|'priority'|'start_at'|'due_at'>>)=>Promise<boolean|undefined>;onToggle:(u:string)=>void;onDelete:()=>void}){
- const {db,me,people}=useZarn();
+ const {db,me,people}=useZarn(),confirm=useConfirm();
  const [title,setTitle]=useState(task.title),[desc,setDesc]=useState(task.description),[type,setType]=useState(task.type),[options,setOptions]=useState<string[]>([]),[comments,setComments]=useState<Comment[]>([]),[text,setText]=useState(''),[sending,setSending]=useState(false),[err,setErr]=useState('');
  useEffect(()=>{let live=true;void loadMembers().then(m=>{if(live)setOptions(m);});return()=>{live=false;};},[]); // eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{let live=true;void (async()=>{const {data}=await db.from('zarn_task_comments').select('*').eq('task_id',task.id).order('created_at');if(live)setComments((data??[]) as Comment[]);})();return()=>{live=false;};},[db,task.id]);
@@ -256,7 +257,7 @@ function TaskDrawer({task,assignees,typeOptions,projectLabel,loadMembers,onClose
  return <><button type="button" className="zp-scrim" aria-label="Close details" onClick={onClose}/>
   <aside className="zp-drawer" role="dialog" aria-label="Task details">
    <header><Dropdown variant="pill" label="Status" value={task.status} onChange={v=>void save({status:v as TaskStatus})} options={statuses.map(s=>({value:s.key,label:s.label,color:s.color}))}/>
-    <div className="zp-drawer-actions"><button type="button" className="zp-icon-btn" aria-label="Delete task" data-tip="Delete" onClick={()=>{if(window.confirm('Delete this task?'))onDelete();}}><Trash2 size={16}/></button><button type="button" className="zp-icon-btn" aria-label="Close" onClick={onClose}><X size={17}/></button></div></header>
+    <div className="zp-drawer-actions"><button type="button" className="zp-icon-btn" aria-label="Delete task" data-tip="Delete" onClick={async()=>{if(await confirm({title:'Delete this task?',message:`“${task.title}” will be deleted for everyone. This can’t be undone.`,confirm:'Delete task',danger:true}))onDelete();}}><Trash2 size={16}/></button><button type="button" className="zp-icon-btn" aria-label="Close" onClick={onClose}><X size={17}/></button></div></header>
    <div className="zp-drawer-body" data-lenis-prevent>
     <input className="zp-title-input" value={title} maxLength={200} onChange={e=>setTitle(e.target.value)} onBlur={()=>{const t=title.trim();if(!t){setTitle(task.title);return;}if(t!==task.title)void save({title:t});}} aria-label="Task name"/>
     <dl className="zp-fields">

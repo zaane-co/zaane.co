@@ -16,6 +16,7 @@ import {useSound} from '@/lib/zarn-sound';
 import SoundDialog from './SoundDialog';
 import Invites from './Invites';
 import NotifyPrompt from './NotifyPrompt';
+import ConfirmProvider from './ConfirmProvider';
 import {usePushState} from '@/lib/zarn-push-client';
 import CallProvider from './CallProvider';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
@@ -61,7 +62,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span></Link>;};
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
- return <CallProvider><ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
+ return <ConfirmProvider><CallProvider><ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
  <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}`}>
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
@@ -172,7 +173,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
    <p className="zn-note">ZARN then opens full-screen from your home screen like any other app.</p>
   </div></div>}
  </div>
- </ShellCtx.Provider></CallProvider>;
+ </ShellCtx.Provider></CallProvider></ConfirmProvider>;
 }
 
 export async function signOut(){await fetch('/api/zarn/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});window.location.assign('/zarn/login');}

@@ -1,5 +1,6 @@
 'use client';
 import Dropdown from '@/components/ui/Dropdown';
+import {useConfirm} from './ConfirmProvider';
 import {useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
 import {AlarmClock,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Plus,Receipt,ListChecks,LayoutGrid,History,Trash2,UserPlus,X} from 'lucide-react';
@@ -174,7 +175,7 @@ function Activity({data}:{data:SpaceData}){
 }
 
 function TeamDialog({data,onClose,onSave}:{data:SpaceData;onClose:()=>void;onSave:(add:string[],remove:string[])=>Promise<void>}){
- const z=useZarn();
+ const z=useZarn(),confirm=useConfirm();
  const [sel,setSel]=useState<string[]>([]),[q,setQ]=useState(''),[busy,setBusy]=useState(false);
  const staff=z.members.filter(m=>!m.deactivated_at&&m.account_type==='member');
  const onTeam=staff.filter(m=>data.team.includes(m.user_id)),pool=staff.filter(m=>!data.team.includes(m.user_id)&&`${m.display_name} ${m.title}`.toLowerCase().includes(q.toLowerCase()));
@@ -183,7 +184,7 @@ function TeamDialog({data,onClose,onSave}:{data:SpaceData;onClose:()=>void;onSav
   <div className="zn-modal-head"><h2>Client team</h2><button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>
   <p className="zn-note">Only these people (and admins) can see this client’s space and chat.</p>
   <p className="zn-section-label">On this client · {onTeam.length}</p>
-  <ul className="zn-list zn-member-list">{onTeam.length?onTeam.map(m=><li key={m.user_id}><div className="zn-person"><Avatar m={m} size={28}/><span><b>{m.display_name}</b><small>{m.title||m.email}</small></span><button type="button" className="zn-remove" disabled={busy} onClick={()=>{if(window.confirm(`Remove ${m.display_name} from this client? They will lose access to its space and chat.`))void run([],[m.user_id]);}}>Remove</button></div></li>):<li className="zn-note">No one yet. Add people below.</li>}</ul>
+  <ul className="zn-list zn-member-list">{onTeam.length?onTeam.map(m=><li key={m.user_id}><div className="zn-person"><Avatar m={m} size={28}/><span><b>{m.display_name}</b><small>{m.title||m.email}</small></span><button type="button" className="zn-remove" disabled={busy} onClick={async()=>{if(await confirm({title:`Remove ${m.display_name}?`,message:'They will lose access to this client’s space and chat.',confirm:'Remove',danger:true}))void run([],[m.user_id]);}}>Remove</button></div></li>):<li className="zn-note">No one yet. Add people below.</li>}</ul>
   <p className="zn-section-label">Add people</p>
   <input className="zn-input" placeholder="Search staff" value={q} onChange={e=>setQ(e.target.value)}/>
   <ul className="zn-list zn-list-scroll">{pool.map(m=><li key={m.user_id}><button type="button" className={sel.includes(m.user_id)?'is-on':''} onClick={()=>setSel(s=>s.includes(m.user_id)?s.filter(x=>x!==m.user_id):[...s,m.user_id])}><Avatar m={m} size={28}/><span><b>{m.display_name}</b><small>{m.title||m.email}</small></span>{sel.includes(m.user_id)&&<Check size={16} className="zn-check"/>}</button></li>)}</ul>
