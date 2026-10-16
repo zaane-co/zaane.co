@@ -1,6 +1,19 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Baseline security headers for every page: no MIME sniffing, no framing by other sites, trimmed referrers,
+  // and the browser features ZARN needs (microphone and camera for calls) limited to this site.
+  async headers() {
+    return [{
+      source: "/:path*",
+      headers: [
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        { key: "Permissions-Policy", value: "microphone=(self), camera=(self), geolocation=(), payment=()" },
+      ],
+    }];
+  },
   async redirects() {
     return [{ source: "/pricing", destination: "/contact", permanent: true }];
   },
