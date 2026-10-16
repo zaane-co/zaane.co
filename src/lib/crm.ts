@@ -13,7 +13,7 @@ export const currencies=['NGN','USD','GBP','EUR'] as const;
 export const activityKinds=['note','call','meeting'] as const;
 export const callOutcomes=['Connected','No answer','Left voicemail','Wrong number'];
 
-export type Lead={id:string;name:string;email:string;company:string;phone:string;website:string;service_interested:string;budget_range:string;message:string;status:Stage;source:string;deal_value:number|null;currency:string;owner_id:string|null;tags:string[];categories:string[];project_description:string;lost_reason:string;position:number;stage_changed_at:string;last_activity_at:string;created_at:string;updated_at:string};
+export type Lead={id:string;name:string;email:string;company:string;phone:string;website:string;service_interested:string;budget_range:string;message:string;status:Stage;source:string;deal_value:number|null;currency:string;owner_id:string|null;tags:string[];categories:string[];project_description:string;project_completed_at:string|null;lost_reason:string;position:number;stage_changed_at:string;last_activity_at:string;created_at:string;updated_at:string};
 export type Activity={id:string;lead_id:string;kind:'note'|'call'|'meeting'|'email'|'stage'|'task';body:string;meta:Record<string,string>;author_id:string|null;created_at:string};
 export type Task={id:string;lead_id:string;title:string;due_at:string|null;done_at:string|null;assignee_id:string|null;created_at:string};
 export type Staff={id:string;name:string;email:string};

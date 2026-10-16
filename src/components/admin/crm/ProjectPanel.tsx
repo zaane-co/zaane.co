@@ -2,7 +2,7 @@
 import Flash from '../Flash';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Check,Plus} from 'lucide-react';
+import {Check,CircleCheck,Plus,RotateCcw} from 'lucide-react';
 import {crmApi,type Lead} from '@/lib/crm';
 
 // Project scope for a lead: a free-form description and any number of service categories.
@@ -18,6 +18,11 @@ export default function ProjectPanel({lead,categories}:{lead:Lead;categories:str
   try{await crmApi({action:'update_lead',id:lead.id,values:{project_description:desc,categories:picked}});setFlash('Project saved.');router.refresh();}
   catch(e){setFlash(e instanceof Error?e.message:'Could not save.');}finally{setBusy(false);}
  }
+ async function setCompleted(done:boolean){
+  setBusy(true);setFlash('');
+  try{await crmApi({action:'update_lead',id:lead.id,values:{project_completed_at:done?new Date().toISOString():null}});setFlash(done?'Project marked as completed. The team sees it in ZARN Activity.':'Project reopened.');router.refresh();}
+  catch(e){setFlash(e instanceof Error?e.message:'Could not update the project.');}finally{setBusy(false);}
+ }
  async function create(e:React.FormEvent){
   e.preventDefault();const n=name.trim().replace(/\s+/g,' ');if(!n)return;
   setBusy(true);setFlash('');
@@ -26,7 +31,7 @@ export default function ProjectPanel({lead,categories}:{lead:Lead;categories:str
  }
  const toggle=(c:string)=>setPicked(p=>p.includes(c)?p.filter(x=>x!==c):[...p,c]);
  return <section className="za-card">
-  <div className="za-card-head"><h2>Project</h2><small className="za-date">{picked.length} categor{picked.length===1?'y':'ies'}</small></div>
+  <div className="za-card-head"><h2>Project</h2>{lead.project_completed_at?<button type="button" className="za-btn za-btn-ghost" disabled={busy} onClick={()=>void setCompleted(false)}><RotateCcw size={14}/>Reopen project</button>:<button type="button" className="za-btn za-btn-primary" disabled={busy} onClick={()=>void setCompleted(true)}><CircleCheck size={14}/>Mark project completed</button>}</div>
   <div className="za-card-pad za-project">
    <div className="za-field"><span className="za-field-name">Categories (pick as many as apply)</span>
     <div className="za-chips za-cat-chips">
@@ -37,6 +42,7 @@ export default function ProjectPanel({lead,categories}:{lead:Lead;categories:str
    </div>
    <label className="za-field"><span className="za-field-name">Project description</span>
     <textarea rows={12} maxLength={50000} placeholder={'What are we building? Goals, scope, deliverables, timeline, anything agreed on calls…'} value={desc} onChange={e=>setDesc(e.target.value)}/></label>
+   {lead.project_completed_at&&<Flash tone="success">Completed on {new Date(lead.project_completed_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}.</Flash>}
    {flash&&<Flash>{flash}</Flash>}
    {dirty&&<div className="za-save-row"><button type="button" className="za-btn za-btn-ghost" onClick={()=>{setDesc(lead.project_description);setPicked(lead.categories);}}>Discard</button><button type="button" className="za-btn za-btn-primary" disabled={busy} onClick={()=>void save()}>{busy?'Saving…':'Save project'}</button></div>}
   </div>

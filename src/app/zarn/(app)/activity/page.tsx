@@ -1,2 +1,2 @@
-import Mentions from '@/components/zarn/Mentions';
-export default function Page(){return <Mentions/>;}
+import Activity from '@/components/zarn/Activity';
+export default function Page(){return <Activity/>;}

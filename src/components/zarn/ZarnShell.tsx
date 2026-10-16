@@ -2,10 +2,11 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {Hash,AtSign,BarChart3,Bell,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {FolderKanban,Hash,AtSign,BarChart3,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
+import {NewProject} from './Projects';
 import {Browse,Invite,NewChannel,NewDm,Profile,SearchDialog} from './Dialogs';
 import AddClient from './AddClient';
 import {useInstall} from './ZarnPwa';
@@ -13,8 +14,8 @@ import ProfileSheet from './ProfileSheet';
 import {setSound,useSound} from '@/lib/zarn-sound';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 
-type Area='chat'|'business'|'clients';
-const areaOf=(p:string):Area=>p.startsWith('/zarn/clients')?'clients':p.startsWith('/zarn/business')||p.startsWith('/zarn/crm')?'business':'chat';
+type Area='chat'|'business'|'clients'|'projects';
+const areaOf=(p:string):Area=>p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')?'clients':p.startsWith('/zarn/business')||p.startsWith('/zarn/crm')?'business':'chat';
 // Phone tab roots (tab bar visible). Inside a conversation the tab bar hides and a back arrow shows instead.
 const tabs=['/zarn/home','/zarn/dms','/zarn/clients','/zarn/activity','/zarn/you'];
 
@@ -22,9 +23,10 @@ const tabs=['/zarn/home','/zarn/dms','/zarn/clients','/zarn/activity','/zarn/you
 // Phones: Slack-style bottom tabs (Home, DMs, Clients, Activity, You), full-screen lists, back arrows in conversations.
 export default function ZarnShell({children}:{children:React.ReactNode}){
  const z=useZarn(),{me,channels}=z,pathname=usePathname(),{light}=useAdminTheme();
+ const dueToday=new Date().toISOString().slice(0,10),dueTodos=(z.todos??[]).filter(t=>!t.done_at&&t.due_at&&t.due_at<=dueToday).length;
  const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,badges}=nav;
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
- const [clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false);
+ const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false);
  const router=useRouter();
  const {mode:installMode,install}=useInstall(),sound=useSound();
  const routeArea=areaOf(pathname);
@@ -62,11 +64,12 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
     {railBtn('chat',<MessageSquare size={20}/>,'Chat',badges.home+badges.dms)}
     {canBusiness&&railBtn('business',<BarChart3 size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
+    {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',0)}
     <button type="button" className="zn-rail-me" aria-label="Your profile" onClick={()=>setProfileId(me.user_id)}><Avatar m={me} size={34} online/></button>
    </nav>
    <aside className="zn-sidebar">
     <div className="zn-workspace">
-     <button type="button" className="zn-ws-btn" onClick={()=>setMenu(v=>!v)} aria-expanded={menu}><b>{area==='chat'?'ZARN':area==='business'?'Business':'Clients'}</b>{guest&&<span className="zn-guest-tag">Guest</span>}<ChevronDown size={14}/></button>
+     <button type="button" className="zn-ws-btn" onClick={()=>setMenu(v=>!v)} aria-expanded={menu}><b>{area==='chat'?'ZARN':area==='business'?'Business':area==='projects'?'Projects':'Clients'}</b>{guest&&<span className="zn-guest-tag">Guest</span>}<ChevronDown size={14}/></button>
      {area==='chat'&&<button type="button" className="zn-icon" aria-label="New message" data-tip="New message" onClick={()=>setDialog('dm')}><MessageSquarePlus size={17}/></button>}
      {area==='clients'&&canAddClient&&<button type="button" className="zn-icon" aria-label="Add client" data-tip="Add client" onClick={()=>setDialog('client')}><Plus size={18}/></button>}
      {menu&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setMenu(false)}/><div className="zn-menu">
@@ -87,7 +90,10 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
     <div className="zn-nav" data-lenis-prevent>
      {area==='chat'&&<>
       <button type="button" className="zn-nav-item zn-search-btn" onClick={()=>setDialog('search')}><Search size={15}/><span>Search</span><kbd>⌘K</kbd></button>
-      {link('/zarn/activity',<AtSign size={15}/>,'Mentions',badges.activity)}
+      {link('/zarn/activity',<Bell size={15}/>,'Activity')}
+      {link('/zarn/mentions',<AtSign size={15}/>,'Mentions',badges.activity)}
+      {link('/zarn/files',<Files size={15}/>,'Files')}
+      {link('/zarn/todos',<ListChecks size={15}/>,'To-dos',dueTodos)}
       {link('/zarn/people',<Contact size={15}/>,'People')}
       {starred.length>0&&section('starred','Starred',starred.map(c=><ChannelRow key={c.id} c={c}/>))}
       {section('channels','Channels',<>{rooms.map(c=><ChannelRow key={c.id} c={c}/>)}{!guest&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('browse')}><Plus size={15}/><span>Browse channels</span></button>}</>,canCreate?()=>setDialog('channel'):undefined)}
@@ -99,6 +105,11 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       {link('/zarn/business/clients',<Users size={15}/>,'All clients')}
       {staffAdmin||me.staffRole==='finance'||me.staffRole==='sales'?<a className="zn-nav-item" href="/admin/invoices" target="_blank" rel="noopener noreferrer"><LayoutDashboard size={15}/><span>Invoices (admin)</span></a>:null}
       <p className="zn-nav-note">Client conversations live under Clients. Deals, values and stages live here.</p>
+     </>}
+     {area==='projects'&&<>
+      {link('/zarn/projects',<FolderKanban size={15}/>,'All projects')}
+      <button type="button" className="zn-nav-item zn-add-client" onClick={()=>setNewProject(true)}><Plus size={15}/><span>New project</span></button>
+      {section('myprojects','My projects',(z.projects??[]).length?(z.projects??[]).map(p=><Link key={p.id} href={`/zarn/projects/${p.id}`} className={`zn-nav-item${pathname===`/zarn/projects/${p.id}`?' is-active':''}`}><i className="zp-dot" style={{background:p.color}}>{p.name.slice(0,1).toUpperCase()}</i><span>{p.name}</span></Link>):<p className="zn-nav-note">No projects yet.</p>)}
      </>}
      {area==='clients'&&<>
       {clients.length>6&&<label className="zn-client-search"><Search size={14}/><input placeholder="Find a client" value={clientQ} onChange={e=>setClientQ(e.target.value)}/></label>}
@@ -129,13 +140,14 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
     {tab('/zarn/home',<Home size={23}/>,'Home',badges.home)}
     {tab('/zarn/dms',<MessageSquare size={23}/>,'DMs',badges.dms)}
     {!guest&&tab('/zarn/clients',<Briefcase size={23}/>,'Clients',badges.clients)}
-    {tab('/zarn/activity',<AtSign size={23}/>,'Activity',badges.activity)}
+    {tab('/zarn/activity',<Bell size={23}/>,'Activity',0)}
     {tab('/zarn/you',<Avatar m={me} size={26}/>,'You',0)}
    </nav>
    <button type="button" className={`zn-fab${quick?' is-open':''}`} aria-label={quick?'Close quick actions':'Quick actions'} aria-expanded={quick} onClick={()=>setQuick(v=>!v)}><Plus size={26}/></button>
   </div>
   {profileId&&<ProfileSheet userId={profileId} onClose={()=>setProfileId(null)} onEdit={()=>{setProfileId(null);setDialog('profile');}}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
+  {newProject&&<NewProject onClose={()=>setNewProject(false)}/>}
   {dialog==='dm'&&<NewDm onClose={()=>setDialog(null)}/>}
   {dialog==='browse'&&<Browse onClose={()=>setDialog(null)}/>}
   {dialog==='search'&&<SearchDialog onClose={()=>setDialog(null)}/>}

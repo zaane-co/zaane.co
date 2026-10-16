@@ -10,12 +10,19 @@ import {playChime} from '@/lib/zarn-sound';
 
 export type ZEvent={table:'zarn_messages';type:'INSERT'|'UPDATE'|'DELETE';row:ZMessage}|{table:'zarn_reactions';type:'INSERT'|'DELETE';row:ZReaction};
 type Unread=Record<string,{unread:number;mentions:number}>;
+export type ZProject={id:string;name:string;description:string;color:string;created_by:string|null;created_at:string};
+export type TodoStatus='todo'|'in_progress'|'done';
+export type TodoPriority='low'|'medium'|'high';
+export type ZTodo={id:string;body:string;description:string;status:TodoStatus;priority:TodoPriority;message_id:string|null;channel_id:string|null;start_at:string|null;due_at:string|null;done_at:string|null;created_at:string};
+export type TodoFields=Partial<Pick<ZTodo,'body'|'description'|'status'|'priority'|'start_at'|'due_at'>>;
 export type Me=ZMember&{staffRole:string|null};
 type Ctx={
  me:Me;people:Record<string,ZMember>;members:ZMember[];channels:ZChannel[];membership:Record<string,ZMembership>;unread:Unread;online:Set<string>;
  db:ReturnType<typeof browserClient>;reload:()=>Promise<void>;markRead:(channelId:string)=>void;subscribe:(fn:(e:ZEvent)=>void)=>()=>void;
  active:string|null;setActive:(id:string|null)=>void;title:(c:ZChannel)=>string;lead:(id:string)=>ZLead|undefined;loadLead:(id:string,force?:boolean)=>void;
  openDm:(ids:string[])=>Promise<void>;notifyOn:boolean;enableNotify:()=>void;emit:(e:ZEvent)=>void;
+ projects:ZProject[]|null;reloadProjects:()=>Promise<void>;
+ todos:ZTodo[]|null;saved:Record<string,string>;toggleSaved:(m:{id:string;channel_id:string})=>Promise<void>;addTodo:(fields:TodoFields&{body:string})=>Promise<void>;updateTodo:(id:string,patch:TodoFields)=>Promise<void>;removeTodo:(id:string)=>Promise<void>;
 };
 const ZarnCtx=createContext<Ctx|null>(null);
 export const useZarn=()=>{const c=useContext(ZarnCtx);if(!c)throw new Error('ZARN context missing');return c;};
@@ -112,9 +119,40 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  const enableNotify=useCallback(()=>{if('Notification' in window)void Notification.requestPermission().then(()=>window.dispatchEvent(new Event('zarn-notify')));},[]);
 
  const subscribe=useCallback((fn:(e:ZEvent)=>void)=>{listeners.current.add(fn);return()=>{listeners.current.delete(fn);};},[]);
+ // Projects you belong to (RLS decides), for the sidebar.
+ const [projects,setProjects]=useState<ZProject[]|null>(null);
+ const reloadProjects=useCallback(async()=>{const {data}=await db.from('zarn_projects').select('id,name,description,color,created_by,created_at').order('created_at');setProjects((data??[]) as ZProject[]);},[db]);
+ useEffect(()=>{if(me.account_type!=='guest')void reloadProjects();else setProjects([]);},[reloadProjects,me.account_type]);
+
+ // To-dos and saved messages. Rows are only ever yours (RLS), so they load once and are edited locally.
+ const [todos,setTodos]=useState<ZTodo[]|null>(null);
+ useEffect(()=>{let live=true;void (async()=>{const {data}=await db.from('zarn_todos').select('id,body,description,status,priority,message_id,channel_id,start_at,due_at,done_at,created_at').eq('user_id',me.user_id).order('created_at',{ascending:false});if(live)setTodos((data??[]) as ZTodo[]);})();return()=>{live=false;};},[db,me.user_id]);
+ const saved=useMemo(()=>Object.fromEntries((todos??[]).filter(t=>t.message_id).map(t=>[t.message_id!,t.id])),[todos]);
+ const addTodo=useCallback(async(f:TodoFields&{body:string})=>{
+  const status=f.status??'todo';
+  const {data,error}=await db.from('zarn_todos').insert({user_id:me.user_id,body:f.body.trim().slice(0,500),description:(f.description??'').slice(0,2000),status,priority:f.priority??'medium',start_at:f.start_at||null,due_at:f.due_at||null,done_at:status==='done'?new Date().toISOString():null}).select('id,body,description,status,priority,message_id,channel_id,start_at,due_at,done_at,created_at').single();
+  if(error)throw new Error('Could not add that to-do.');setTodos(t=>[data as ZTodo,...(t??[])]);
+ },[db,me.user_id]);
+ const updateTodo=useCallback(async(id:string,patch:TodoFields)=>{
+  // done_at follows status so older code that only reads done_at keeps working.
+  const full:Record<string,unknown>={...patch};if(patch.status)full.done_at=patch.status==='done'?new Date().toISOString():null;
+  setTodos(t=>(t??[]).map(x=>x.id===id?{...x,...full} as ZTodo:x));
+  const {error}=await db.from('zarn_todos').update(full).eq('id',id);
+  if(error)throw new Error('Could not update that to-do.');
+ },[db]);
+ const removeTodo=useCallback(async(id:string)=>{
+  setTodos(t=>(t??[]).filter(x=>x.id!==id));await db.from('zarn_todos').delete().eq('id',id);
+ },[db]);
+ const toggleSaved=useCallback(async(m:{id:string;channel_id:string})=>{
+  const existing=saved[m.id];
+  if(existing){await removeTodo(existing);return;}
+  const {data,error}=await db.from('zarn_todos').insert({user_id:me.user_id,message_id:m.id,channel_id:m.channel_id}).select('id,body,description,status,priority,message_id,channel_id,start_at,due_at,done_at,created_at').single();
+  if(!error&&data)setTodos(t=>[data as ZTodo,...(t??[])]);
+ },[db,me.user_id,saved,removeTodo]);
+
  // Local echo: your own messages and reactions show instantly; the realtime copy is de-duplicated by id.
  const emit=useCallback((e:ZEvent)=>{listeners.current.forEach(fn=>fn(e));},[]);
- const value=useMemo<Ctx>(()=>({me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit}),
-  [me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit]);
+ const value=useMemo<Ctx>(()=>({me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
+  [me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
  return <ZarnCtx.Provider value={value}>{children}</ZarnCtx.Provider>;
 }

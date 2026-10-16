@@ -16,6 +16,7 @@ const lead=z.object({
  deal_value:z.number().nonnegative().max(1e12).nullable(),currency:z.enum(currencies),owner_id:id.nullable(),
  tags:z.array(text(30).min(1)).max(12),lost_reason:text(300),
  project_description:text(50000),categories:z.array(text(60).min(1)).max(12),
+ project_completed_at:z.iso.datetime({offset:true}).nullable(),
 });
 const due=z.iso.datetime({offset:true}).nullable();
 const actions=z.discriminatedUnion('action',[
