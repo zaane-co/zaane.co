@@ -20,6 +20,19 @@ export function useInstall(){
 }
 export default function ZarnPwa(){
  const router=useRouter();
+ // Keep the app exactly as tall as the visible area, so when the phone keyboard opens the message bar sits right on top of it
+ // (like a native app) instead of the whole page sliding up and leaving a gap.
+ useEffect(()=>{
+  const vv=window.visualViewport;if(!vv)return;
+  const root=document.documentElement;
+  const set=()=>{
+   root.style.setProperty('--zvh',`${vv.height}px`);root.style.setProperty('--zvt',`${vv.offsetTop}px`);
+   root.toggleAttribute('data-kb',window.innerHeight-vv.height>120);
+   if(window.scrollY)window.scrollTo(0,0);
+  };
+  set();vv.addEventListener('resize',set);vv.addEventListener('scroll',set);
+  return()=>{vv.removeEventListener('resize',set);vv.removeEventListener('scroll',set);['--zvh','--zvt'].forEach(k=>root.style.removeProperty(k));root.removeAttribute('data-kb');};
+ },[]);
  // Tapping a notification goes to that exact conversation: a message from the service worker (app already open) or a saved target (app was closed).
  useEffect(()=>{
   const clear=()=>{void caches?.open('zarn-nav').then(c=>c.delete('/__nav')).catch(()=>{});};
