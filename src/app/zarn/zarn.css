@@ -982,3 +982,7 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 .zn-remove:hover:not(:disabled){background:#dc2626;border-color:#dc2626;color:#fff}.zn-remove:disabled{opacity:.5}
 .zn-section-label{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--z-faint);margin-top:4px}
 button.zp-members{display:inline-flex;align-items:center;border-radius:999px;padding:2px}button.zp-members:hover{background:var(--z-hover)}
+/* Saved page */
+.zn-saved-page{flex:1;overflow-y:auto;padding:16px 24px 28px;display:flex;flex-direction:column;gap:22px}
+.zn-saved-page .zn-section-label{display:flex;align-items:center;gap:6px;margin:0 0 8px}
+.zn-starred-list{display:flex;flex-direction:column;gap:2px}
