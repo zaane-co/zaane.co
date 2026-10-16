@@ -11,6 +11,7 @@ import {ImagePlus,Bold,Check,ChevronLeft,Code2,Heading1,Heading2,Italic,Link2,Li
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import ShareDoc from './ShareDoc';
+import {usePictureClick} from './ImageLightbox';
 import Image from '@tiptap/extension-image';
 import {imageTools} from './editor-images';
 type Doc={id:string;title:string;content:string;owner_id:string;updated_at:string};
@@ -32,7 +33,7 @@ export default function DocPage({id}:{id:string}){
  return <Editing doc={doc} role={role} meId={me.user_id}/>;
 }
 function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
- const {db}=useZarn(),router=useRouter(),confirm=useConfirm();
+ const {db}=useZarn(),router=useRouter(),confirm=useConfirm(),pics=usePictureClick();
  const canEdit=role==='owner'||role==='edit';
  const [title,setTitle]=useState(doc.title),[state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
  const editorRef=useRef<Editor|null>(null),fileRef=useRef<HTMLInputElement>(null);
@@ -69,7 +70,7 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
   {canEdit&&editor&&<Toolbar editor={editor} linkOpen={linkOpen} setLinkOpen={setLinkOpen} url={url} setUrl={setUrl} onImage={()=>fileRef.current?.click()}/>}
   <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={e=>{void tools.insert(Array.from(e.target.files??[]));e.target.value='';}}/>
   {(img.busy||img.error)&&<p className={`zd-imgstate${img.error?' is-error':''}`} role="status">{img.busy?'Uploading picture…':img.error}</p>}
-  <div className="zd-scroll" data-lenis-prevent><div className="zd-sheet"><EditorContent editor={editor}/></div></div>
+  <div className="zd-scroll" data-lenis-prevent><div className="zd-sheet" onClick={canEdit?undefined:pics.onClick}><EditorContent editor={editor}/></div>{pics.node}</div>
   {sharing&&<ShareDoc docId={doc.id} onClose={()=>setSharing(false)}/>}
  </div>;
 }
