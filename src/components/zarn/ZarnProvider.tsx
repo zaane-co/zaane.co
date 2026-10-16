@@ -11,7 +11,9 @@ import {subscribePush} from '@/lib/zarn-push-client';
 
 export type ZEvent={table:'zarn_messages';type:'INSERT'|'UPDATE'|'DELETE';row:ZMessage}|{table:'zarn_reactions';type:'INSERT'|'DELETE';row:ZReaction};
 type Unread=Record<string,{unread:number;mentions:number}>;
-export type ZProject={id:string;name:string;description:string;color:string;created_by:string|null;created_at:string};
+export type ZProject={id:string;name:string;description:string;color:string;lead_id:string|null;created_by:string|null;created_at:string};
+export type ZStatus={key:string;label:string;color:string;position:number;builtin:boolean;created_by:string|null};
+const DEFAULT_STATUSES:ZStatus[]=[{key:'todo',label:'To-do',color:'#71717a',position:0,builtin:true,created_by:null},{key:'in_progress',label:'On progress',color:'#2563eb',position:1,builtin:true,created_by:null},{key:'in_review',label:'In review',color:'#d97706',position:2,builtin:true,created_by:null},{key:'done',label:'Done',color:'#16a34a',position:3,builtin:true,created_by:null}];
 export type TodoStatus='todo'|'in_progress'|'done';
 export type TodoPriority='low'|'medium'|'high';
 export type ZTodo={id:string;body:string;description:string;status:TodoStatus;priority:TodoPriority;message_id:string|null;channel_id:string|null;start_at:string|null;due_at:string|null;done_at:string|null;created_at:string};
@@ -24,7 +26,7 @@ type Ctx={
  db:ReturnType<typeof browserClient>;reload:()=>Promise<void>;markRead:(channelId:string)=>void;subscribe:(fn:(e:ZEvent)=>void)=>()=>void;
  active:string|null;setActive:(id:string|null)=>void;title:(c:ZChannel)=>string;lead:(id:string)=>ZLead|undefined;loadLead:(id:string,force?:boolean)=>void;
  openDm:(ids:string[])=>Promise<void>;notifyOn:boolean;enableNotify:()=>void;emit:(e:ZEvent)=>void;
- projects:ZProject[]|null;reloadProjects:()=>Promise<void>;dueTasks:number;refreshDue:()=>Promise<void>;
+ projects:ZProject[]|null;reloadProjects:()=>Promise<void>;taskStatuses:ZStatus[];reloadStatuses:()=>Promise<void>;dueTasks:number;refreshDue:()=>Promise<void>;
  todos:ZTodo[]|null;saved:Record<string,string>;toggleSaved:(m:{id:string;channel_id:string})=>Promise<void>;addTodo:(fields:TodoFields&{body:string})=>Promise<void>;updateTodo:(id:string,patch:TodoFields)=>Promise<void>;removeTodo:(id:string)=>Promise<void>;
 };
 const ZarnCtx=createContext<Ctx|null>(null);
@@ -171,8 +173,11 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
 
  const subscribe=useCallback((fn:(e:ZEvent)=>void)=>{listeners.current.add(fn);return()=>{listeners.current.delete(fn);};},[]);
  // Projects you belong to (RLS decides), for the sidebar.
- const [projects,setProjects]=useState<ZProject[]|null>(null);
- const reloadProjects=useCallback(async()=>{const {data}=await db.from('zarn_projects').select('id,name,description,color,created_by,created_at').order('created_at');setProjects((data??[]) as ZProject[]);},[db]);
+ const [projects,setProjects]=useState<ZProject[]|null>(null),[taskStatuses,setTaskStatuses]=useState<ZStatus[]>(DEFAULT_STATUSES);
+ const reloadStatuses=useCallback(async()=>{const {data}=await db.from('zarn_task_statuses').select('key,label,color,position,builtin,created_by').order('position');if(data?.length)setTaskStatuses(data as ZStatus[]);},[db]);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
+ useEffect(()=>{void reloadStatuses();const ch=db.channel('zarn-statuses').on('postgres_changes',{event:'*',schema:'public',table:'zarn_task_statuses'},()=>{void reloadStatuses();}).subscribe();return()=>{void db.removeChannel(ch);};},[db,reloadStatuses]);
+ const reloadProjects=useCallback(async()=>{const {data}=await db.from('zarn_projects').select('id,name,description,color,lead_id,created_by,created_at').order('created_at');setProjects((data??[]) as ZProject[]);},[db]);
  useEffect(()=>{if(me.account_type!=='guest')void reloadProjects();else setProjects([]);},[reloadProjects,me.account_type]);
 
  // Open tasks assigned to you that are due today or already late, for the sidebar badge.
@@ -214,7 +219,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
 
  // Local echo: your own messages and reactions show instantly; the realtime copy is de-duplicated by id.
  const emit=useCallback((e:ZEvent)=>{listeners.current.forEach(fn=>fn(e));},[]);
- const value=useMemo<Ctx>(()=>({invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
-  [invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
+ const value=useMemo<Ctx>(()=>({invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
+  [invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
  return <ZarnCtx.Provider value={value}>{children}</ZarnCtx.Provider>;
 }

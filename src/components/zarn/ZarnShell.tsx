@@ -63,7 +63,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
  return <ConfirmProvider><CallProvider><ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
- <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}`}>
+ <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}`} data-lenis-prevent>
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
     <button type="button" className="zn-rail-logo" aria-label="Workspace menu" onClick={()=>setMenu(v=>!v)}><img src="/zarnlogo.png" alt="ZARN"/></button>

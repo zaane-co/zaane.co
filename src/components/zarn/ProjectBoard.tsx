@@ -5,19 +5,22 @@ import {useRouter} from 'next/navigation';
 import {Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
 import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal,PeoplePicker} from './Dialogs';
+import AddStatusDialog from './AddStatusDialog';
+import AssigneePicker from './AssigneePicker';
+import {NewProject} from './Projects';
 import {Avatar,dayOf,timeOf} from './format';
 import SavedMessages from './SavedMessages';
 import Dropdown from '@/components/ui/Dropdown';
 import {useConfirm} from './ConfirmProvider';
 
-export type TaskStatus='todo'|'in_progress'|'in_review'|'done';
+export type TaskStatus=string;
 type Priority='low'|'medium'|'high';
 type Task={id:string;project_id:string|null;title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string|null;due_at:string|null;position:number;created_by:string|null;created_at:string};
 type Comment={id:string;task_id:string;user_id:string|null;body:string;created_at:string};
 type View='kanban'|'timeline'|'list'|'saved';
 type Form={title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string;due_at:string;project_id:string;assignees:string[]};
 
-export const statuses:{key:TaskStatus;label:string;color:string}[]=[{key:'todo',label:'To-do',color:'#71717a'},{key:'in_progress',label:'On progress',color:'#2563eb'},{key:'in_review',label:'In review',color:'#d97706'},{key:'done',label:'Done',color:'#16a34a'}];
+const BASE_STATUSES:{key:TaskStatus;label:string;color:string}[]=[{key:'todo',label:'To-do',color:'#71717a'},{key:'in_progress',label:'On progress',color:'#2563eb'},{key:'in_review',label:'In review',color:'#d97706'},{key:'done',label:'Done',color:'#16a34a'}];
 const priorities:{key:Priority;label:string;color:string}[]=[{key:'low',label:'Low',color:'#2563eb'},{key:'medium',label:'Medium',color:'#d97706'},{key:'high',label:'High',color:'#dc2626'}];
 const typePalette=['#7c3aed','#ea580c','#0891b2','#db2777','#16a34a','#2563eb'];
 const typeColor=(t:string)=>typePalette[[...t].reduce((a,c)=>a+c.charCodeAt(0),0)%typePalette.length];
@@ -38,7 +41,9 @@ function Stack({ids,max=3}:{ids:string[];max?:number}){
 // Tasks as a list, kanban or timeline. With an id it is one project; without one it is "My tasks":
 // everything you created or were assigned, across projects and on its own.
 export default function ProjectBoard({id}:{id?:string}){
- const z=useZarn(),{db,me,people,members:team,projects,reloadProjects,refreshDue}=z,router=useRouter(),confirm=useConfirm();
+ const z=useZarn(),{db,me,people,members:team,projects,reloadProjects,refreshDue,reloadStatuses}=z,router=useRouter(),confirm=useConfirm();
+ const statuses=z.taskStatuses.length?z.taskStatuses.map(x=>({key:x.key,label:x.label,color:x.color,builtin:x.builtin,created_by:x.created_by})):BASE_STATUSES.map(x=>({...x,builtin:true,created_by:null as string|null}));
+ const [addingStatus,setAddingStatus]=useState<{then?:(key:string)=>void}|null>(null),[newProject,setNewProject]=useState<{then?:(id:string)=>void}|null>(null);
  const mine=!id;
  const [project,setProject]=useState<ZProject|null|undefined>(mine?null:undefined),[members,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
  const [view,setView]=useState<View>('list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
@@ -160,14 +165,20 @@ export default function ProjectBoard({id}:{id?:string}){
    </tr>)}</tbody></table></div>:<p className="zp-empty-row">{q||prio!=='all'||who!=='all'?'Nothing matches.':'No tasks here.'}</p>)}
  </section>;})}</div>;
 
- const kanbanView=<div className="zp-kanban">{statuses.map(g=>{const rows=shown.filter(t=>t.status===g.key).sort((a,b)=>a.position-b.position);return <section key={g.key} className="zp-col" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const tid=e.dataTransfer.getData('text/plain');setDragging(null);if(tid)void patch(tid,{status:g.key});}}>
-  <header><i style={{background:g.color}}/><b>{g.label}</b><span className="zp-count">{rows.length}</span><button type="button" className="zp-icon-btn" aria-label={`Add task to ${g.label}`} data-tip="Add task" onClick={()=>add(g.key)}><Plus size={15}/></button></header>
+ const deleteStatus=async(g:{key:string;label:string})=>{
+  if(!await confirm({title:`Delete “${g.label}”?`,message:'Tasks in this status move back to To-do. This can’t be undone.',confirm:'Delete status',danger:true}))return;
+  const r=await fetch('/api/zarn/statuses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',key:g.key})});
+  const d=await r.json().catch(()=>({}));if(!r.ok){setError(d.error||'Could not delete the status.');return;}
+  setTasks(ts=>ts.map(t=>t.status===g.key?{...t,status:'todo'}:t));await reloadStatuses();
+ };
+ const kanbanView=<div className="zp-kanban" style={{gridTemplateColumns:`repeat(${statuses.length},minmax(250px,1fr)) 190px`,minWidth:statuses.length*264+204}}>{statuses.map(g=>{const rows=shown.filter(t=>t.status===g.key).sort((a,b)=>a.position-b.position);return <section key={g.key} className="zp-col" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const tid=e.dataTransfer.getData('text/plain');setDragging(null);if(tid)void patch(tid,{status:g.key});}}>
+  <header><i style={{background:g.color}}/><b>{g.label}</b><span className="zp-count">{rows.length}</span>{!g.builtin&&(g.created_by===me.user_id||me.staffRole==='super_admin'||me.staffRole==='admin')&&<button type="button" className="zp-icon-btn zp-del-status" aria-label={`Delete status ${g.label}`} data-tip="Delete status" onClick={()=>void deleteStatus(g)}><Trash2 size={13}/></button>}<button type="button" className="zp-icon-btn" aria-label={`Add task to ${g.label}`} data-tip="Add task" onClick={()=>add(g.key)}><Plus size={15}/></button></header>
   <div className="zp-cards">{rows.map(t=><article key={t.id} className={`zp-card${t.status==='done'?' is-done':''}${dragging===t.id?' is-dragging':''}`} draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',t.id);setDragging(t.id);}} onDragEnd={()=>setDragging(null)} onClick={()=>setOpen(t.id)}>
    <div className="zp-card-top">{mine&&t.project_id&&projectPill(t.project_id)}{typePill(t.type)}{pill(t.priority)}</div>
    <b>{t.title}</b>{t.description&&<p>{t.description}</p>}
    <footer><span className={`zp-est${overdue(t)?' is-overdue':''}`}><CalendarDays size={13}/>{estimate(t)}</span><Stack ids={assign[t.id]??[]}/></footer>
   </article>)}{!rows.length&&<p className="zp-empty-row">Drop tasks here</p>}</div>
- </section>;})}</div>;
+ </section>;})}<button type="button" className="zp-addcol" onClick={()=>setAddingStatus({})}><Plus size={16}/>Add status</button></div>;
 
  const timelineView=(()=>{
   const dated=shown.filter(t=>t.start_at||t.due_at),undated=shown.filter(t=>!t.start_at&&!t.due_at);
@@ -183,7 +194,7 @@ export default function ProjectBoard({id}:{id?:string}){
     <div className="zp-tl-days">{cols.map((d,i)=><span key={i} className={iso(d)===today?'is-today':d.getUTCDay()%6===0?'is-weekend':''} style={{width:W}}>{d.getUTCDate()}</span>)}</div></div></div>
    <div className="zp-tl-body">
     <div className="zp-tl-today" style={{left:220+todayX}}/>
-    {spans.map(({t,s,e})=>{const g=statuses.find(x=>x.key===t.status)!;return <div key={t.id} className="zp-tl-row" onClick={()=>setOpen(t.id)}>
+    {spans.map(({t,s,e})=>{const g=statuses.find(x=>x.key===t.status)??statuses[0]!;return <div key={t.id} className="zp-tl-row" onClick={()=>setOpen(t.id)}>
      <div className="zp-tl-label"><span>{t.title}</span><Stack ids={assign[t.id]??[]} max={2}/></div>
      <div className="zp-tl-track" style={{width:days*W,backgroundSize:`${W}px 100%`}}><div className="zp-tl-bar" style={{left:((s-min)/DAY)*W+3,width:Math.max(W-6,((e-s)/DAY+1)*W-6),background:g.color}} title={`${t.title} · ${estimate(t)}`}><span>{t.title}</span></div></div>
     </div>;})}
@@ -217,9 +228,9 @@ export default function ProjectBoard({id}:{id?:string}){
   {form&&<Modal title="New task" onClose={()=>setForm(null)} wide><form className="zn-modal-body" onSubmit={create}>
    <label className="zn-label">Task name<input className="zn-input" autoFocus maxLength={200} value={form.title} onChange={e=>setForm(f=>f&&{...f,title:e.target.value})} placeholder="What needs doing?"/></label>
    <label className="zn-label">Description (optional)<textarea className="zn-input" rows={3} maxLength={4000} value={form.description} onChange={e=>setForm(f=>f&&{...f,description:e.target.value})}/></label>
-   {mine&&<div className="zn-label">Project<Dropdown label="Project" value={form.project_id} onChange={v=>setForm(f=>f&&{...f,project_id:v,assignees:[me.user_id]})} options={[{value:'',label:'No project (personal)'},...(projects??[]).map(p=>({value:p.id,label:p.name}))]}/></div>}
+   {mine&&<div className="zn-label">Project<Dropdown label="Project" value={form.project_id} onChange={v=>{if(v==='__new'){setNewProject({then:pid=>setForm(f=>f&&{...f,project_id:pid,assignees:[me.user_id]})});return;}setForm(f=>f&&{...f,project_id:v,assignees:[me.user_id]});}} options={[{value:'',label:'No project (personal)'},...(projects??[]).map(p=>({value:p.id,label:p.name})),{value:'__new',label:'+ Create a new project…',group:' '}]}/></div>}
    <div className="zn-form-row">
-    <div className="zn-label">Status<Dropdown label="Status" value={form.status} onChange={v=>setForm(f=>f&&{...f,status:v as TaskStatus})} options={statuses.map(g=>({value:g.key,label:g.label,color:g.color}))}/></div>
+    <div className="zn-label">Status<Dropdown label="Status" value={form.status} onChange={v=>{if(v==='__new'){setAddingStatus({then:k=>setForm(f=>f&&{...f,status:k})});return;}setForm(f=>f&&{...f,status:v});}} options={[...statuses.map(g=>({value:g.key,label:g.label,color:g.color})),{value:'__new',label:'+ Add a status…',group:' '}]}/></div>
     <div className="zn-label">Priority<Dropdown label="Priority" value={form.priority} onChange={v=>setForm(f=>f&&{...f,priority:v as Priority})} options={priorities.map(p=>({value:p.key,label:p.label}))}/></div>
    </div>
    <div className="zn-form-row">
@@ -227,20 +238,23 @@ export default function ProjectBoard({id}:{id?:string}){
     <label className="zn-label">Due date<input type="date" className="zn-input" value={form.due_at} onChange={e=>setForm(f=>f&&{...f,due_at:e.target.value})}/></label>
    </div>
    <label className="zn-label">Type<input className="zn-input" list="zp-types" maxLength={40} value={form.type} onChange={e=>setForm(f=>f&&{...f,type:e.target.value})} placeholder="e.g. Design"/><datalist id="zp-types">{typeOptions.map(t=><option key={t} value={t}/>)}</datalist></label>
-   <div className="zn-label">Assign to<div className="zp-assign">{(formMembers??[]).map(m=>{const on=form.assignees.includes(m);return <button key={m} type="button" role="checkbox" aria-checked={on} className={on?'is-on':''} onClick={()=>setForm(f=>f&&{...f,assignees:on?f.assignees.filter(x=>x!==m):[...f.assignees,m]})}><Avatar m={people[m]} size={20}/>{m===me.user_id?'Me':people[m]?.display_name??'Member'}</button>;})}</div></div>
+   <div className="zn-label">Assign to<AssigneePicker candidates={formMembers??[]} value={form.assignees} onToggle={m=>setForm(f=>f&&{...f,assignees:f.assignees.includes(m)?f.assignees.filter(x=>x!==m):[...f.assignees,m]})}/></div>
    {error&&<p className="zn-error" role="alert">{error}</p>}
    <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={()=>setForm(null)}>Cancel</button><button className="zn-btn is-primary" disabled={busy}>{busy?'Creating…':'Add task'}</button></div>
   </form></Modal>}
   {openTask&&<TaskDrawer key={openTask.id} task={openTask} assignees={assign[openTask.id]??[]} typeOptions={typeOptions} projectLabel={openTask.project_id?projectName(openTask.project_id):'Personal'}
-   loadMembers={()=>chipMembersFor(openTask.project_id)} onClose={()=>setOpen(null)} onPatch={v=>patch(openTask.id,v)} onToggle={u=>toggleAssignee(openTask,u)} onDelete={()=>void remove(openTask.id)}/>}
+   loadMembers={()=>chipMembersFor(openTask.project_id)} onClose={()=>setOpen(null)} onPatch={v=>patch(openTask.id,v)} onToggle={u=>toggleAssignee(openTask,u)} onAddStatus={then=>setAddingStatus({then})} onDelete={()=>void remove(openTask.id)}/>}
   {showMembers&&<Modal title={`Members · ${members.length}`} onClose={()=>setShowMembers(false)}><ul className="zn-list zn-list-scroll zn-member-list">{members.map(u=>{const owner=project?.created_by===u,self=u===me.user_id;return <li key={u}><div className="zn-person"><Avatar m={people[u]} size={32}/><span><b>{people[u]?.display_name??'Member'}{self&&' (you)'}</b><small>{owner?'Owner':people[u]?.title||people[u]?.email||''}</small></span>{!owner&&(canManage||self)&&<button type="button" className="zn-remove" onClick={()=>void removeMember(u)}>{self?'Leave':'Remove'}</button>}</div></li>;})}</ul><div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={()=>{setShowMembers(false);setInviting(true);}}><UserPlus size={14}/>Invite</button><button type="button" className="zn-btn is-primary" onClick={()=>setShowMembers(false)}>Done</button></div></Modal>}
+  {addingStatus&&<AddStatusDialog onClose={()=>setAddingStatus(null)} onAdded={k=>addingStatus.then?.(k)}/>}
+  {newProject&&<NewProject onClose={()=>setNewProject(null)} onCreated={pid=>newProject.then?.(pid)}/>}
   {inviting&&<PeoplePicker title="Invite to project" confirm="Invite" exclude={members} onClose={()=>setInviting(false)} onPick={invite}/>}
  </div>;
 }
 
 // Details panel: edit everything about a task in place and talk about it in comments.
-function TaskDrawer({task,assignees,typeOptions,projectLabel,loadMembers,onClose,onPatch,onToggle,onDelete}:{task:Task;assignees:string[];typeOptions:string[];projectLabel:string;loadMembers:()=>Promise<string[]>;onClose:()=>void;onPatch:(v:Partial<Pick<Task,'title'|'description'|'status'|'type'|'priority'|'start_at'|'due_at'>>)=>Promise<boolean|undefined>;onToggle:(u:string)=>void;onDelete:()=>void}){
- const {db,me,people}=useZarn(),confirm=useConfirm();
+function TaskDrawer({task,assignees,typeOptions,projectLabel,loadMembers,onClose,onPatch,onToggle,onDelete,onAddStatus}:{onAddStatus:(then:(key:string)=>void)=>void;task:Task;assignees:string[];typeOptions:string[];projectLabel:string;loadMembers:()=>Promise<string[]>;onClose:()=>void;onPatch:(v:Partial<Pick<Task,'title'|'description'|'status'|'type'|'priority'|'start_at'|'due_at'>>)=>Promise<boolean|undefined>;onToggle:(u:string)=>void;onDelete:()=>void}){
+ const {db,me,people,taskStatuses}=useZarn(),confirm=useConfirm();
+ const statuses=taskStatuses.length?taskStatuses.map(x=>({key:x.key,label:x.label,color:x.color})):BASE_STATUSES;
  const [title,setTitle]=useState(task.title),[desc,setDesc]=useState(task.description),[type,setType]=useState(task.type),[options,setOptions]=useState<string[]>([]),[comments,setComments]=useState<Comment[]>([]),[text,setText]=useState(''),[sending,setSending]=useState(false),[err,setErr]=useState('');
  useEffect(()=>{let live=true;void loadMembers().then(m=>{if(live)setOptions(m);});return()=>{live=false;};},[]); // eslint-disable-line react-hooks/exhaustive-deps
  useEffect(()=>{let live=true;void (async()=>{const {data}=await db.from('zarn_task_comments').select('*').eq('task_id',task.id).order('created_at');if(live)setComments((data??[]) as Comment[]);})();return()=>{live=false;};},[db,task.id]);
@@ -256,12 +270,12 @@ function TaskDrawer({task,assignees,typeOptions,projectLabel,loadMembers,onClose
  const overdue=!!task.due_at&&task.status!=='done'&&task.due_at<iso(new Date());
  return <><button type="button" className="zp-scrim" aria-label="Close details" onClick={onClose}/>
   <aside className="zp-drawer" role="dialog" aria-label="Task details">
-   <header><Dropdown variant="pill" label="Status" value={task.status} onChange={v=>void save({status:v as TaskStatus})} options={statuses.map(s=>({value:s.key,label:s.label,color:s.color}))}/>
+   <header><Dropdown variant="pill" label="Status" value={task.status} onChange={v=>{if(v==='__new'){onAddStatus((k)=>void save({status:k}));return;}void save({status:v});}} options={[...statuses.map(s=>({value:s.key,label:s.label,color:s.color})),{value:'__new',label:'+ Add a status…',group:' '}]}/>
     <div className="zp-drawer-actions"><button type="button" className="zp-icon-btn" aria-label="Delete task" data-tip="Delete" onClick={async()=>{if(await confirm({title:'Delete this task?',message:`“${task.title}” will be deleted for everyone. This can’t be undone.`,confirm:'Delete task',danger:true}))onDelete();}}><Trash2 size={16}/></button><button type="button" className="zp-icon-btn" aria-label="Close" onClick={onClose}><X size={17}/></button></div></header>
    <div className="zp-drawer-body" data-lenis-prevent>
     <input className="zp-title-input" value={title} maxLength={200} onChange={e=>setTitle(e.target.value)} onBlur={()=>{const t=title.trim();if(!t){setTitle(task.title);return;}if(t!==task.title)void save({title:t});}} aria-label="Task name"/>
     <dl className="zp-fields">
-     <dt>Assignees</dt><dd><div className="zp-assign">{options.map(m=>{const on=assignees.includes(m);return <button key={m} type="button" role="checkbox" aria-checked={on} className={on?'is-on':''} onClick={()=>onToggle(m)}><Avatar m={people[m]} size={20}/>{m===me.user_id?'Me':people[m]?.display_name??'Member'}</button>;})}</div></dd>
+     <dt>Assignees</dt><dd><AssigneePicker candidates={options} value={assignees} onToggle={onToggle}/></dd>
      <dt>Due date</dt><dd><input type="date" className="zp-input" value={task.due_at??''} onChange={e=>{const v=e.target.value||null;if(v&&task.start_at&&task.start_at>v){setErr('The due date can’t be before the start date.');return;}void save({due_at:v});}}/>{overdue&&<span className="zp-overdue">Overdue</span>}</dd>
      <dt>Start date</dt><dd><input type="date" className="zp-input" value={task.start_at??''} onChange={e=>{const v=e.target.value||null;if(v&&task.due_at&&v>task.due_at){setErr('The start date can’t be after the due date.');return;}void save({start_at:v});}}/></dd>
      <dt>Priority</dt><dd><Dropdown label="Priority" value={task.priority} onChange={v=>void save({priority:v as Priority})} options={priorities.map(p=>({value:p.key,label:p.label}))}/></dd>

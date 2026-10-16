@@ -1140,3 +1140,20 @@ html[data-kb] .zn-prompt{display:none}
 .zn-confirm h2{font-size:18px;font-weight:800}.zn-confirm p{font-size:13.5px;line-height:1.5;color:var(--z-muted)}
 .zn-confirm .zn-modal-foot{width:100%;justify-content:stretch;gap:10px;margin-top:8px}.zn-confirm .zn-modal-foot .zn-btn{flex:1;height:42px}
 .zn-btn.is-danger{background:#dc2626;border-color:#dc2626;color:#fff}.zn-btn.is-danger:hover{filter:brightness(1.08)}
+/* Modals scroll as one block with the buttons pinned to the bottom, so they are never cut off */
+.zn-modal{overflow:hidden}
+.zn-modal-body{overscroll-behavior:contain}
+.zn-modal-body>.zn-modal-foot,form.zn-modal-body .zn-modal-foot{position:sticky;bottom:0;background:var(--z-panel);padding:12px 0 2px;margin-top:6px;z-index:2}
+/* Assignee search picker and extra board column */
+.zp-picker{display:flex;flex-direction:column;gap:8px;position:relative}
+.zp-assign button svg:last-child{opacity:.7}
+.zp-picker-input{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:9px;border:1px solid var(--z-border);background:var(--z-input);color:var(--z-muted)}
+.zp-picker-input input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--z-fg);font:inherit;font-size:14px}
+.zp-picker-input:focus-within{border-color:var(--z-muted)}
+.zp-picker-list{list-style:none;margin:0;padding:6px;max-height:220px;overflow-y:auto;border-radius:12px;background:var(--z-panel);border:1px solid var(--z-border)}
+.zp-picker-list button{display:flex;align-items:center;gap:10px;width:100%;padding:7px 8px;border-radius:8px;text-align:left}.zp-picker-list button:hover{background:var(--z-hover)}
+.zp-picker-list span{display:flex;flex-direction:column;min-width:0}.zp-picker-list small{font-size:12px;color:var(--z-muted)}
+.zp-picker-empty{padding:10px;font-size:13px;color:var(--z-muted)}
+.zp-addcol{align-self:start;min-height:56px;border-radius:14px;border:1.5px dashed var(--z-border);display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--z-muted);padding:16px}
+.zp-addcol:hover{border-color:var(--z-muted);color:var(--z-fg);background:var(--z-hover)}
+.zp-col>header .zp-del-status{margin-left:0;color:var(--z-faint)}

@@ -9,7 +9,7 @@ import {Avatar,dayOf,plain,timeOf} from './format';
 
 export function Modal({title,onClose,children,wide}:{title:string;onClose:()=>void;children:React.ReactNode;wide?:boolean}){
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[onClose]);
- return <div className="zn-modal-scrim" onClick={onClose}><div className={`zn-modal${wide?' zn-modal-lg':''}`} role="dialog" aria-label={title} onClick={e=>e.stopPropagation()}>
+ return <div className="zn-modal-scrim" onClick={onClose}><div className={`zn-modal${wide?' zn-modal-lg':''}`} role="dialog" aria-label={title} data-lenis-prevent onClick={e=>e.stopPropagation()}>
   <div className="zn-modal-head"><h2>{title}</h2><button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>{children}</div></div>;
 }
 
