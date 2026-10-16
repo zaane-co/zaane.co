@@ -12,3 +12,28 @@ self.addEventListener('fetch', e => {
   if (e.request.mode !== 'navigate') return;
   e.respondWith(fetch(e.request).catch(() => caches.match(OFFLINE)));
 });
+
+// Push: show the notification and put the unread count on the app icon. Skipped when ZARN is already open and visible (the app plays its own chime).
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) {}
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (wins.some(w => w.visibilityState === 'visible')) return;
+    if (self.navigator.setAppBadge && d.unread) { try { await self.navigator.setAppBadge(d.unread); } catch (_) {} }
+    await self.registration.showNotification(d.title || 'ZARN', {
+      body: d.body || '', tag: d.tag, icon: '/zarn-icons/icon-192.png', badge: '/zarn-icons/icon-192.png',
+      data: { url: d.url || '/zarn' }, renotify: true,
+    });
+  })());
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/zarn';
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const w = wins.find(c => c.url.includes('/zarn'));
+    if (w) { await w.focus(); if ('navigate' in w) { try { await w.navigate(url); } catch (_) {} } return; }
+    await self.clients.openWindow(url);
+  })());
+});

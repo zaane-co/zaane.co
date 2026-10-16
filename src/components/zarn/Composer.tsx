@@ -58,6 +58,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
   const {error:e}=await db.from('zarn_messages').insert(msg);
   setSending(false);
   if(e){emit({table:'zarn_messages',type:'DELETE',row:{...msg} as never});setError('Message not sent. Check your connection and try again.');return;}
+  void fetch('/api/zarn/push/notify',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:msg.id})}).catch(()=>{});
   setText('');setFiles([]);setLeadId(null);onSent?.();
  }
  function onKey(e:React.KeyboardEvent<HTMLTextAreaElement>){

@@ -9,6 +9,16 @@ import {plain} from './format';
 import {playChime} from '@/lib/zarn-sound';
 
 export type ZEvent={table:'zarn_messages';type:'INSERT'|'UPDATE'|'DELETE';row:ZMessage}|{table:'zarn_reactions';type:'INSERT'|'DELETE';row:ZReaction};
+const b64=(k:string)=>{const p='='.repeat((4-k.length%4)%4),r=atob((k+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)));};
+// Registers this browser/phone for web push so messages arrive even when ZARN is closed.
+async function subscribePush(){
+ try{
+  const key=process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;if(!key||!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  const reg=await navigator.serviceWorker.getRegistration('/zarn');if(!reg)return;
+  const sub=(await reg.pushManager.getSubscription())??await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(key)});
+  await fetch('/api/zarn/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON()})});
+ }catch{}
+}
 type Unread=Record<string,{unread:number;mentions:number}>;
 export type ZProject={id:string;name:string;description:string;color:string;created_by:string|null;created_at:string};
 export type TodoStatus='todo'|'in_progress'|'done';
@@ -113,10 +123,14 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  useEffect(()=>{
   const total=Object.entries(unread).reduce((t,[id,u])=>t+(membership[id]?.muted?u.mentions:u.unread),0);
   document.title=total?`(${total}) ZARN`:'ZARN';
+  const nav=navigator as Navigator&{setAppBadge?:(n?:number)=>Promise<void>;clearAppBadge?:()=>Promise<void>};
+  if(total)void nav.setAppBadge?.(total).catch(()=>{});else void nav.clearAppBadge?.().catch(()=>{});
  },[unread,membership]);
  // Desktop notification permission, read from the browser (false during server render).
  const notifyOn=useSyncExternalStore(cb=>{window.addEventListener('zarn-notify',cb);return()=>window.removeEventListener('zarn-notify',cb);},()=>'Notification' in window&&Notification.permission==='granted',()=>false);
- const enableNotify=useCallback(()=>{if('Notification' in window)void Notification.requestPermission().then(()=>window.dispatchEvent(new Event('zarn-notify')));},[]);
+ const enableNotify=useCallback(()=>{if('Notification' in window)void Notification.requestPermission().then(async p=>{window.dispatchEvent(new Event('zarn-notify'));if(p==='granted')await subscribePush();});},[]);
+ // Keep this device's push subscription registered while notifications are allowed.
+ useEffect(()=>{if('Notification' in window&&Notification.permission==='granted')void subscribePush();},[]);
 
  const subscribe=useCallback((fn:(e:ZEvent)=>void)=>{listeners.current.add(fn);return()=>{listeners.current.delete(fn);};},[]);
  // Projects you belong to (RLS decides), for the sidebar.
