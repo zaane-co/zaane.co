@@ -7,7 +7,7 @@ import ClientBrief from './ClientBrief';
 import ClientVault from './ClientVault';
 import {useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
-import {KeyRound,FolderKanban,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Receipt,ListChecks,LayoutGrid,History,UserPlus,X} from 'lucide-react';
+import {KeyRound,FolderKanban,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Receipt,ListChecks,LayoutGrid,History,UserPlus,X,Archive,ArchiveRestore,Ellipsis,Trash2} from 'lucide-react';
 import {money,ago,dueLabel,dueState,invoiceState,invoiceStateStyle,fmtDate,type InvoiceStatus} from '@/lib/crm';
 import {zarnApi} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
@@ -24,15 +24,20 @@ export type SpaceData={
  materials:{id:string;title:string;note:string;link:string;file_key:string|null;file_name:string;received_at:string|null}[];
  activities:{id:string;kind:string;body:string;meta:Record<string,string>;author_id:string|null;created_at:string}[];
  invoices:{id:string;number:string;status:string;total:number;amount_paid:number;currency:string;due_date:string}[]|null;
- names:Record<string,string>;canManage:boolean;canStudio:boolean;
+ names:Record<string,string>;canManage:boolean;canStudio:boolean;archived:boolean;canDelete:boolean;
 };
 type Tab='chat'|'overview'|'tasks'|'projects'|'files'|'vault'|'activity'|'invoices';
 
 // A client's private space: team chat plus everything we're tracking for them.
 export default function ClientSpace({data}:{data:SpaceData}){
- const {lead,team,stages}=data,z=useZarn(),router=useRouter(),[pending,start]=useTransition(),isAdmin=z.me.staffRole==='super_admin'||z.me.staffRole==='admin';
+ const {lead,team,stages}=data,z=useZarn(),router=useRouter(),confirm=useConfirm(),[pending,start]=useTransition(),isAdmin=z.me.staffRole==='super_admin'||z.me.staffRole==='admin';
  const [tab,setTab]=useState<Tab>('chat'),[adding,setAdding]=useState(false),[flash,setFlash]=useState('');
  const stage=stages.find(s=>s.key===lead.status);
+ const [menu,setMenu]=useState(false),[deleting,setDeleting]=useState(false);
+ async function archive(on:boolean){
+  if(on&&!await confirm({title:'Archive this client?',message:'It disappears from the Clients list but nothing is deleted. You can restore it any time from the Archived section.',confirm:'Archive',danger:false}))return;
+  if(await act({action:'archive',archived:on},on?'Client archived.':'Client restored.')){await z.reload();if(on)router.push('/zarn/clients');else router.refresh();}
+ }
  async function act(body:object,msg?:string){
   setFlash('');
   try{await zarnApi('/api/zarn/clients',{lead_id:lead.id,...body});if(msg)setFlash(msg);start(()=>router.refresh());return true;}
@@ -51,10 +56,16 @@ export default function ClientSpace({data}:{data:SpaceData}){
     <Dropdown variant="pill" label="Stage" value={lead.status} disabled={pending} onChange={async x=>{if(await act({action:'stage',status:x},'Stage updated.'))z.loadLead(lead.id,true);}} options={stages.map(s=>({value:s.key,label:s.label,color:s.color}))}/>
     <div className="zn-team-stack" title={team.map(id=>z.people[id]?.display_name??data.names[id]).join(', ')}>{team.slice(0,5).map(id=><Avatar key={id} m={z.people[id]} size={28} online={z.online.has(id)}/>)}{team.length>5&&<span className="zn-more">+{team.length-5}</span>}</div>
     {data.canManage&&<button type="button" className="zn-btn" onClick={()=>setAdding(true)}><UserPlus size={14}/>Team</button>}
+    {data.canManage&&<div className="zn-kebab"><button type="button" className="zn-btn zn-kebab-btn" aria-label="More actions" aria-expanded={menu} onClick={()=>setMenu(v=>!v)}><Ellipsis size={16}/></button>{menu&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setMenu(false)}/><div className="zn-kebab-pop" role="menu">
+     <button type="button" role="menuitem" onClick={()=>{setMenu(false);void archive(!data.archived);}}>{data.archived?<><ArchiveRestore size={14}/>Restore client</>:<><Archive size={14}/>Archive client</>}</button>
+     {data.canDelete&&<button type="button" role="menuitem" className="is-danger" onClick={()=>{setMenu(false);setDeleting(true);}}><Trash2 size={14}/>Delete client space…</button>}
+    </div></>}</div>}
    </div>
   </header>
+  {data.archived&&<div className="zn-archived-bar"><Archive size={14}/><span>This client is archived. It’s hidden from the Clients list, and nothing here has been deleted.</span>{data.canManage&&<button type="button" className="zn-btn is-primary" onClick={()=>void archive(false)}>Restore</button>}</div>}
   <nav className="zn-client-tabs" role="tablist">{tabs.map(([k,l,icon,n])=><button key={k} type="button" role="tab" aria-selected={tab===k} className={tab===k?'is-on':''} onClick={()=>setTab(k)}>{icon}{l}{n?<span>{n}</span>:null}</button>)}</nav>
   {flash&&<p className="zn-flash">{flash}</p>}
+  {deleting&&<DeleteClient leadId={lead.id} name={lead.company||lead.name} onClose={()=>setDeleting(false)}/>}
   <div className="zn-client-body">
    {tab==='chat'&&<ChannelView id={data.channelId} embedded/>}
    {tab==='overview'&&<Overview data={data} onAct={act} onTab={setTab}/>}
@@ -171,5 +182,27 @@ function TeamDialog({data,onClose,onSave}:{data:SpaceData;onClose:()=>void;onSav
   <input className="zn-input" placeholder="Search staff" value={q} onChange={e=>setQ(e.target.value)}/>
   <ul className="zn-list zn-list-scroll">{pool.map(m=><li key={m.user_id}><button type="button" className={sel.includes(m.user_id)?'is-on':''} onClick={()=>setSel(s=>s.includes(m.user_id)?s.filter(x=>x!==m.user_id):[...s,m.user_id])}><Avatar m={m} size={28}/><span><b>{m.display_name}</b><small>{m.title||m.email}</small></span>{sel.includes(m.user_id)&&<Check size={16} className="zn-check"/>}</button></li>)}</ul>
   <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button type="button" className="zn-btn is-primary" disabled={busy||!sel.length} onClick={()=>void run(sel,[])}>Add {sel.length||''}</button></div>
+ </div></div>;
+}
+
+// Permanently deletes the client's ZARN space. The CRM record and invoices remain in the Studio admin.
+function DeleteClient({leadId,name,onClose}:{leadId:string;name:string;onClose:()=>void}){
+ const z=useZarn(),router=useRouter();
+ const [typed,setTyped]=useState(''),[busy,setBusy]=useState(false),[err,setErr]=useState('');
+ async function go(){
+  setBusy(true);setErr('');
+  try{
+   const r=await fetch('/api/zarn/clients',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete_space',lead_id:leadId,confirm:typed})});
+   const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Could not delete it.');
+   await z.reload();router.push('/zarn/clients');
+  }catch(e){setErr(e instanceof Error?e.message:'Could not delete it.');setBusy(false);}
+ }
+ return <div className="zn-modal-scrim" onClick={busy?undefined:onClose}><div className="zn-modal zn-confirm" role="alertdialog" aria-label="Delete client space" onClick={e=>e.stopPropagation()}>
+  <span className="zn-confirm-ico is-danger"><Trash2 size={20}/></span>
+  <h2>Delete {name}’s space?</h2>
+  <p>This permanently deletes the chat, tasks, vault logins and files, and the brief in ZARN. Projects and documents linked to this client are kept. The client’s CRM record and invoices stay in the Studio admin. This can’t be undone. If you may want it back, archive it instead.</p>
+  <label className="zn-label" style={{width:'100%',textAlign:'left'}}>Type <b>{name}</b> to confirm<input className="zn-input" value={typed} onChange={e=>setTyped(e.target.value)} autoFocus autoComplete="off"/></label>
+  {err&&<p className="zn-error" role="alert">{err}</p>}
+  <div className="zn-modal-foot"><button type="button" className="zn-btn" disabled={busy} onClick={onClose}>Cancel</button><button type="button" className="zn-btn is-danger" disabled={busy||!typed.trim()} onClick={()=>void go()}>{busy?'Deleting…':'Delete space'}</button></div>
  </div></div>;
 }

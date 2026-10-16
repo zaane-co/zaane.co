@@ -28,6 +28,8 @@ export function useNav(){
  const rooms=mine.filter(c=>(c.kind==='public'||c.kind==='private')&&!membership[c.id]?.starred).sort((a,b)=>(a.name??'').localeCompare(b.name??''));
  const dms=mine.filter(c=>c.kind==='dm').sort((a,b)=>(unread[b.id]?.unread??0)-(unread[a.id]?.unread??0));
  const clients=live.filter(c=>c.kind==='client'&&(membership[c.id]||staffAdmin)).sort((a,b)=>title(a).localeCompare(title(b)));
+ // Archived clients are only listed for admins, in their own section.
+ const archivedClients=channels.filter(c=>c.kind==='client'&&c.archived_at&&staffAdmin).sort((a,b)=>title(a).localeCompare(title(b)));
  const count=(list:ZChannel[],k:'unread'|'mentions')=>list.reduce((t,c)=>t+(membership[c.id]?.muted&&k==='unread'?0:unread[c.id]?.[k]??0),0);
  const badges={
   home:count([...starred,...rooms].filter(c=>c.kind!=='dm'),'unread'),
@@ -35,7 +37,7 @@ export function useNav(){
   clients:count(clients.filter(c=>membership[c.id]),'unread'),
   activity:Object.values(unread).reduce((t,u)=>t+u.mentions,0),
  };
- return {staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,badges};
+ return {staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,archivedClients,badges};
 }
 
 export const channelPath=(c:ZChannel)=>c.kind==='client'?`/zarn/clients/${c.lead_id}`:`/zarn/c/${c.id}`;

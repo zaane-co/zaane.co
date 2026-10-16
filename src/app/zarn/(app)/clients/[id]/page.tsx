@@ -29,7 +29,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
   db.from('lead_files').select('id,name,size,type,uploaded_by,created_at').eq('lead_id',id).order('created_at',{ascending:false}),
  ]);
  if(!lead)notFound();
- const data:SpaceData={files:files??[],me:me.user_id,lead,channelId:channel.id,stages:(stages??[]).sort((a,b)=>(a.kind==='lost'?1:0)-(b.kind==='lost'?1:0)||a.position-b.position),team:(team??[]).map(t=>t.user_id),tasks:tasks??[],materials:materials??[],activities:activities??[],invoices:invoices.data,names:Object.fromEntries((staff??[]).map(u=>[u.id,u.name||u.email])),canManage:canManageTeams(me),canStudio:me.staffRole==='super_admin'||me.staffRole==='admin'||me.staffRole==='sales'};
+ const data:SpaceData={files:files??[],me:me.user_id,lead,channelId:channel.id,stages:(stages??[]).sort((a,b)=>(a.kind==='lost'?1:0)-(b.kind==='lost'?1:0)||a.position-b.position),team:(team??[]).map(t=>t.user_id),tasks:tasks??[],materials:materials??[],activities:activities??[],invoices:invoices.data,names:Object.fromEntries((staff??[]).map(u=>[u.id,u.name||u.email])),archived:!!channel.archived_at,canDelete:me.staffRole==='super_admin'||me.staffRole==='admin',canManage:canManageTeams(me),canStudio:me.staffRole==='super_admin'||me.staffRole==='admin'||me.staffRole==='sales'};
  // Amounts are for admins only: blank them out before they reach the browser.
  if(me.staffRole!=='super_admin'&&me.staffRole!=='admin'){data.lead={...data.lead,deal_value:null};if(data.invoices)data.invoices=data.invoices.map(i=>({...i,total:0,amount_paid:0}));}
  return <ClientSpace key={id} data={data}/>;

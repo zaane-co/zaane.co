@@ -32,8 +32,8 @@ const tabs=['/zarn/home','/zarn/dms','/zarn/clients','/zarn/activity','/zarn/you
 // Phones: Slack-style bottom tabs (Home, DMs, Clients, Activity, You), full-screen lists, back arrows in conversations.
 export default function ZarnShell({children}:{children:React.ReactNode}){
  const z=useZarn(),{me,channels}=z,pathname=usePathname(),{light}=useAdminTheme();
- const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,badges}=nav;
- const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
+ const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,archivedClients,badges}=nav;
+ const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({archivedclients:true});
  const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false);
  const router=useRouter();
  const {mode:installMode,install}=useInstall(),sound=useSound(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false),[installDone,setInstallDone]=useState(false);
@@ -128,6 +128,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       {clients.length>6&&<label className="zn-client-search"><Search size={14}/><input placeholder="Find a client" value={clientQ} onChange={e=>setClientQ(e.target.value)}/></label>}
       {canAddClient&&<button type="button" className="zn-nav-item zn-add-client" onClick={()=>setDialog('client')}><Plus size={15}/><span>Add client</span></button>}
       {section('myclients',staffAdmin?'All client spaces':'My clients',shownClients.length?shownClients.map(c=><ChannelRow key={c.id} c={c}/>):<p className="zn-nav-note">{clients.length?'No match.':'No client spaces yet. When you’re added to a client, it shows up here.'}</p>)}
+      {archivedClients.length>0&&section('archivedclients',`Archived · ${archivedClients.length}`,archivedClients.map(c=><ChannelRow key={c.id} c={c}/>))}
      </>}
     </div>
    </aside>

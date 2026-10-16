@@ -2,6 +2,7 @@ import {z} from 'zod';
 import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
 import {cleanHtml} from '@/lib/blog-html';
+import {deleteFile} from '@/lib/r2';
 import {canAddClients,canManageTeams,clientAccess,isStudioAdmin} from '@/lib/zarn-clients';
 import {currencies} from '@/lib/crm';
 // Client spaces in ZARN. A client is a CRM lead plus a private conversation for the staff assigned to it.
@@ -14,6 +15,8 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('task_add'),lead_id:id,title:z.string().trim().min(1,'Give the task a title.').max(300),due_at:z.iso.datetime({offset:true}).nullable().default(null),assignee_id:id.nullable().default(null)}),
  z.object({action:z.literal('task_toggle'),lead_id:id,id,done:z.boolean()}),
  z.object({action:z.literal('task_delete'),lead_id:id,id}),
+ z.object({action:z.literal('archive'),lead_id:id,archived:z.boolean()}),
+ z.object({action:z.literal('delete_space'),lead_id:id,confirm:z.string().max(300)}),
  z.object({action:z.literal('brief'),lead_id:id,html:z.string().max(100000)}),
  z.object({action:z.literal('note'),lead_id:id,body:z.string().trim().min(1).max(5000)}),
 ]);
@@ -82,6 +85,35 @@ export async function POST(request:Request){
   case 'task_delete':{
    const {error}=await db.from('lead_tasks').delete().eq('id',b.id).eq('lead_id',b.lead_id);
    return error?fail('Could not delete the task.'):Response.json({ok:true});
+  }
+  case 'archive':{
+   if(!canManageTeams(me))return fail('Only admins and sales can archive clients.',403);
+   const {error}=await db.from('zarn_channels').update({archived_at:b.archived?new Date().toISOString():null}).eq('kind','client').eq('lead_id',b.lead_id);
+   return error?fail('Could not update the client.'):Response.json({ok:true});
+  }
+  case 'delete_space':{
+   // Deletes the client's ZARN space and everything in it. The CRM record and invoices stay in the Studio admin.
+   if(!isStudioAdmin(me))return fail('Only admins can delete a client space.',403);
+   const {data:lead}=await db.from('leads').select('name,company').eq('id',b.lead_id).maybeSingle();
+   const {data:ch}=await db.from('zarn_channels').select('id').eq('kind','client').eq('lead_id',b.lead_id).maybeSingle();
+   if(!lead||!ch)return fail('That client space no longer exists.',404);
+   const expected=(lead.company||lead.name||'').trim().toLowerCase();
+   if(!expected||b.confirm.trim().toLowerCase()!==expected)return fail('Type the client’s name exactly to confirm.');
+   // Stored files go too: vault files and chat attachments (best effort).
+   const keys:string[]=[];
+   const {data:vf}=await db.from('zarn_vault_items').select('file_key').eq('lead_id',b.lead_id).neq('file_key','');
+   for(const r of vf??[])if(r.file_key)keys.push(r.file_key);
+   const {data:ms}=await db.from('zarn_messages').select('attachments').eq('channel_id',ch.id).neq('attachments','[]');
+   for(const m of (ms??[]) as {attachments:{key?:string}[]}[])for(const a of m.attachments??[])if(a.key?.startsWith('private/'))keys.push(a.key);
+   for(const k of keys)await deleteFile(k).catch(()=>{});
+   await db.from('zarn_vault_items').delete().eq('lead_id',b.lead_id);
+   await db.from('zarn_vault_log').delete().eq('lead_id',b.lead_id);
+   await db.from('zarn_vault_shares').delete().eq('lead_id',b.lead_id);
+   await db.from('zarn_tasks').delete().eq('lead_id',b.lead_id);
+   await db.from('zarn_projects').update({lead_id:null}).eq('lead_id',b.lead_id);
+   await db.from('zarn_docs').update({lead_id:null}).eq('lead_id',b.lead_id);
+   const {error}=await db.from('zarn_channels').delete().eq('id',ch.id);
+   return error?fail('Could not delete the client space.'):Response.json({ok:true});
   }
   case 'brief':{
    const {allowed}=await clientAccess(me,b.lead_id);if(!allowed)return fail('You can’t edit this client’s brief.',403);
