@@ -4,7 +4,7 @@ export type ZEmergency={user_id:string;name:string;relation:string;phone:string}
 export const usernameOk=(u:string)=>/^[a-z0-9][a-z0-9._]{1,29}$/.test(u);
 export type ZChannel={id:string;kind:'public'|'private'|'dm'|'client';lead_id:string|null;name:string|null;topic:string;crm_feed:string|null;dm_key:string|null;is_default:boolean;archived_at:string|null;created_at:string};
 export type ZMembership={channel_id:string;user_id:string;last_read_at:string;muted:boolean;starred:boolean};
-export type ZAttachment={key:string;name:string;size:number;type:string};
+export type ZAttachment={key:string;name:string;size:number;type:string;duration?:number};
 export type ZMessage={id:string;channel_id:string;user_id:string|null;parent_id:string|null;body:string;attachments:ZAttachment[];lead_id:string|null;invoice_id:string|null;kind:'user'|'system'|'crm';meta:Record<string,string|number>;reply_count:number;last_reply_at:string|null;pinned_at:string|null;edited_at:string|null;deleted_at:string|null;created_at:string;pending?:boolean};
 export type ZReaction={message_id:string;user_id:string;channel_id:string;emoji:string};
 export type ZLead={id:string;name:string;company:string;status:string;stage_label:string|null;stage_color:string|null;stage_kind:string|null;deal_value:number|null;currency:string;categories:string[];service_interested:string;owner_id:string|null;owner_name:string|null;created_at:string;last_activity_at:string};

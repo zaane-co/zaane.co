@@ -8,6 +8,7 @@ import {useZarn} from './ZarnProvider';
 import {useShell} from './nav';
 import DocViewer,{docKind} from './DocViewer';
 import {useCall} from './CallProvider';
+import VoicePlayer from './VoicePlayer';
 import {Avatar,StatusMark,renderBody,timeOf,tokensToText,textToTokens} from './format';
 
 // One message row. compact = same author as the previous message within a few minutes (no avatar/name).
@@ -55,6 +56,7 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
    {m.kind!=='crm'&&m.lead_id&&<LeadCard id={m.lead_id}/>}
    {m.attachments.length>0&&<div className="zn-files">{m.attachments.map((a,i)=>a.type.startsWith('image/')&&a.type!=='image/svg+xml'
     ?<button type="button" key={i} className="zn-image" aria-label={`Open ${a.name}`} onClick={()=>setViewer(i)}><img src={`/api/zarn/files?m=${m.id}&i=${i}`} alt={a.name} loading="lazy"/></button>
+    :a.type.startsWith('audio/')?<VoicePlayer key={i} messageId={m.id} index={i} att={a}/>
     :docKind(a)?<button type="button" key={i} className="zn-file" onClick={()=>setDoc(i)}><FileText size={18}/><span><b>{a.name}</b><small>{(a.size/1024).toFixed(a.size>1024*1024?0:1)} KB · Click to preview</small></span><Download size={15}/></button>
     :<a key={i} href={`/api/zarn/files?m=${m.id}&i=${i}&download=1`} className="zn-file"><FileText size={18}/><span><b>{a.name}</b><small>{(a.size/1024).toFixed(a.size>1024*1024?0:1)} KB</small></span><Download size={15}/></a>)}</div>}
    {Object.keys(groups).length>0&&<div className="zn-reactions">{Object.entries(groups).map(([e,users])=><button key={e} type="button" className={users.includes(me.user_id)?'is-mine':''} title={users.map(u=>people[u]?.display_name??'Someone').join(', ')} onClick={()=>void toggle(e)}>{e}<span>{users.length}</span></button>)}

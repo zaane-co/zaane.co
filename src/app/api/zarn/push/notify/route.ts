@@ -24,7 +24,7 @@ export async function POST(request:Request){
  if(!ch||!mem?.length)return Response.json({ok:true,sent:0});
  const names=Object.fromEntries((people??[]).map(p=>[p.user_id,p.display_name]));
  const text=String(m.body??'').replace(/<@([0-9a-f-]{36})>/gi,(_,id)=>`@${names[id]??'someone'}`).replace(/<!channel>/g,'@channel').replace(/[*_~`]/g,'').trim();
- const body=(text||((m.attachments as unknown[]|null)?.length?'Sent an attachment':'')).slice(0,140);
+ const body=(text||(((m.attachments as {type?:string}[]|null)?.[0]?.type?.startsWith('audio/')?'Voice note':(m.attachments as unknown[]|null)?.length?'Sent an attachment':''))).slice(0,140);
  const who=names[me.user_id]??'ZARN';
  const title=ch.kind==='dm'?who:ch.kind==='client'?`${who} in a client space`:`${who} in #${ch.name??''}`;
  const everyone=String(m.body).includes('<!channel>');

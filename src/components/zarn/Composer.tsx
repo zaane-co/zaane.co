@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {AtSign,Briefcase,Loader2,Paperclip,Send,X} from 'lucide-react';
+import {AtSign,Briefcase,Loader2,Paperclip,Send,X,Mic,Trash2} from 'lucide-react';
 import {optimizeImage} from '@/components/admin/blog/shared';
 import type {ZAttachment,ZLead,ZMember} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
@@ -34,6 +34,48 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
   setText(next);setMention(null);
   requestAnimationFrame(()=>{const pos=mention.start+o.label.length+2;el.focus();el.setSelectionRange(pos,pos);});
  }
+
+ // Voice notes: tap the mic, speak, tap send. Recorded with the browser's MediaRecorder and sent like any attachment.
+ const [rec,setRec]=useState(false),[recSecs,setRecSecs]=useState(0),[recBusy,setRecBusy]=useState(false);
+ const recorder=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),recStream=useRef<MediaStream|null>(null),recTimer=useRef<ReturnType<typeof setInterval>|null>(null),recStart=useRef(0),discard=useRef(false);
+ const MAX_VOICE=180;
+ const stopTracks=()=>{recStream.current?.getTracks().forEach(t=>t.stop());recStream.current=null;if(recTimer.current)clearInterval(recTimer.current);recTimer.current=null;};
+ async function startRec(){
+  if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){setError('Voice notes aren’t supported on this browser.');return;}
+  setError('');
+  try{
+   const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+   recStream.current=stream;
+   const mime=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg'].find(t=>MediaRecorder.isTypeSupported(t));
+   const r=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+   chunks.current=[];discard.current=false;
+   r.ondataavailable=e=>{if(e.data.size)chunks.current.push(e.data);};
+   r.onstop=()=>{const secs=Math.max(1,Math.round((Date.now()-recStart.current)/1000));stopTracks();if(discard.current){setRec(false);return;}void sendVoice(new Blob(chunks.current,{type:r.mimeType||mime||'audio/webm'}),secs);};
+   recStart.current=Date.now();r.start();recorder.current=r;setRec(true);setRecSecs(0);
+   recTimer.current=setInterval(()=>{const secs=Math.round((Date.now()-recStart.current)/1000);setRecSecs(secs);if(secs>=MAX_VOICE)finishRec();},250);
+  }catch{stopTracks();setError('Allow microphone access to record voice notes.');}
+ }
+ function finishRec(){if(recorder.current?.state==='recording')recorder.current.stop();}
+ function cancelRec(){discard.current=true;if(recorder.current?.state==='recording')recorder.current.stop();else{stopTracks();setRec(false);}}
+ async function sendVoice(blob:Blob,secs:number){
+  setRecBusy(true);
+  try{
+   if(blob.size<600)throw new Error('That was too short. Hold on a little longer.');
+   const base=blob.type.split(';')[0]||'audio/webm',ext=base.includes('mp4')?'m4a':base.includes('ogg')?'ogg':'webm';
+   const file=new File([blob],`voice-note-${Date.now()}.${ext}`,{type:base});
+   const form=new FormData();form.set('channel_id',channelId);form.set('file',file);
+   const r=await fetch('/api/zarn/files',{method:'POST',body:form});const d=await r.json().catch(()=>({}));
+   if(!r.ok)throw new Error(d.error||'Could not send the voice note.');
+   const msg={id:crypto.randomUUID(),channel_id:channelId,parent_id:parentId??null,user_id:me.user_id,body:'',attachments:[{key:d.key,name:d.name,size:d.size,type:d.type,duration:secs}],lead_id:null};
+   emit({table:'zarn_messages',type:'INSERT',row:{...msg,invoice_id:null,kind:'user',meta:{},reply_count:0,last_reply_at:null,pinned_at:null,edited_at:null,deleted_at:null,created_at:new Date().toISOString(),pending:true}});
+   const {error:e}=await db.from('zarn_messages').insert(msg);
+   if(e){emit({table:'zarn_messages',type:'DELETE',row:{...msg} as never});throw new Error('Voice note not sent. Check your connection and try again.');}
+   void fetch('/api/zarn/push/notify',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:msg.id})}).catch(()=>{});
+   onSent?.();
+  }catch(e){setError(e instanceof Error?e.message:'Could not send the voice note.');}
+  finally{setRecBusy(false);setRec(false);}
+ }
+ useEffect(()=>()=>{discard.current=true;if(recorder.current?.state==='recording')recorder.current.stop();stopTracks();},[]);
  async function addFiles(list:FileList|null){
   if(!list)return;
   for(const raw of Array.from(list).slice(0,10)){
@@ -59,7 +101,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
   setSending(false);
   if(e){emit({table:'zarn_messages',type:'DELETE',row:{...msg} as never});setError('Message not sent. Check your connection and try again.');return;}
   void fetch('/api/zarn/push/notify',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:msg.id})}).catch(()=>{});
-  setText('');setFiles([]);setLeadId(null);onSent?.();
+  setText('');setFiles([]);setLeadId(null);onSent?.();box.current?.focus();
  }
  function onKey(e:React.KeyboardEvent<HTMLTextAreaElement>){
   if(mention&&options.length){
@@ -68,16 +110,23 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
    if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();choose(options[pick]!);return;}
    if(e.key==='Escape'){setMention(null);return;}
   }
-  if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send();}
+  if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing&&!window.matchMedia('(pointer: coarse)').matches){e.preventDefault();void send();}
  }
  if(disabled)return <div className="zn-composer is-disabled">{disabled}</div>;
  const l=leadId?lead(leadId):undefined;
+ const hasContent=!!text.trim()||files.length>0||!!leadId;
  return <div className="zn-composer" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();void addFiles(e.dataTransfer.files);}}>
   {mention&&options.length>0&&<ul className="zn-suggest" role="listbox">{options.map((o,i)=><li key={o.id} role="option" aria-selected={i===pick} className={i===pick?'is-on':''} onMouseDown={e=>{e.preventDefault();choose(o);}}>{o.m?<Avatar m={o.m} size={22}/>:<AtSign size={16}/>}<b>{o.label}</b>{o.m&&<small>{o.m.username?`@${o.m.username}`:''}{o.m.username&&o.m.title?' · ':''}{o.m.title}</small>}{!o.m&&<small>Notify everyone in this channel</small>}</li>)}</ul>}
   {(files.length>0||leadId)&&<div className="zn-attach-row">
    {files.map(f=><span key={f.tmp} className={`zn-chip${f.error?' is-error':''}`} title={f.error}>{f.uploading?<Loader2 size={13} className="zn-spin"/>:<Paperclip size={13}/>}{f.name}<button type="button" aria-label="Remove" onClick={()=>setFiles(x=>x.filter(y=>y.tmp!==f.tmp))}><X size={12}/></button></span>)}
    {leadId&&<span className="zn-chip"><Briefcase size={13}/>{l?.company||l?.name||'Lead'}<button type="button" aria-label="Remove lead" onClick={()=>setLeadId(null)}><X size={12}/></button></span>}
   </div>}
+  {rec?<div className="zn-rec" role="group" aria-label="Recording a voice note">
+   <button type="button" className="zn-rec-cancel" aria-label="Discard recording" disabled={recBusy} onClick={cancelRec}><Trash2 size={18}/></button>
+   <span className="zn-rec-dot"/><time>{Math.floor(recSecs/60)}:{String(recSecs%60).padStart(2,'0')}</time>
+   <span className="zn-rec-hint">{recBusy?'Sending…':`Recording · up to ${MAX_VOICE/60} min`}</span>
+   <button type="button" className="zn-send" aria-label="Send voice note" disabled={recBusy} onClick={finishRec}>{recBusy?<Loader2 size={17} className="zn-spin"/>:<Send size={17}/>}</button>
+  </div>:<>
   <textarea ref={box} rows={1} value={text} placeholder={placeholder} maxLength={8000} onChange={e=>onChange(e.target.value,e.target.selectionStart)} onKeyDown={onKey} onPaste={e=>{if(e.clipboardData.files.length){e.preventDefault();void addFiles(e.clipboardData.files);}}} aria-label="Message"/>
   <div className="zn-composer-bar">
    <button type="button" aria-label="Attach files" data-tip="Attach files (4 MB each)" onClick={()=>fileInput.current?.click()}><Paperclip size={17}/></button>
@@ -85,8 +134,11 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
    <button type="button" aria-label="Mention someone" data-tip="Mention someone" onClick={()=>{const el=box.current!;const pos=el.selectionStart;const v=text.slice(0,pos)+(pos&&!/\s$/.test(text.slice(0,pos))?' @':'@')+text.slice(pos);onChange(v,v.length-(text.length-pos));el.focus();}}><AtSign size={17}/></button>
    {me.can_view_crm&&<button type="button" aria-label="Attach a CRM lead" data-tip="Share a CRM lead" onClick={()=>setLeadPicker(true)}><Briefcase size={17}/></button>}
    <small className="zn-hint">*bold* _italic_ `code` · Shift+Enter for a new line</small>
-   <button type="button" className="zn-send" aria-label="Send" disabled={sending||(!text.trim()&&!files.length&&!leadId)} onClick={()=>void send()}><Send size={16}/></button>
+   {hasContent
+    ?<button type="button" className="zn-send" aria-label="Send" disabled={sending} onMouseDown={e=>e.preventDefault()} onClick={()=>void send()}><Send size={17}/></button>
+    :<button type="button" className="zn-send is-mic" aria-label="Record a voice note" data-tip="Record a voice note" onMouseDown={e=>e.preventDefault()} onClick={()=>void startRec()}><Mic size={18}/></button>}
   </div>
+  </>}
   {error&&<p className="zn-error">{error}</p>}
   {leadPicker&&<LeadPicker onClose={()=>setLeadPicker(false)} onPick={id=>{setLeadId(id);setLeadPicker(false);box.current?.focus();}}/>}
  </div>;
