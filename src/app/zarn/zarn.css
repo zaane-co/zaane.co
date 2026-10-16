@@ -1053,3 +1053,4 @@ button.zp-members{display:inline-flex;align-items:center;border-radius:999px;pad
 .zn-doc-img{flex:1;display:grid;place-items:center;background:#111;overflow:auto}.zn-doc-img img{max-width:100%;max-height:100%;object-fit:contain}
 .lf-name.is-link b{cursor:pointer}.lf-name.is-link:hover b{text-decoration:underline}
 button.lf-name{text-align:left;background:none;border:0;padding:0;font:inherit;color:inherit}
+.zn-file-voice{display:flex;align-items:center;justify-content:center;padding:14px 10px;background:var(--z-panel-2)}.zn-file-voice .zn-voice{width:100%;margin:0}

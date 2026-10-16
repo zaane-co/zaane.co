@@ -7,11 +7,13 @@ import {useZarn} from './ZarnProvider';
 import {dayOf} from './format';
 import {Modal} from './Dialogs';
 import DocViewer,{docKind} from './DocViewer';
+import VoicePlayer from './VoicePlayer';
 import Dropdown from '@/components/ui/Dropdown';
 import {optimizeImage} from '@/components/admin/blog/shared';
 
 type Item={key:string;m:Pick<ZMessage,'id'|'channel_id'|'user_id'|'created_at'>;i:number;a:ZAttachment};
-type Kind='all'|'images'|'documents'|'other';
+type Kind='all'|'images'|'voice'|'documents'|'other';
+const isAudio=(a:ZAttachment)=>a.type.startsWith('audio/');
 const isImage=(a:ZAttachment)=>a.type.startsWith('image/')&&a.type!=='image/svg+xml';
 const isDoc=(a:ZAttachment)=>/pdf|word|document|sheet|excel|presentation|powerpoint|text\//.test(a.type)||/\.(pdf|docx?|xlsx?|pptx?|csv|txt|md)$/i.test(a.name);
 const size=(n:number)=>n>1024*1024?`${(n/1024/1024).toFixed(1)} MB`:`${Math.max(1,Math.round(n/1024))} KB`;
@@ -28,8 +30,9 @@ export default function Files(){
  },[db]);
  // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
  useEffect(()=>{void load();},[load]);
- const counts=useMemo(()=>({all:items.length,images:items.filter(x=>isImage(x.a)).length,documents:items.filter(x=>!isImage(x.a)&&isDoc(x.a)).length,other:items.filter(x=>!isImage(x.a)&&!isDoc(x.a)).length}),[items]);
- const shown=items.filter(x=>(kind==='all'||(kind==='images'?isImage(x.a):kind==='documents'?!isImage(x.a)&&isDoc(x.a):!isImage(x.a)&&!isDoc(x.a)))&&`${x.a.name} ${people[x.m.user_id??'']?.display_name??''}`.toLowerCase().includes(q.toLowerCase()));
+ const match=(x:Item,k:Kind)=>k==='all'||(k==='images'?isImage(x.a):k==='voice'?isAudio(x.a):k==='documents'?!isImage(x.a)&&!isAudio(x.a)&&isDoc(x.a):!isImage(x.a)&&!isAudio(x.a)&&!isDoc(x.a));
+ const counts=useMemo(()=>({all:items.length,images:items.filter(x=>match(x,'images')).length,voice:items.filter(x=>match(x,'voice')).length,documents:items.filter(x=>match(x,'documents')).length,other:items.filter(x=>match(x,'other')).length}),[items]);
+ const shown=items.filter(x=>match(x,kind)&&`${x.a.name} ${people[x.m.user_id??'']?.display_name??''}`.toLowerCase().includes(q.toLowerCase()));
  const where=(id:string)=>{const c=channels.find(x=>x.id===id);return c?(c.kind==='dm'||c.kind==='client'?title(c):`#${c.name}`):'a channel';};
  return <div className="zn-page" onDragOver={e=>{if(e.dataTransfer.types.includes('Files'))e.preventDefault();}} onDrop={e=>{if(!e.dataTransfer.files.length)return;e.preventDefault();setDropped(Array.from(e.dataTransfer.files));setUploading(true);}}>
   {docOpen&&<DocViewer messageId={docOpen.m.id} index={docOpen.i} att={docOpen.a} onClose={()=>setDocOpen(null)}/>}
@@ -37,11 +40,12 @@ export default function Files(){
   <header className="zn-page-head"><div><h1><FilesIcon size={20}/>Files</h1><p>Everything shared in the conversations you’re part of.</p></div><button type="button" className="zn-btn is-primary" onClick={()=>setUploading(true)}><Upload size={14}/>Upload</button></header>
   <div className="zn-tools">
    <label className="zn-tool-search"><Search size={15}/><input placeholder="Search by file name or person" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search files"/></label>
-   <div className="zn-pills" role="tablist" aria-label="File type">{(['all','images','documents','other'] as const).map(k=><button key={k} type="button" role="tab" aria-selected={kind===k} className={kind===k?'is-on':''} onClick={()=>setKind(k)}>{k==='all'?'All':k[0].toUpperCase()+k.slice(1)} <span>{counts[k]}</span></button>)}</div>
+   <div className="zn-pills" role="tablist" aria-label="File type">{(['all','images','voice','documents','other'] as const).map(k=><button key={k} type="button" role="tab" aria-selected={kind===k} className={kind===k?'is-on':''} onClick={()=>setKind(k)}>{k==='all'?'All':k==='voice'?'Voice notes':k[0].toUpperCase()+k.slice(1)} <span>{counts[k]}</span></button>)}</div>
   </div>
   <div className="zn-crm-list" data-lenis-prevent>
    {loading?<p className="zn-loading">Loading…</p>:shown.length?<div className="zn-file-grid">{shown.map(x=>{const c=channels.find(ch=>ch.id===x.m.channel_id);return <article key={x.key} className="zn-file-card">
-    {isImage(x.a)?<a href={`/api/zarn/files?m=${x.m.id}&i=${x.i}`} target="_blank" rel="noopener noreferrer" className="zn-file-thumb" aria-label={`Open ${x.a.name}`}><img src={`/api/zarn/files?m=${x.m.id}&i=${x.i}`} alt={x.a.name} loading="lazy"/></a>
+    {isAudio(x.a)?<div className="zn-file-voice"><VoicePlayer messageId={x.m.id} index={x.i} att={x.a}/></div>
+     :isImage(x.a)?<a href={`/api/zarn/files?m=${x.m.id}&i=${x.i}`} target="_blank" rel="noopener noreferrer" className="zn-file-thumb" aria-label={`Open ${x.a.name}`}><img src={`/api/zarn/files?m=${x.m.id}&i=${x.i}`} alt={x.a.name} loading="lazy"/></a>
      :docKind(x.a)?<button type="button" className="zn-file-thumb is-doc" aria-label={`Preview ${x.a.name}`} onClick={()=>setDocOpen(x)}><FileText size={30}/><em>{(x.a.name.split('.').pop()||'file').slice(0,5)}</em></button>
      :<a href={`/api/zarn/files?m=${x.m.id}&i=${x.i}&download=1`} className="zn-file-thumb is-doc" aria-label={`Download ${x.a.name}`}><FileText size={30}/><em>{(x.a.name.split('.').pop()||'file').slice(0,5)}</em></a>}
     <div className="zn-file-meta"><b title={x.a.name}>{x.a.name}</b><small>{size(x.a.size)} · {people[x.m.user_id??'']?.display_name??'Someone'} · {dayOf(x.m.created_at)}</small>
