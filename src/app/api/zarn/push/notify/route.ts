@@ -38,7 +38,7 @@ export async function POST(request:Request){
  await Promise.all([...new Set(subs.map(s=>s.user_id))].map(async u=>{const {data}=await svc.rpc('zarn_unread_total',{uid:u});counts.set(u,Number(data)||1);}));
  let sent=0;
  await Promise.all(subs.map(async s=>{
-  try{await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},JSON.stringify({title,body:body||'New message',tag:m.id,url,unread:counts.get(s.user_id)??1}),{TTL:60*60*24});sent++;}
+  try{await webpush.sendNotification({endpoint:s.endpoint,keys:{p256dh:s.p256dh,auth:s.auth}},JSON.stringify({title,body:body||'New message',tag:m.id,url,channel:ch.id,unread:counts.get(s.user_id)??1}),{TTL:60*60*24});sent++;}
   catch(e){const code=(e as {statusCode?:number}).statusCode;if(code===404||code===410)await svc.from('zarn_push_subscriptions').delete().eq('endpoint',s.endpoint);}
  }));
  return Response.json({ok:true,sent});

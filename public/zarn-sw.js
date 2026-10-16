@@ -23,7 +23,7 @@ self.addEventListener('push', e => {
     if (self.navigator.setAppBadge && d.unread) { try { await self.navigator.setAppBadge(d.unread); } catch (_) {} }
     await self.registration.showNotification(d.title || 'ZARN', {
       body: d.body || '', tag: d.tag, icon: '/zarn-icons/icon-192.png', badge: '/zarn-icons/icon-192.png',
-      data: { url: d.url || '/zarn' }, renotify: true,
+      data: { url: d.url || '/zarn', channel: d.channel }, renotify: true,
       requireInteraction: !!d.call, vibrate: d.call ? [300, 150, 300, 150, 300] : undefined,
     });
   })());

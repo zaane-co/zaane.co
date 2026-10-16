@@ -38,13 +38,21 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  const [active,setActive]=useState<string|null>(null);
  const [leads,setLeads]=useState<Record<string,ZLead>>(()=>Object.fromEntries((initial.leads??[]).map(l=>[l.id,l])));
  const listeners=useRef(new Set<(e:ZEvent)=>void>());
+ const unreadReady=useRef(false);
  const activeRef=useRef(active);useEffect(()=>{activeRef.current=active;},[active]);
  const people=useMemo(()=>Object.fromEntries(members.map(m=>[m.user_id,m])),[members]);
  const membership=useMemo(()=>Object.fromEntries(membershipRows.map(m=>[m.channel_id,m])),[membershipRows]);
  const peopleRef=useRef(people),channelsRef=useRef(channels),membershipRef=useRef(membership);
  useEffect(()=>{peopleRef.current=people;channelsRef.current=channels;membershipRef.current=membership;},[people,channels,membership]);
 
- const loadUnread=useCallback(async()=>{const {data}=await db.rpc('zarn_unread');setUnread(Object.fromEntries(((data??[]) as {channel_id:string;unread:number;mentions:number}[]).map(r=>[r.channel_id,{unread:r.unread,mentions:r.mentions}])));},[db]);
+ const loadUnread=useCallback(async()=>{
+  const {data}=await db.rpc('zarn_unread');
+  const map=Object.fromEntries(((data??[]) as {channel_id:string;unread:number;mentions:number}[]).map(r=>[r.channel_id,{unread:r.unread,mentions:r.mentions}]));
+  // The conversation on screen is never unread: if a refresh raced the read mark, mark it read again.
+  const open=activeRef.current;
+  if(open&&document.visibilityState==='visible'&&(map[open]?.unread||map[open]?.mentions)){map[open]={unread:0,mentions:0};void db.rpc('zarn_mark_read',{c:open}).then(()=>{});}
+  setUnread(map);unreadReady.current=true;
+ },[db]);
  const [invites,setInvites]=useState<ZInvite[]>([]);
  const reloadInvites=useCallback(async()=>{
   try{const r=await fetch('/api/zarn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'invites'})});const d=await r.json();if(r.ok)setInvites(d.invites??[]);}catch{}
@@ -95,7 +103,8 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
   return()=>{document.removeEventListener('visibilitychange',mark);window.removeEventListener('online',mark);};
  },[db]);
  // Initial unread + live updates.
- useEffect(()=>{void db.rpc('zarn_unread').then(({data}:{data:unknown})=>setUnread(Object.fromEntries(((data??[]) as {channel_id:string;unread:number;mentions:number}[]).map(r=>[r.channel_id,{unread:r.unread,mentions:r.mentions}]))));},[db]);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
+ useEffect(()=>{void loadUnread();},[loadUnread]);
  useEffect(()=>{
   const ch=db.channel('zarn-db')
    .on('postgres_changes',{event:'*',schema:'public',table:'zarn_messages'},(p:Change)=>{
@@ -120,7 +129,11 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
     const row=(p.eventType==='DELETE'?p.old:p.new) as unknown as ZReaction;
     listeners.current.forEach(fn=>fn({table:'zarn_reactions',type:p.eventType as 'INSERT'|'DELETE',row}));
    })
-   .on('postgres_changes',{event:'*',schema:'public',table:'zarn_channel_members',filter:`user_id=eq.${me.user_id}`},()=>{void reload();})
+   .on('postgres_changes',{event:'*',schema:'public',table:'zarn_channel_members',filter:`user_id=eq.${me.user_id}`},(p:Change)=>{
+    // Reading and delivery stamps change this row constantly; only a real change (joined, left, muted, starred) needs a reload.
+    if(p.eventType==='UPDATE'&&p.old&&p.new&&p.old.muted===p.new.muted&&p.old.starred===p.new.starred)return;
+    void reload();
+   })
    .on('postgres_changes',{event:'*',schema:'public',table:'zarn_channels'},()=>{void reload();})
    .subscribe();
   const presence=db.channel('zarn-presence',{config:{presence:{key:me.user_id}}});
@@ -136,6 +149,13 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
   document.title=total?`(${total}) ZARN`:'ZARN';
   const nav=navigator as Navigator&{setAppBadge?:(n?:number)=>Promise<void>;clearAppBadge?:()=>Promise<void>};
   if(total)void nav.setAppBadge?.(total).catch(()=>{});else void nav.clearAppBadge?.().catch(()=>{});
+ },[unread,membership]);
+ // Notifications that were sent for a conversation disappear from the phone's notification list once it has been read.
+ useEffect(()=>{
+  if(!unreadReady.current||!('serviceWorker' in navigator))return;
+  void navigator.serviceWorker.getRegistration('/zarn').then(reg=>reg?.getNotifications()).then(list=>{
+   list?.forEach(n=>{const c=(n.data as {channel?:string}|undefined)?.channel;if(!c)return;const u=unread[c];const pending=membership[c]?.muted?(u?.mentions??0):(u?.unread??0);if(!pending)n.close();});
+  }).catch(()=>{});
  },[unread,membership]);
  // Desktop notification permission, read from the browser (false during server render).
  const notifyOn=useSyncExternalStore(cb=>{window.addEventListener('zarn-notify',cb);return()=>window.removeEventListener('zarn-notify',cb);},()=>'Notification' in window&&Notification.permission==='granted',()=>false);
