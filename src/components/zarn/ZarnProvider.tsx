@@ -31,7 +31,7 @@ type Ctx={
  db:ReturnType<typeof browserClient>;reload:()=>Promise<void>;markRead:(channelId:string)=>void;subscribe:(fn:(e:ZEvent)=>void)=>()=>void;
  active:string|null;setActive:(id:string|null)=>void;title:(c:ZChannel)=>string;lead:(id:string)=>ZLead|undefined;loadLead:(id:string,force?:boolean)=>void;
  openDm:(ids:string[])=>Promise<void>;notifyOn:boolean;enableNotify:()=>void;emit:(e:ZEvent)=>void;
- projects:ZProject[]|null;reloadProjects:()=>Promise<void>;
+ projects:ZProject[]|null;reloadProjects:()=>Promise<void>;dueTasks:number;refreshDue:()=>Promise<void>;
  todos:ZTodo[]|null;saved:Record<string,string>;toggleSaved:(m:{id:string;channel_id:string})=>Promise<void>;addTodo:(fields:TodoFields&{body:string})=>Promise<void>;updateTodo:(id:string,patch:TodoFields)=>Promise<void>;removeTodo:(id:string)=>Promise<void>;
 };
 const ZarnCtx=createContext<Ctx|null>(null);
@@ -138,6 +138,17 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  const reloadProjects=useCallback(async()=>{const {data}=await db.from('zarn_projects').select('id,name,description,color,created_by,created_at').order('created_at');setProjects((data??[]) as ZProject[]);},[db]);
  useEffect(()=>{if(me.account_type!=='guest')void reloadProjects();else setProjects([]);},[reloadProjects,me.account_type]);
 
+ // Open tasks assigned to you that are due today or already late, for the sidebar badge.
+ const [dueTasks,setDueTasks]=useState(0);
+ const refreshDue=useCallback(async()=>{
+  const {data:a}=await db.from('zarn_task_assignees').select('task_id').eq('user_id',me.user_id);
+  const ids=((a??[]) as {task_id:string}[]).map(x=>x.task_id).slice(0,500);
+  if(!ids.length){setDueTasks(0);return;}
+  const {count}=await db.from('zarn_tasks').select('id',{count:'exact',head:true}).in('id',ids).neq('status','done').lte('due_at',new Date().toISOString().slice(0,10));
+  setDueTasks(count??0);
+ },[db,me.user_id]);
+ useEffect(()=>{if(me.account_type!=='guest')void refreshDue();},[refreshDue,me.account_type]);
+
  // To-dos and saved messages. Rows are only ever yours (RLS), so they load once and are edited locally.
  const [todos,setTodos]=useState<ZTodo[]|null>(null);
  useEffect(()=>{let live=true;void (async()=>{const {data}=await db.from('zarn_todos').select('id,body,description,status,priority,message_id,channel_id,start_at,due_at,done_at,created_at').eq('user_id',me.user_id).order('created_at',{ascending:false});if(live)setTodos((data??[]) as ZTodo[]);})();return()=>{live=false;};},[db,me.user_id]);
@@ -166,7 +177,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
 
  // Local echo: your own messages and reactions show instantly; the realtime copy is de-duplicated by id.
  const emit=useCallback((e:ZEvent)=>{listeners.current.forEach(fn=>fn(e));},[]);
- const value=useMemo<Ctx>(()=>({me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
-  [me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
+ const value=useMemo<Ctx>(()=>({me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
+  [me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
  return <ZarnCtx.Provider value={value}>{children}</ZarnCtx.Provider>;
 }

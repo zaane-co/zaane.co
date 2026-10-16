@@ -1,2 +1,2 @@
-import Todos from '@/components/zarn/Todos';
-export default function Page(){return <Todos/>;}
+import ProjectBoard from '@/components/zarn/ProjectBoard';
+export default function Page(){return <ProjectBoard/>;}

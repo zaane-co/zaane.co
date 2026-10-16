@@ -23,7 +23,6 @@ const tabs=['/zarn/home','/zarn/dms','/zarn/clients','/zarn/activity','/zarn/you
 // Phones: Slack-style bottom tabs (Home, DMs, Clients, Activity, You), full-screen lists, back arrows in conversations.
 export default function ZarnShell({children}:{children:React.ReactNode}){
  const z=useZarn(),{me,channels}=z,pathname=usePathname(),{light}=useAdminTheme();
- const dueToday=new Date().toISOString().slice(0,10),dueTodos=(z.todos??[]).filter(t=>!t.done_at&&t.due_at&&t.due_at<=dueToday).length;
  const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,badges}=nav;
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false);
@@ -93,7 +92,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       {link('/zarn/activity',<Bell size={15}/>,'Activity')}
       {link('/zarn/mentions',<AtSign size={15}/>,'Mentions',badges.activity)}
       {link('/zarn/files',<Files size={15}/>,'Files')}
-      {link('/zarn/todos',<ListChecks size={15}/>,'To-dos',dueTodos)}
+      {link('/zarn/todos',<ListChecks size={15}/>,'To-dos',z.dueTasks)}
       {link('/zarn/people',<Contact size={15}/>,'People')}
       {starred.length>0&&section('starred','Starred',starred.map(c=><ChannelRow key={c.id} c={c}/>))}
       {section('channels','Channels',<>{rooms.map(c=><ChannelRow key={c.id} c={c}/>)}{!guest&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('browse')}><Plus size={15}/><span>Browse channels</span></button>}</>,canCreate?()=>setDialog('channel'):undefined)}
