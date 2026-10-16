@@ -1,6 +1,7 @@
 'use client';
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
 import {Check,Maximize2,Mic,MicOff,Minimize2,Phone,PhoneOff,Volume2} from 'lucide-react';
+import {createPortal} from 'react-dom';
 import type {RealtimeChannel} from '@supabase/supabase-js';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -20,6 +21,8 @@ async function api(body:object){
  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Something went wrong.');return d;
 }
 
+// The theme colours are defined on the .zarn root, so the call UI renders inside it (light and dark both work).
+const portal=(node:React.ReactNode)=>createPortal(node,document.querySelector('.zarn')??document.body);
 export default function CallProvider({children}:{children:React.ReactNode}){
  const {db,me,people}=useZarn();
  const [phase,setPhase]=useState<Phase>('idle'),[call,setCall]=useState<Call|null>(null),[muted,setMuted]=useState(false),[secs,setSecs]=useState(0),[notice,setNotice]=useState(''),[mini,setMini]=useState(false),[outs,setOuts]=useState<MediaDeviceInfo[]|null>(null),[outId,setOutId]=useState('');
@@ -141,6 +144,7 @@ export default function CallProvider({children}:{children:React.ReactNode}){
  const peer=call?people[call.peer]:undefined,name=peer?.display_name??'Someone';
  return <Ctx.Provider value={value}>{children}
   <audio ref={audio} autoPlay playsInline/>
+  {(notice||phase!=='idle')&&portal(<>
   {notice&&<div className="zn-call-toast" role="status">{notice}</div>}
   {phase!=='idle'&&call&&mini&&<div className="zn-call-mini" role="status">
    <button type="button" className="zn-call-mini-main" aria-label="Expand call" onClick={()=>setMini(false)}><Avatar m={peer} size={28}/><b>{name}</b><small>{phase==='active'?fmt(secs):phase==='incoming'?'Incoming':'Calling…'}</small></button>
@@ -164,5 +168,6 @@ export default function CallProvider({children}:{children:React.ReactNode}){
    </div>
    {outs&&<ul className="zn-call-outs" aria-label="Speakers">{outs.length?outs.map(d=><li key={d.deviceId}><button type="button" onClick={()=>void pickOutput(d.deviceId)}>{(outId||'default')===d.deviceId?<Check size={14}/>:<i/>}<span>{d.label||'Speaker'}</span></button></li>):<li className="is-empty">No other speakers found.</li>}</ul>}
   </div></div>}
+  </>)}
  </Ctx.Provider>;
 }

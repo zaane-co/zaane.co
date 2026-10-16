@@ -948,7 +948,7 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 .zn-call-actions .is-decline svg{background:#dc2626;border-color:#dc2626;color:#fff}
 .zn-call-actions .is-accept svg{background:#16a34a;border-color:#16a34a;color:#fff}
 .zn-call-toast{position:fixed;z-index:121;left:50%;bottom:24px;transform:translateX(-50%);padding:10px 16px;border-radius:10px;background:var(--z-fg);color:var(--z-bg);font-size:13.5px;font-weight:600;max-width:calc(100vw - 24px)}
-.zn-call-min{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:var(--z-muted)}.zn-call-min:hover{background:var(--z-hover);color:var(--z-fg)}
+.zn-call-min{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--z-fg);background:var(--z-hover);border:1px solid var(--z-border)}.zn-call-min:hover{background:var(--z-hover);color:var(--z-fg)}
 .zn-call-outs{width:100%;list-style:none;margin:0;padding:6px;border-radius:12px;background:var(--z-panel);border:1px solid var(--z-border);display:flex;flex-direction:column;gap:2px;text-align:left}
 .zn-call-outs button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;font-size:13px;color:var(--z-fg)}.zn-call-outs button:hover{background:var(--z-hover)}
 .zn-call-outs button i{width:14px;flex-shrink:0}.zn-call-outs button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
