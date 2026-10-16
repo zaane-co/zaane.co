@@ -105,9 +105,15 @@ export default function CallProvider({children}:{children:React.ReactNode}){
  }
 
  // Someone is calling me / the call changed.
+ // Pick up a call that is still ringing: when ZARN opens (e.g. from tapping the notification) and whenever the app comes back to the front.
  useEffect(()=>{
-  void db.from('zarn_calls').select('id,caller_id,channel_id,created_at').eq('callee_id',me.user_id).eq('status','ringing').gt('created_at',new Date(Date.now()-RING_TIMEOUT).toISOString()).order('created_at',{ascending:false}).limit(1)
-   .then(({data}:{data:{id:string;caller_id:string;channel_id:string}[]|null})=>{const r=data?.[0];if(!r||phaseRef.current!=='idle')return;const c={id:r.id,peer:r.caller_id,channel:r.channel_id};callRef.current=c;setCall(c);go('incoming');stopRing.current=startRing('in');timers.current.push(setTimeout(()=>{if(phaseRef.current==='incoming')cleanup();},RING_TIMEOUT));});
+  const check=()=>{
+   if(document.visibilityState!=='visible'||phaseRef.current!=='idle')return;
+   void db.from('zarn_calls').select('id,caller_id,channel_id,created_at').eq('callee_id',me.user_id).eq('status','ringing').gt('created_at',new Date(Date.now()-RING_TIMEOUT).toISOString()).order('created_at',{ascending:false}).limit(1)
+    .then(({data}:{data:{id:string;caller_id:string;channel_id:string}[]|null})=>{const r=data?.[0];if(!r||phaseRef.current!=='idle')return;const c={id:r.id,peer:r.caller_id,channel:r.channel_id};callRef.current=c;setCall(c);go('incoming');stopRing.current=startRing('in');timers.current.push(setTimeout(()=>{if(phaseRef.current==='incoming')cleanup();},RING_TIMEOUT));});
+  };
+  check();document.addEventListener('visibilitychange',check);window.addEventListener('focus',check);window.addEventListener('pageshow',check);
+  return()=>{document.removeEventListener('visibilitychange',check);window.removeEventListener('focus',check);window.removeEventListener('pageshow',check);};
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[db,me.user_id]);
  useEffect(()=>{

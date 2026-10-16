@@ -1,18 +1,19 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Bookmark,Check,CheckCheck,ChevronLeft,ChevronRight,Clock3,Download,FileText,MessageSquareText,Pencil,Pin,SmilePlus,Trash2,TrendingUp,Receipt,UserPlus,X} from 'lucide-react';
+import {Bookmark,Phone,Check,CheckCheck,ChevronLeft,ChevronRight,Clock3,Download,FileText,MessageSquareText,Pencil,Pin,SmilePlus,Trash2,TrendingUp,Receipt,UserPlus,X} from 'lucide-react';
 import {quickReactions,zarnApi,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {money} from '@/lib/crm';
 import {useZarn} from './ZarnProvider';
 import {useShell} from './nav';
 import DocViewer,{docKind} from './DocViewer';
+import {useCall} from './CallProvider';
 import {Avatar,StatusMark,renderBody,timeOf,tokensToText,textToTokens} from './format';
 
 // One message row. compact = same author as the previous message within a few minutes (no avatar/name).
 export type Receipt={pending:boolean;seen:{id:string;at:string}[];unseen:string[];delivered:string[]};
 export default function Message({m,reactions,compact,inThread,onThread,receipt}:{m:ZMessage;reactions:ZReaction[];compact:boolean;inThread?:boolean;onThread?:(m:ZMessage)=>void;receipt?:Receipt}){
- const {me,people,members,db,membership,emit,saved,toggleSaved}=useZarn(),{profile}=useShell();
+ const {me,people,members,db,membership,channels,emit,saved,toggleSaved}=useZarn(),{profile}=useShell(),call=useCall();
  const [viewer,setViewer]=useState<number|null>(null),[doc,setDoc]=useState<number|null>(null),[seenOpen,setSeenOpen]=useState(false);
  const [tapped,setTapped]=useState(false),[picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[confirm,setConfirm]=useState(false);
  const author=m.user_id?people[m.user_id]:undefined,mine=m.user_id===me.user_id,canAct=!!membership[m.channel_id];
@@ -33,7 +34,13 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
  const remove=async()=>{const deleted_at=new Date().toISOString();emit({table:'zarn_messages',type:'UPDATE',row:{...m,body:'',deleted_at}});await db.from('zarn_messages').update({deleted_at,body:''}).eq('id',m.id);setConfirm(false);};
  const pin=()=>void zarnApi('/api/zarn',{action:'pin',message_id:m.id,pinned:!m.pinned_at}).catch(()=>{});
 
- if(m.kind==='system')return <div className="zn-system">{systemText(m,people)}</div>;
+ if(m.kind==='system'){
+  // A missed or declined call gets a one-tap call back.
+  const missed=m.meta.event==='call'&&(m.meta.status==='missed'||m.meta.status==='declined');
+  const ch=channels.find(c=>c.id===m.channel_id),by=String(m.meta.by??'');
+  const peer=by===me.user_id?(ch?.dm_key??'').split(',').find(u=>u!==me.user_id):by;
+  return <div className="zn-system">{systemText(m,people)}{missed&&peer&&ch?.kind==='dm'&&<button type="button" className="zn-callback" disabled={call.busy} onClick={()=>void call.start(m.channel_id,peer)}><Phone size={12}/>{by===me.user_id?'Call again':'Call back'}</button>}</div>;
+ }
  if(m.deleted_at)return <div className={`zn-msg${compact?' is-compact':''}`}><div className="zn-gutter">{!compact&&<Avatar m={author}/>}</div><div className="zn-msg-main"><p className="zn-deleted">This message was deleted.</p></div></div>;
 
  // Touch screens have no hover: tapping a message (not a link or button) shows its action bar.

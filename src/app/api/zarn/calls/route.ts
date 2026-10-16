@@ -52,6 +52,7 @@ export async function POST(request:Request){
  if(upd){
   const duration=done==='ended'&&call.answered_at?Math.max(1,Math.round((Date.now()-new Date(call.answered_at).getTime())/1000)):0;
   await svc.from('zarn_messages').insert({channel_id:call.channel_id,kind:'system',meta:{event:'call',status:done,by:call.caller_id,duration}});
+  if(done==='missed'&&call.caller_id===me.user_id)await pushTo([call.callee_id],{title:`Missed call from ${me.display_name}`,body:'Tap to open the chat and call back',tag:`missed-${call.id}`,url:`/zarn/c/${call.channel_id}`});
  }
  return Response.json({ok:true});
 }
