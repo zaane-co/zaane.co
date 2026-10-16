@@ -38,7 +38,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  const [active,setActive]=useState<string|null>(null);
  const [leads,setLeads]=useState<Record<string,ZLead>>(()=>Object.fromEntries((initial.leads??[]).map(l=>[l.id,l])));
  const listeners=useRef(new Set<(e:ZEvent)=>void>());
- const unreadReady=useRef(false);
+ const unreadReady=useRef(false),memberTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const activeRef=useRef(active);useEffect(()=>{activeRef.current=active;},[active]);
  const people=useMemo(()=>Object.fromEntries(members.map(m=>[m.user_id,m])),[members]);
  const membership=useMemo(()=>Object.fromEntries(membershipRows.map(m=>[m.channel_id,m])),[membershipRows]);
@@ -135,6 +135,12 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
     void reload();
    })
    .on('postgres_changes',{event:'*',schema:'public',table:'zarn_channels'},()=>{void reload();})
+   .on('postgres_changes',{event:'*',schema:'public',table:'zarn_members'},(p:Change)=>{
+    // Heartbeat updates (last seen) fire constantly; only a real change to a person needs a refresh of the team list.
+    if(p.eventType==='UPDATE'&&p.old&&p.new){const {last_seen_at:_a,...before}=p.old as Record<string,unknown>,{last_seen_at:_b,...after}=p.new as Record<string,unknown>;void _a;void _b;if(JSON.stringify(before)===JSON.stringify(after))return;}
+    if(memberTimer.current)clearTimeout(memberTimer.current);
+    memberTimer.current=setTimeout(()=>{void reload();},400);
+   })
    .subscribe();
   const presence=db.channel('zarn-presence',{config:{presence:{key:me.user_id}}});
   presence.on('presence',{event:'sync'},()=>setOnline(new Set(Object.keys(presence.presenceState()))))
