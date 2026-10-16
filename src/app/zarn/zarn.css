@@ -1209,3 +1209,8 @@ html[data-kb] .zn-prompt{display:none}
 .zcb-edit{border:1px solid var(--z-border);border-radius:12px;background:var(--z-input);padding:12px 14px;min-height:180px}
 .zcb-edit .zcb-prose{min-height:150px}
 .zcb-edit-btn{align-self:flex-start}
+/* Client brief: keep the card compact; read it in Preview, edit inside a scrolling box */
+.zcb-clamp{max-height:92px;overflow:hidden;-webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent)}
+.zcb-actions{display:flex;gap:8px;flex-wrap:wrap}
+.zcb-edit{max-height:min(58vh,520px);overflow-y:auto;overscroll-behavior:contain}
+.zcb-read{font-size:15px;line-height:1.7;overflow-y:auto;max-height:68vh}
