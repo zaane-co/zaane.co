@@ -25,9 +25,10 @@ export async function POST(request:Request){
   await svc.from('zarn_calls').update({status:'missed',ended_at:new Date().toISOString()}).eq('status','ringing').lt('created_at',new Date(Date.now()-RING_MS).toISOString());
   const {data:busy}=await svc.from('zarn_calls').select('id,caller_id').in('status',['ringing','active']).or(`caller_id.in.(${me.user_id},${calleeId}),callee_id.in.(${me.user_id},${calleeId})`).limit(1);
   if(busy?.length)return bad('One of you is already on a call.',409);
-  const {data:call,error}=await svc.from('zarn_calls').insert({channel_id:ch.id,caller_id:me.user_id,callee_id:calleeId}).select('id').single();
+  const video=b.video===true;
+  const {data:call,error}=await svc.from('zarn_calls').insert({channel_id:ch.id,caller_id:me.user_id,callee_id:calleeId,video}).select('id').single();
   if(error||!call)return bad('Could not start the call.',500);
-  await pushTo([calleeId],{title:`${me.display_name} is calling`,body:'Voice call · tap to answer',tag:`call-${call.id}`,url:`${channelHref(ch,ch.id)}`,call:call.id});
+  await pushTo([calleeId],{title:`${me.display_name} is calling`,body:`${video?'Video':'Voice'} call · tap to answer`,tag:`call-${call.id}`,url:`${channelHref(ch,ch.id)}`,call:call.id});
   return Response.json({ok:true,call_id:call.id,ice:await iceServers()});
  }
 

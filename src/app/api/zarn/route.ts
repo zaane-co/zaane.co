@@ -12,6 +12,7 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('invite_accept'),channel_id:id}),
  z.object({action:z.literal('invite_decline'),channel_id:id}),
  z.object({action:z.literal('topic'),id,topic:z.string().trim().max(250)}),
+ z.object({action:z.literal('channel_delete'),id}),
  z.object({action:z.literal('pin'),message_id:id,pinned:z.boolean()}),
 ]);
 const fail=(error:string,status=400)=>Response.json({error},{status});
@@ -80,6 +81,15 @@ export async function POST(request:Request){
   case 'invite_decline':{
    await admin.from('zarn_channel_invites').delete().eq('channel_id',b.channel_id).eq('user_id',me.user_id);
    return Response.json({ok:true});
+  }
+  case 'channel_delete':{
+   // Staff admins can delete any channel; otherwise only the person who created it (never auto-join or CRM feed channels).
+   const {data:c}=await admin.from('zarn_channels').select('kind,created_by,is_default,crm_feed').eq('id',b.id).maybeSingle();
+   if(!c||(c.kind!=='public'&&c.kind!=='private'))return fail('Channel not found.',404);
+   const staff=me.staffRole==='super_admin'||me.staffRole==='admin';
+   if(!staff&&(c.created_by!==me.user_id||c.is_default||c.crm_feed))return fail('Only an admin or the channel’s creator can delete it.',403);
+   const {error}=await admin.from('zarn_channels').delete().eq('id',b.id);
+   return error?fail('Could not delete the channel.'):Response.json({ok:true});
   }
   case 'topic':{
    if(!await inChannel(b.id))return fail('Join the channel first.',403);

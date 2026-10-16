@@ -2,7 +2,7 @@
 import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {useCall} from './CallProvider';
-import {Bell,BellOff,Briefcase,Hash,Info,Lock,Phone,Pin,Star,UserPlus,X} from 'lucide-react';
+import {Bell,BellOff,Briefcase,Hash,Info,Lock,Phone,Pin,Star,Trash2,UserPlus,Video,X} from 'lucide-react';
 import {zarnApi,type ZChannel,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {useZarn,type ZEvent} from './ZarnProvider';
 import Message from './Message';
@@ -104,6 +104,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
     })()}
     <div className="zn-head-actions">
      {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined?<button type="button" aria-label="Voice call" data-tip={call.busy?'You’re on a call':'Voice call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!)}><Phone size={16}/></button>:null;})()}
+     {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined?<button type="button" aria-label="Video call" data-tip={call.busy?'You’re on a call':'Video call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!,{video:true})}><Video size={16}/></button>:null;})()}
      {pinned.length>0&&<button type="button" data-tip="Pinned messages" onClick={()=>setDetails(true)}><Pin size={16}/><span>{pinned.length}</span></button>}
      {joined&&<button type="button" aria-label={membership[id]?.starred?'Unstar':'Star'} data-tip={membership[id]?.starred?'Unstar':'Star'} className={membership[id]?.starred?'is-on':''} onClick={async()=>{await db.from('zarn_channel_members').update({starred:!membership[id]?.starred}).eq('channel_id',id).eq('user_id',me.user_id);await z.reload();}}><Star size={16}/></button>}
      <button type="button" aria-label="Channel details" data-tip="Details" onClick={()=>setDetails(true)}><Info size={16}/></button>
@@ -163,10 +164,13 @@ function Thread({parent,onClose}:{parent:ZMessage;onClose:()=>void}){
 function Details({c,pinned,onClose,onJump}:{c:ZChannel;pinned:ZMessage[];onClose:()=>void;onJump:(id:string)=>void}){
  const {profile:profileOf}=useShell();
  const z=useZarn(),{db,me,people,membership,title,online}=z,router=useRouter();
- const [tab,setTab]=useState<'about'|'members'|'pins'>('about'),[ids,setIds]=useState<string[]>([]),[topic,setTopic]=useState(c.topic),[adding,setAdding]=useState(false),[msg,setMsg]=useState('');
+ const [tab,setTab]=useState<'about'|'members'|'pins'>('about'),[ids,setIds]=useState<string[]>([]),[topic,setTopic]=useState(c.topic),[adding,setAdding]=useState(false),[msg,setMsg]=useState(''),[confirmDel,setConfirmDel]=useState(false),[deleting,setDeleting]=useState(false);
  useEffect(()=>{void db.from('zarn_channel_members').select('user_id').eq('channel_id',c.id).then(({data}:{data:{user_id:string}[]|null})=>setIds((data??[]).map(r=>r.user_id)));},[db,c.id,adding]);
  const mine=membership[c.id];
  const saveTopic=async()=>{try{await zarnApi('/api/zarn',{action:'topic',id:c.id,topic});setMsg('Topic updated.');await z.reload();}catch(e){setMsg(e instanceof Error?e.message:'Could not save.');}};
+ const staff=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const canDelete=(c.kind==='public'||c.kind==='private')&&(staff||(c.created_by===me.user_id&&!c.is_default&&!c.crm_feed));
+ const remove=async()=>{setDeleting(true);try{await zarnApi('/api/zarn',{action:'channel_delete',id:c.id});await z.reload();router.push('/zarn');}catch(e){setMsg(e instanceof Error?e.message:'Could not delete the channel.');setConfirmDel(false);}finally{setDeleting(false);}};
  const leave=async()=>{await db.from('zarn_channel_members').delete().eq('channel_id',c.id).eq('user_id',me.user_id);await z.reload();router.push('/zarn');};
  return <div className="zn-modal-scrim" onClick={onClose}><div className="zn-modal zn-modal-lg" role="dialog" aria-label="Channel details" onClick={e=>e.stopPropagation()}>
   <div className="zn-modal-head"><h2>{c.kind==='dm'?title(c):`#${c.name}`}</h2><button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>
@@ -178,6 +182,9 @@ function Details({c,pinned,onClose,onJump}:{c:ZChannel;pinned:ZMessage[];onClose
    <p className="zn-note">{c.kind==='private'?'Private: only members can see this channel.':'Public: anyone on ZARN can find and join it.'}{c.crm_feed&&' CRM updates post here automatically.'}</p>
    {mine&&<div className="zn-row"><button type="button" className="zn-btn" onClick={async()=>{await db.from('zarn_channel_members').update({muted:!mine.muted}).eq('channel_id',c.id).eq('user_id',me.user_id);await z.reload();}}>{mine.muted?<><Bell size={14}/>Unmute</>:<><BellOff size={14}/>Mute</>}</button>
     {!c.is_default&&<button type="button" className="zn-btn is-danger" onClick={()=>void leave()}>Leave channel</button>}</div>}
+   {canDelete&&(confirmDel
+    ?<div className="zn-note"><p>Delete #{c.name} and every message in it? This can’t be undone.</p><div className="zn-row"><button type="button" className="zn-btn" disabled={deleting} onClick={()=>setConfirmDel(false)}>Cancel</button><button type="button" className="zn-btn is-danger" disabled={deleting} onClick={()=>void remove()}>{deleting?'Deleting…':'Yes, delete channel'}</button></div></div>
+    :<div className="zn-row"><button type="button" className="zn-btn is-danger" onClick={()=>setConfirmDel(true)}><Trash2 size={14}/>Delete channel</button></div>)}
   </div>
   :tab==='pins'?<div className="zn-modal-body">{pinned.length?pinned.map(m=><button key={m.id} type="button" className="zn-pin-row" onClick={()=>onJump(m.id)}><b>{people[m.user_id??'']?.display_name??'CRM'}</b><span>{renderBody(m.body.slice(0,240),people,me.user_id)}</span></button>):<p className="zn-note">Nothing pinned yet. Hover a message and click the pin.</p>}</div>
   :<div className="zn-modal-body">

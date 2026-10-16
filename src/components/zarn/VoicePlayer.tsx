@@ -4,14 +4,14 @@ import {Loader2,Pause,Play} from 'lucide-react';
 import type {ZAttachment} from '@/lib/zarn';
 const fmt=(s:number)=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 // A voice note in a message. The (small) file is fetched once so it plays on tap, including on iPhone.
-export default function VoicePlayer({messageId,index,att}:{messageId:string;index:number;att:ZAttachment}){
+export default function VoicePlayer({messageId,index,att,src}:{messageId?:string;index?:number;att:ZAttachment;src?:string}){
  const [ready,setReady]=useState(false),[failed,setFailed]=useState(false),[playing,setPlaying]=useState(false),[pos,setPos]=useState(0),[rate,setRate]=useState(1),[dur,setDur]=useState(0);
  const audio=useRef<HTMLAudioElement|null>(null);
  useEffect(()=>{
   let url='',live=true;
   void (async()=>{
    try{
-    const r=await fetch(`/api/zarn/files?m=${messageId}&i=${index}&download=1`);if(!r.ok)throw new Error();
+    const r=await fetch(src?`${src}&download=1`:`/api/zarn/files?m=${messageId}&i=${index}&download=1`);if(!r.ok)throw new Error();
     const blob=await r.blob();if(!live)return;
     url=URL.createObjectURL(new Blob([blob],{type:att.type}));
     const a=new Audio(url);a.preload='auto';
@@ -20,7 +20,7 @@ export default function VoicePlayer({messageId,index,att}:{messageId:string;inde
    }catch{if(live)setFailed(true);}
   })();
   return()=>{live=false;audio.current?.pause();audio.current=null;if(url)URL.revokeObjectURL(url);};
- },[messageId,index,att.type]);
+ },[messageId,index,src,att.type]);
  const total=att.duration||dur;
  function toggle(){const a=audio.current;if(!a)return;if(a.paused)void a.play().catch(()=>setFailed(true));else a.pause();}
  function cycle(){const next=rate===1?1.5:rate===1.5?2:1;setRate(next);if(audio.current)audio.current.playbackRate=next;}
