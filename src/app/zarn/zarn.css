@@ -959,3 +959,4 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 .zn-call-mini .is-on{background:var(--z-fg);color:var(--z-bg)}.zn-call-mini .is-decline{background:#dc2626;color:#fff}
 .zn-badge.is-soft{background:var(--z-fg);color:var(--z-bg)}
 .zn-nav-item.is-active .zn-badge.is-soft{background:#fff;color:var(--z-bg)}
+.zn-menu-note{margin:0;padding:2px 12px 8px;font-size:12px;line-height:1.45;color:var(--z-muted);max-width:260px}

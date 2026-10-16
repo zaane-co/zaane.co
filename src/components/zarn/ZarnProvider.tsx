@@ -7,18 +7,9 @@ type Change=RealtimePostgresChangesPayload<Record<string,unknown>>;
 import {channelHref,channelTitle,type ZChannel,type ZLead,type ZMember,type ZMembership,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {plain} from './format';
 import {playChime,getSound} from '@/lib/zarn-sound';
+import {subscribePush} from '@/lib/zarn-push-client';
 
 export type ZEvent={table:'zarn_messages';type:'INSERT'|'UPDATE'|'DELETE';row:ZMessage}|{table:'zarn_reactions';type:'INSERT'|'DELETE';row:ZReaction};
-const b64=(k:string)=>{const p='='.repeat((4-k.length%4)%4),r=atob((k+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from([...r].map(c=>c.charCodeAt(0)));};
-// Registers this browser/phone for web push so messages arrive even when ZARN is closed.
-async function subscribePush(){
- try{
-  const key=process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;if(!key||!('serviceWorker' in navigator)||!('PushManager' in window))return;
-  const reg=await navigator.serviceWorker.getRegistration('/zarn');if(!reg)return;
-  const sub=(await reg.pushManager.getSubscription())??await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64(key)});
-  await fetch('/api/zarn/push',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subscription:sub.toJSON()})});
- }catch{}
-}
 type Unread=Record<string,{unread:number;mentions:number}>;
 export type ZProject={id:string;name:string;description:string;color:string;created_by:string|null;created_at:string};
 export type TodoStatus='todo'|'in_progress'|'done';
@@ -128,7 +119,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  },[unread,membership]);
  // Desktop notification permission, read from the browser (false during server render).
  const notifyOn=useSyncExternalStore(cb=>{window.addEventListener('zarn-notify',cb);return()=>window.removeEventListener('zarn-notify',cb);},()=>'Notification' in window&&Notification.permission==='granted',()=>false);
- const enableNotify=useCallback(()=>{if('Notification' in window)void Notification.requestPermission().then(async p=>{window.dispatchEvent(new Event('zarn-notify'));if(p==='granted')await subscribePush();});},[]);
+ const enableNotify=useCallback(()=>{if(!('Notification' in window)){void subscribePush();return;}void Notification.requestPermission().then(async()=>{window.dispatchEvent(new Event('zarn-notify'));await subscribePush();});},[]);
  // Keep this device's push subscription registered while notifications are allowed.
  useEffect(()=>{if('Notification' in window&&Notification.permission==='granted')void subscribePush();},[]);
 

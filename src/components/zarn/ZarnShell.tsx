@@ -14,6 +14,7 @@ import {useInstall} from './ZarnPwa';
 import ProfileSheet from './ProfileSheet';
 import {useSound} from '@/lib/zarn-sound';
 import SoundDialog from './SoundDialog';
+import {usePushState} from '@/lib/zarn-push-client';
 import CallProvider from './CallProvider';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 
@@ -30,7 +31,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false);
  const router=useRouter();
- const {mode:installMode,install}=useInstall(),sound=useSound(),[soundOpen,setSoundOpen]=useState(false);
+ const {mode:installMode,install}=useInstall(),sound=useSound(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false);
  const routeArea=areaOf(pathname);
  const [area,setArea]=useState<Area>(routeArea);
  // Follow the route's area whenever the route changes.
@@ -79,7 +80,8 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       <button type="button" onClick={()=>{setMenu(false);setDialog('profile');}}><UserRound size={15}/>Profile and status</button>
       <button type="button" onClick={()=>writeTheme(!light)}>{light?<Moon size={15}/>:<Sun size={15}/>}{light?'Dark mode':'Light mode'}</button>
       <button type="button" onClick={()=>{setMenu(false);setSoundOpen(true);}}>{sound?<Volume2 size={15}/>:<VolumeX size={15}/>}{sound?'Message sounds: on':'Message sounds: off'}</button>
-      {!z.notifyOn&&<button type="button" onClick={()=>{z.enableNotify();setMenu(false);}}><Bell size={15}/>Turn on notifications</button>}
+      <button type="button" onClick={()=>{z.enableNotify();if(push.state!=='error')setMenu(false);}}><Bell size={15}/>{push.state==='on'?'Notifications: on':push.state==='error'?'Notifications: fix':'Turn on notifications'}</button>
+      {push.state==='error'&&<p className="zn-menu-note">{push.reason}</p>}
       {installMode&&<button type="button" onClick={()=>{setMenu(false);if(installMode==='prompt')void install();else setDialog('install');}}><Download size={15}/>Install ZARN on this device</button>}
       {staffAdmin&&<><div className="zn-menu-sep"/><p className="zn-menu-label">Admin</p>
        <button type="button" onClick={()=>{setMenu(false);setDialog('invite');}}><UserPlus size={15}/>Invite people</button>
