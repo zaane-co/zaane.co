@@ -2,10 +2,11 @@
 import Dropdown from '@/components/ui/Dropdown';
 import {useConfirm} from './ConfirmProvider';
 import ClientProjects from './ClientProjects';
+import ProjectBoard from './ProjectBoard';
 import ClientBrief from './ClientBrief';
 import {useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
-import {FolderKanban,AlarmClock,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Plus,Receipt,ListChecks,LayoutGrid,History,Trash2,UserPlus,X} from 'lucide-react';
+import {FolderKanban,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Receipt,ListChecks,LayoutGrid,History,UserPlus,X} from 'lucide-react';
 import {money,ago,dueLabel,dueState,invoiceState,invoiceStateStyle,fmtDate,type InvoiceStatus} from '@/lib/crm';
 import {zarnApi} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
@@ -31,13 +32,12 @@ export default function ClientSpace({data}:{data:SpaceData}){
  const {lead,team,stages}=data,z=useZarn(),router=useRouter(),[pending,start]=useTransition(),isAdmin=z.me.staffRole==='super_admin'||z.me.staffRole==='admin';
  const [tab,setTab]=useState<Tab>('chat'),[adding,setAdding]=useState(false),[flash,setFlash]=useState('');
  const stage=stages.find(s=>s.key===lead.status);
- const openTasks=data.tasks.filter(t=>!t.done_at);
  async function act(body:object,msg?:string){
   setFlash('');
   try{await zarnApi('/api/zarn/clients',{lead_id:lead.id,...body});if(msg)setFlash(msg);start(()=>router.refresh());return true;}
   catch(e){setFlash(e instanceof Error?e.message:'Something went wrong.');return false;}
  }
- const tabs:[Tab,string,React.ReactNode,number?][]=[['chat','Chat',<MessageSquare key="c" size={15}/>,z.unread[data.channelId]?.unread],['overview','Overview',<LayoutGrid key="o" size={15}/>],['tasks','Tasks',<ListChecks key="t" size={15}/>,openTasks.length],['projects','Projects',<FolderKanban key="p" size={15}/>,(z.projects??[]).filter(p=>p.lead_id===lead.id).length||undefined],['files','Files',<FileText key="f" size={15}/>,data.files.length],['activity','Activity',<History key="a" size={15}/>]];
+ const tabs:[Tab,string,React.ReactNode,number?][]=[['chat','Chat',<MessageSquare key="c" size={15}/>,z.unread[data.channelId]?.unread],['overview','Overview',<LayoutGrid key="o" size={15}/>],['tasks','Tasks',<ListChecks key="t" size={15}/>],['projects','Projects',<FolderKanban key="p" size={15}/>,(z.projects??[]).filter(p=>p.lead_id===lead.id).length||undefined],['files','Files',<FileText key="f" size={15}/>,data.files.length],['activity','Activity',<History key="a" size={15}/>]];
  if(data.invoices)tabs.push(['invoices','Invoices',<Receipt key="i" size={15}/>,data.invoices.length]);
  const name=lead.company||lead.name;
  return <div className="zn-client">
@@ -57,7 +57,7 @@ export default function ClientSpace({data}:{data:SpaceData}){
   <div className="zn-client-body">
    {tab==='chat'&&<ChannelView id={data.channelId} embedded/>}
    {tab==='overview'&&<Overview data={data} onAct={act} onTab={setTab}/>}
-   {tab==='tasks'&&<Tasks data={data} onAct={act}/>}
+   {tab==='tasks'&&<ProjectBoard leadId={lead.id}/>}
    {tab==='projects'&&<ClientProjects leadId={lead.id}/>}
    {tab==='files'&&<Files data={data}/>}
    {tab==='activity'&&<Activity data={data}/>}
@@ -129,28 +129,6 @@ function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=
     </section>
    </aside>
   </div>
- </div></div>;
-}
-
-function Tasks({data,onAct}:{data:SpaceData;onAct:(b:object,m?:string)=>Promise<boolean>}){
- const z=useZarn();
- const [title,setTitle]=useState(''),[due,setDue]=useState(''),[who,setWho]=useState(z.me.user_id),[showDone,setShowDone]=useState(false);
- const open=data.tasks.filter(t=>!t.done_at),done=data.tasks.filter(t=>t.done_at);
- const name=(id:string|null)=>id?(z.people[id]?.display_name??data.names[id]??'Someone'):'Unassigned';
- const row=(t:SpaceData['tasks'][number])=><li key={t.id} className={`zn-task${t.done_at?' is-done':''}`}>
-  <input type="checkbox" checked={!!t.done_at} onChange={e=>void onAct({action:'task_toggle',id:t.id,done:e.target.checked})} aria-label={`Complete ${t.title}`}/>
-  <div><b>{t.title}</b><small><Avatar m={t.assignee_id?z.people[t.assignee_id]:undefined} size={16}/>{name(t.assignee_id)}{t.due_at&&<span className={`zn-due is-${t.done_at?'done':dueState(t.due_at)}`}><AlarmClock size={11}/>{dueLabel(t.due_at)}</span>}</small></div>
-  <button type="button" aria-label="Delete task" onClick={()=>void onAct({action:'task_delete',id:t.id})}><Trash2 size={13}/></button>
- </li>;
- return <div className="zn-pane"><div className="zn-pane-inner">
-  <form className="zn-task-form" onSubmit={async e=>{e.preventDefault();if(await onAct({action:'task_add',title,due_at:due?new Date(due).toISOString():null,assignee_id:who},'Task added.')){setTitle('');setDue('');}}}>
-   <input className="zn-input" required maxLength={300} placeholder="Add a task, e.g. Send first logo concepts" value={title} onChange={e=>setTitle(e.target.value)}/>
-   <div className="zn-row"><Dropdown label="Assign to" value={who} onChange={setWho} options={data.team.map(id=>({value:id,label:`${name(id)}${id===z.me.user_id?' (me)':''}`}))}/>
-    <input className="zn-input" type="datetime-local" value={due} onChange={e=>setDue(e.target.value)} aria-label="Due"/>
-    <button className="zn-btn is-primary" disabled={!title.trim()}><Plus size={14}/>Add</button></div>
-  </form>
-  {open.length?<ul className="zn-tasks">{open.map(row)}</ul>:<p className="zn-note">No open tasks. Add what the team needs to do for this client.</p>}
-  {done.length>0&&<><button type="button" className="zn-link" onClick={()=>setShowDone(v=>!v)}><Check size={13}/>{showDone?'Hide':'Show'} {done.length} completed</button>{showDone&&<ul className="zn-tasks">{done.map(row)}</ul>}</>}
  </div></div>;
 }
 

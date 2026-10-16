@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
+import {FolderKanban,FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
 import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal,PeoplePicker} from './Dialogs';
 import AddStatusDialog from './AddStatusDialog';
@@ -41,17 +41,20 @@ function Stack({ids,max=3}:{ids:string[];max?:number}){
 
 // Tasks as a list, kanban or timeline. With an id it is one project; without one it is "My tasks":
 // everything you created or were assigned, across projects and on its own.
-export default function ProjectBoard({id}:{id?:string}){
+export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  const z=useZarn(),{db,me,people,members:team,projects,reloadProjects,refreshDue,reloadStatuses}=z,router=useRouter(),confirm=useConfirm();
  const statuses=z.taskStatuses.length?z.taskStatuses.map(x=>({key:x.key,label:x.label,color:x.color,builtin:x.builtin,created_by:x.created_by})):BASE_STATUSES.map(x=>({...x,builtin:true,created_by:null as string|null}));
  const [addingStatus,setAddingStatus]=useState<{then?:(key:string)=>void}|null>(null),[newProject,setNewProject]=useState<{then?:(id:string)=>void}|null>(null);
- const mine=!id;
- const [project,setProject]=useState<ZProject|null|undefined>(mine?null:undefined),[members,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
+ // multi: tasks from several projects (my tasks, or one client's projects). mine: my own tasks across everything.
+ const multi=!id,mine=!id&&!leadId;
+ const clientProjects=useMemo(()=>leadId?(projects??[]).filter(p=>p.lead_id===leadId):[],[projects,leadId]);
+ const clientKey=clientProjects.map(p=>p.id).join(',');
+ const [project,setProject]=useState<ZProject|null|undefined>(multi?null:undefined),[members,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
  const [view,setView]=useState<View>('list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
  const [formMembers,setFormMembers]=useState<string[]|null>(null);
 
- useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!mine&&v==='brief'))setView(v);},[mine]);
+ useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!multi&&v==='brief'))setView(v);},[mine,multi]);
  const pick=(v:View)=>{setView(v);window.history.replaceState(null,'',`?view=${v}`);};
  const everyone=useMemo(()=>team.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member').map(m=>m.user_id),[team]);
 
@@ -64,6 +67,9 @@ export default function ProjectBoard({id}:{id?:string}){
     db.from('zarn_tasks').select('*').eq('project_id',id).order('position'),
    ]);
    setProject((pr as ZProject|null)??null);setMembers(((pm??[]) as {user_id:string}[]).map(x=>x.user_id));taskRows=(tk??[]) as Task[];
+  }else if(leadId){
+   const pids=clientKey?clientKey.split(','):[];
+   if(pids.length){const {data}=await db.from('zarn_tasks').select('*').in('project_id',pids).order('position');taskRows=(data??[]) as Task[];}
   }else{
    const [{data:a},{data:c}]=await Promise.all([db.from('zarn_task_assignees').select('task_id').eq('user_id',me.user_id),db.from('zarn_tasks').select('id').eq('created_by',me.user_id)]);
    const ids=[...new Set([...((a??[]) as {task_id:string}[]).map(x=>x.task_id),...((c??[]) as {id:string}[]).map(x=>x.id)])];
@@ -74,7 +80,7 @@ export default function ProjectBoard({id}:{id?:string}){
   const map:Record<string,string[]>={};
   for(let i=0;i<taskRows.length;i+=100){const {data}=await db.from('zarn_task_assignees').select('task_id,user_id').in('task_id',taskRows.slice(i,i+100).map(t=>t.id));for(const r of (data??[]) as {task_id:string;user_id:string}[])(map[r.task_id]??=[]).push(r.user_id);}
   setAssign(map);setLoaded(true);
- },[db,id,me.user_id]);
+ },[db,id,leadId,clientKey,me.user_id]);
  useEffect(()=>{void load();},[load]);
 
  // Who can be assigned: the project's members, or the whole team for a task with no project.
@@ -86,15 +92,16 @@ export default function ProjectBoard({id}:{id?:string}){
  },[db,everyone,id,members]);
  useEffect(()=>{if(!form){setFormMembers(null);return;}let live=true;void chipMembersFor(form.project_id||null).then(m=>{if(live)setFormMembers(m);});return()=>{live=false;};},[form?.project_id,!!form,chipMembersFor]); // eslint-disable-line react-hooks/exhaustive-deps
 
- const canManage=!mine&&!!project&&(project.created_by===me.user_id||me.staffRole==='super_admin'||me.staffRole==='admin');
+ const canManage=!multi&&!!project&&(project.created_by===me.user_id||me.staffRole==='super_admin'||me.staffRole==='admin');
  const projectName=(pid:string|null)=>pid?(projects??[]).find(p=>p.id===pid)?.name??'Project':'';
  const shown=useMemo(()=>tasks.filter(t=>(prio==='all'||t.priority===prio)&&(who==='all'||(who==='me'?(assign[t.id]??[]).includes(me.user_id):(assign[t.id]??[]).includes(who)))&&`${t.title} ${t.description} ${t.type} ${projectName(t.project_id)}`.toLowerCase().includes(q.toLowerCase())),[tasks,assign,q,prio,who,me.user_id,projects]); // eslint-disable-line react-hooks/exhaustive-deps
  const typeOptions=useMemo(()=>[...new Set([...typeSuggestions,...tasks.map(t=>t.type).filter(Boolean)])],[tasks]);
- const filterPeople=mine?everyone.filter(m=>m!==me.user_id):members.filter(m=>m!==me.user_id);
+ const filterPeople=multi?everyone.filter(m=>m!==me.user_id):members.filter(m=>m!==me.user_id);
 
  async function create(e:React.FormEvent){
   e.preventDefault();if(!form)return;
   if(!form.title.trim()){setError('Give the task a name.');return;}
+  if(leadId&&!form.project_id){setError('Choose which of this client’s projects the task belongs to.');return;}
   if(form.start_at&&form.due_at&&form.start_at>form.due_at){setError('The start date can’t be after the due date.');return;}
   setBusy(true);setError('');
   try{
@@ -141,7 +148,7 @@ export default function ProjectBoard({id}:{id?:string}){
   if(!await confirm({title:'Delete this project?',message:`“${project?.name}” and all its tasks will be deleted. This can’t be undone.`,confirm:'Delete project',danger:true}))return;
   await db.from('zarn_projects').delete().eq('id',id!);await reloadProjects();router.push('/zarn/projects');
  }
- const add=(s:TaskStatus='todo')=>{setError('');setForm(blank(s,me.user_id,id??''));};
+ const add=(s:TaskStatus='todo')=>{setError('');setForm(blank(s,me.user_id,id??clientProjects[0]?.id??''));};
  const pill=(p:Priority)=>{const x=priorities.find(i=>i.key===p)!;return <span className="zp-pill" style={{background:x.color}}>{x.label}</span>;};
  const typePill=(t:string)=>t?<span className="zp-pill" style={{background:typeColor(t)}}>{t}</span>:<span className="zp-muted">-</span>;
  const projectPill=(pid:string|null)=>pid?<Link href={`/zarn/projects/${pid}`} className="zp-proj" onClick={e=>e.stopPropagation()}>{projectName(pid)}</Link>:<span className="zp-muted">Personal</span>;
@@ -150,7 +157,9 @@ export default function ProjectBoard({id}:{id?:string}){
  const overdue=(t:Task)=>!!t.due_at&&t.status!=='done'&&t.due_at<today;
 
  if(project===undefined)return <div className="zn-page"><p className="zn-loading">Loading…</p></div>;
- if(project===null&&!mine)return <div className="zn-page"><div className="zn-empty-state"><h2>Project not found</h2><p>It may have been deleted, or you haven’t been added to it.</p></div></div>;
+ if(project===null&&!multi)return <div className="zn-page"><div className="zn-empty-state"><h2>Project not found</h2><p>It may have been deleted, or you haven’t been added to it.</p></div></div>;
+ // A client with no projects yet: tasks live inside projects, so start one first.
+ if(leadId&&loaded&&!clientProjects.length)return <div className="zn-pane"><div className="zn-empty-state"><FolderKanban size={26}/><h2>No projects for this client yet</h2><p>Tasks live inside projects. Start a project for this client, then add its tasks here as a list, board or timeline.</p><button type="button" className="zn-btn is-primary" onClick={()=>setNewProject({})}><Plus size={14}/>New project</button></div>{newProject&&<NewProject clientId={leadId} onClose={()=>setNewProject(null)} onCreated={()=>setNewProject(null)}/>}</div>;
 
  const empty=!loaded?<p className="zn-loading">Loading…</p>:null;
  const listView=<div className="zp-list">{statuses.map(g=>{const rows=shown.filter(t=>t.status===g.key);return <section key={g.key} className="zp-group">
@@ -161,7 +170,7 @@ export default function ProjectBoard({id}:{id?:string}){
     <td onClick={e=>e.stopPropagation()}><button type="button" className="zp-check" aria-pressed={t.status==='done'} aria-label={t.status==='done'?'Mark as not done':'Mark as done'} onClick={()=>void patch(t.id,{status:t.status==='done'?'todo':'done'})}>{t.status==='done'&&'✓'}</button></td>
     <td className="zp-name">{t.title}</td><td className="zp-hide-sm zp-desc">{t.description||'-'}</td>
     <td className={`zp-est${overdue(t)?' is-overdue':''}`}>{estimate(t)}</td>
-    <td className="zp-hide-sm">{mine?projectPill(t.project_id):typePill(t.type)}</td><td><Stack ids={assign[t.id]??[]}/></td><td>{pill(t.priority)}</td>
+    <td className="zp-hide-sm">{multi?projectPill(t.project_id):typePill(t.type)}</td><td><Stack ids={assign[t.id]??[]}/></td><td>{pill(t.priority)}</td>
     <td onClick={e=>e.stopPropagation()}><button type="button" className="zp-icon-btn" aria-label="Open details" data-tip="Open details" onClick={()=>setOpen(t.id)}><Ellipsis size={16}/></button></td>
    </tr>)}</tbody></table></div>:<p className="zp-empty-row">{q||prio!=='all'||who!=='all'?'Nothing matches.':'No tasks here.'}</p>)}
  </section>;})}</div>;
@@ -175,7 +184,7 @@ export default function ProjectBoard({id}:{id?:string}){
  const kanbanView=<div className="zp-kanban" style={{gridTemplateColumns:`repeat(${statuses.length},minmax(250px,1fr)) 190px`,minWidth:statuses.length*264+204}}>{statuses.map(g=>{const rows=shown.filter(t=>t.status===g.key).sort((a,b)=>a.position-b.position);return <section key={g.key} className="zp-col" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const tid=e.dataTransfer.getData('text/plain');setDragging(null);if(tid)void patch(tid,{status:g.key});}}>
   <header><i style={{background:g.color}}/><b>{g.label}</b><span className="zp-count">{rows.length}</span>{!g.builtin&&(g.created_by===me.user_id||me.staffRole==='super_admin'||me.staffRole==='admin')&&<button type="button" className="zp-icon-btn zp-del-status" aria-label={`Delete status ${g.label}`} data-tip="Delete status" onClick={()=>void deleteStatus(g)}><Trash2 size={13}/></button>}<button type="button" className="zp-icon-btn" aria-label={`Add task to ${g.label}`} data-tip="Add task" onClick={()=>add(g.key)}><Plus size={15}/></button></header>
   <div className="zp-cards">{rows.map(t=><article key={t.id} className={`zp-card${t.status==='done'?' is-done':''}${dragging===t.id?' is-dragging':''}`} draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',t.id);setDragging(t.id);}} onDragEnd={()=>setDragging(null)} onClick={()=>setOpen(t.id)}>
-   <div className="zp-card-top">{mine&&t.project_id&&projectPill(t.project_id)}{typePill(t.type)}{pill(t.priority)}</div>
+   <div className="zp-card-top">{multi&&t.project_id&&projectPill(t.project_id)}{typePill(t.type)}{pill(t.priority)}</div>
    <b>{t.title}</b>{t.description&&<p>{t.description}</p>}
    <footer><span className={`zp-est${overdue(t)?' is-overdue':''}`}><CalendarDays size={13}/>{estimate(t)}</span><Stack ids={assign[t.id]??[]}/></footer>
   </article>)}{!rows.length&&<p className="zp-empty-row">Drop tasks here</p>}</div>
@@ -204,9 +213,9 @@ export default function ProjectBoard({id}:{id?:string}){
  })();
 
  const openTask=tasks.find(t=>t.id===open);
- const views:[View,string,React.ReactNode][]=[['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as [View,string,React.ReactNode]]:[['brief','Brief',<FileText key="b" size={15}/>] as [View,string,React.ReactNode]])];
+ const views:[View,string,React.ReactNode][]=[['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(leadId?[]:mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as [View,string,React.ReactNode]]:[['brief','Brief',<FileText key="b" size={15}/>] as [View,string,React.ReactNode]])];
  return <div className="zn-page zp-page">
-  <header className="zp-head">
+  {!leadId&&<header className="zp-head">
    {mine?<div className="zp-title"><span className="zp-badge is-ink"><ListChecks size={22}/></span><div><h1>To-dos</h1><p>Tasks you created or were assigned, across every project.</p></div></div>
     :<div className="zp-title"><span className="zp-badge" style={{background:project!.color}}>{project!.name.slice(0,1).toUpperCase()}</span><div><h1>{project!.name}</h1>{project!.description&&<p>{project!.description}</p>}{project!.lead_id&&(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project!.lead_id);return c?<p><Link href={`/zarn/clients/${project!.lead_id}`} className="zp-client-link">Client: {z.title(c)}</Link></p>:null;})()}</div></div>}
    {!mine&&<div className="zp-head-right">
@@ -214,7 +223,7 @@ export default function ProjectBoard({id}:{id?:string}){
     <button type="button" className="zp-btn" onClick={()=>setInviting(true)}><UserPlus size={15}/>Invite</button>
     {canManage&&<div className="zp-menu"><button type="button" className="zp-icon-btn" aria-label="Project menu" onClick={()=>setMenu(v=>!v)}><Ellipsis size={17}/></button>{menu&&<div className="zp-menu-pop"><button type="button" onClick={()=>{setMenu(false);void deleteProject();}}><Trash2 size={14}/>Delete project</button></div>}</div>}
    </div>}
-  </header>
+  </header>}
   <div className="zp-bar">
    <div className="zp-tabs" role="tablist" aria-label="View">{views.map(([k,l,i])=><button key={k} type="button" role="tab" aria-selected={view===k} className={view===k?'is-on':''} onClick={()=>pick(k)}>{i}{l}</button>)}</div>
    {view!=='saved'&&<div className="zp-tools">
@@ -229,7 +238,7 @@ export default function ProjectBoard({id}:{id?:string}){
   {form&&<Modal title="New task" onClose={()=>setForm(null)} wide><form className="zn-modal-body" onSubmit={create}>
    <label className="zn-label">Task name<input className="zn-input" autoFocus maxLength={200} value={form.title} onChange={e=>setForm(f=>f&&{...f,title:e.target.value})} placeholder="What needs doing?"/></label>
    <label className="zn-label">Description (optional)<textarea className="zn-input" rows={3} maxLength={4000} value={form.description} onChange={e=>setForm(f=>f&&{...f,description:e.target.value})}/></label>
-   {mine&&<div className="zn-label">Project<Dropdown label="Project" value={form.project_id} onChange={v=>{if(v==='__new'){setNewProject({then:pid=>setForm(f=>f&&{...f,project_id:pid,assignees:[me.user_id]})});return;}setForm(f=>f&&{...f,project_id:v,assignees:[me.user_id]});}} options={[{value:'',label:'No project (personal)'},...(projects??[]).map(p=>({value:p.id,label:p.name})),{value:'__new',label:'+ Create a new project…',group:' '}]}/></div>}
+   {multi&&<div className="zn-label">Project<Dropdown label="Project" value={form.project_id} onChange={v=>{if(v==='__new'){setNewProject({then:pid=>setForm(f=>f&&{...f,project_id:pid,assignees:[me.user_id]})});return;}setForm(f=>f&&{...f,project_id:v,assignees:[me.user_id]});}} options={[{value:'',label:'No project (personal)'},...(leadId?clientProjects:(projects??[])).map(p=>({value:p.id,label:p.name})),{value:'__new',label:'+ Create a new project…',group:' '}]}/></div>}
    <div className="zn-form-row">
     <div className="zn-label">Status<Dropdown label="Status" value={form.status} onChange={v=>{if(v==='__new'){setAddingStatus({then:k=>setForm(f=>f&&{...f,status:k})});return;}setForm(f=>f&&{...f,status:v});}} options={[...statuses.map(g=>({value:g.key,label:g.label,color:g.color})),{value:'__new',label:'+ Add a status…',group:' '}]}/></div>
     <div className="zn-label">Priority<Dropdown label="Priority" value={form.priority} onChange={v=>setForm(f=>f&&{...f,priority:v as Priority})} options={priorities.map(p=>({value:p.key,label:p.label}))}/></div>
@@ -247,7 +256,7 @@ export default function ProjectBoard({id}:{id?:string}){
    loadMembers={()=>chipMembersFor(openTask.project_id)} onClose={()=>setOpen(null)} onPatch={v=>patch(openTask.id,v)} onToggle={u=>toggleAssignee(openTask,u)} onAddStatus={then=>setAddingStatus({then})} onDelete={()=>void remove(openTask.id)}/>}
   {showMembers&&<Modal title={`Members · ${members.length}`} onClose={()=>setShowMembers(false)}><ul className="zn-list zn-list-scroll zn-member-list">{members.map(u=>{const owner=project?.created_by===u,self=u===me.user_id;return <li key={u}><div className="zn-person"><Avatar m={people[u]} size={32}/><span><b>{people[u]?.display_name??'Member'}{self&&' (you)'}</b><small>{owner?'Owner':people[u]?.title||people[u]?.email||''}</small></span>{!owner&&(canManage||self)&&<button type="button" className="zn-remove" onClick={()=>void removeMember(u)}>{self?'Leave':'Remove'}</button>}</div></li>;})}</ul><div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={()=>{setShowMembers(false);setInviting(true);}}><UserPlus size={14}/>Invite</button><button type="button" className="zn-btn is-primary" onClick={()=>setShowMembers(false)}>Done</button></div></Modal>}
   {addingStatus&&<AddStatusDialog onClose={()=>setAddingStatus(null)} onAdded={k=>addingStatus.then?.(k)}/>}
-  {newProject&&<NewProject onClose={()=>setNewProject(null)} onCreated={pid=>newProject.then?.(pid)}/>}
+  {newProject&&<NewProject clientId={leadId} onClose={()=>setNewProject(null)} onCreated={pid=>newProject.then?.(pid)}/>}
   {inviting&&<PeoplePicker title="Invite to project" confirm="Invite" exclude={members} onClose={()=>setInviting(false)} onPick={invite}/>}
  </div>;
 }
