@@ -934,17 +934,26 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 .zai-form input{flex:1;height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--z-border);background:var(--z-input);color:var(--z-fg);font:inherit;font-size:14px;outline:0}
 /* Voice calls */
 .zn-call-scrim{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
-.zn-call{width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:22px;padding:36px 28px 28px;border-radius:24px;background:var(--z-panel);border:1px solid var(--z-border);box-shadow:0 30px 80px rgba(0,0,0,.5);text-align:center}
+.zn-call{position:relative;box-sizing:border-box;width:100%;max-width:300px;display:flex;flex-direction:column;align-items:center;gap:18px;padding:32px 22px 24px;border-radius:24px;background:var(--z-panel-2);color:var(--z-fg);border:1px solid var(--z-muted);box-shadow:0 30px 80px rgba(0,0,0,.6);text-align:center}
 .zn-call-avatar{position:relative;border-radius:30px}
 .zn-call-avatar.is-ringing::before,.zn-call-avatar.is-ringing::after{content:'';position:absolute;inset:-6px;border-radius:36px;border:2px solid var(--z-accent);opacity:0;animation:zn-ring 1.8s ease-out infinite}
 .zn-call-avatar.is-ringing::after{animation-delay:.9s}
 @keyframes zn-ring{0%{transform:scale(.96);opacity:.7}100%{transform:scale(1.35);opacity:0}}
 .zn-call-info{display:flex;flex-direction:column;gap:4px;min-width:0;max-width:100%}.zn-call-info b{font-size:22px;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zn-call-info small{font-size:14px;color:var(--z-muted);font-variant-numeric:tabular-nums}
-.zn-call-actions{display:flex;justify-content:center;gap:28px;margin-top:6px}
+.zn-call-actions{display:flex;justify-content:center;gap:22px;margin-top:4px}
 .zn-call-actions button{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--z-muted)}
 .zn-call-actions button svg{box-sizing:content-box;width:24px;height:24px;padding:16px;border-radius:50%;background:var(--z-panel-2);border:1px solid var(--z-border);color:var(--z-fg)}
 .zn-call-actions button.is-on svg{background:var(--z-fg);color:var(--z-bg)}
 .zn-call-actions .is-decline svg{background:#dc2626;border-color:#dc2626;color:#fff}
 .zn-call-actions .is-accept svg{background:#16a34a;border-color:#16a34a;color:#fff}
 .zn-call-toast{position:fixed;z-index:121;left:50%;bottom:24px;transform:translateX(-50%);padding:10px 16px;border-radius:10px;background:var(--z-fg);color:var(--z-bg);font-size:13.5px;font-weight:600;max-width:calc(100vw - 24px)}
+.zn-call-min{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;color:var(--z-muted)}.zn-call-min:hover{background:var(--z-hover);color:var(--z-fg)}
+.zn-call-outs{width:100%;list-style:none;margin:0;padding:6px;border-radius:12px;background:var(--z-panel);border:1px solid var(--z-border);display:flex;flex-direction:column;gap:2px;text-align:left}
+.zn-call-outs button{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:8px;font-size:13px;color:var(--z-fg)}.zn-call-outs button:hover{background:var(--z-hover)}
+.zn-call-outs button i{width:14px;flex-shrink:0}.zn-call-outs button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zn-call-outs .is-empty{padding:8px 10px;font-size:13px;color:var(--z-muted)}
+.zn-call-mini{position:fixed;z-index:120;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:5px;border-radius:999px;background:var(--z-panel-2);color:var(--z-fg);border:1px solid var(--z-muted);box-shadow:0 12px 36px rgba(0,0,0,.5);max-width:calc(100vw - 16px)}
+.zn-call-mini button{height:34px;min-width:34px;border-radius:999px;display:grid;place-items:center;color:var(--z-fg)}.zn-call-mini button:hover{background:var(--z-hover)}
+.zn-call-mini .zn-call-mini-main{display:flex;align-items:center;gap:8px;padding:0 12px 0 4px;min-width:0}.zn-call-mini-main b{font-size:13.5px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.zn-call-mini-main small{font-size:12.5px;color:var(--z-muted);font-variant-numeric:tabular-nums}
+.zn-call-mini .is-on{background:var(--z-fg);color:var(--z-bg)}.zn-call-mini .is-decline{background:#dc2626;color:#fff}

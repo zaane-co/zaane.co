@@ -1,6 +1,6 @@
 'use client';
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
-import {Mic,MicOff,Phone,PhoneOff} from 'lucide-react';
+import {Check,Maximize2,Mic,MicOff,Minimize2,Phone,PhoneOff,Volume2} from 'lucide-react';
 import type {RealtimeChannel} from '@supabase/supabase-js';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -22,7 +22,7 @@ async function api(body:object){
 
 export default function CallProvider({children}:{children:React.ReactNode}){
  const {db,me,people}=useZarn();
- const [phase,setPhase]=useState<Phase>('idle'),[call,setCall]=useState<Call|null>(null),[muted,setMuted]=useState(false),[secs,setSecs]=useState(0),[notice,setNotice]=useState('');
+ const [phase,setPhase]=useState<Phase>('idle'),[call,setCall]=useState<Call|null>(null),[muted,setMuted]=useState(false),[secs,setSecs]=useState(0),[notice,setNotice]=useState(''),[mini,setMini]=useState(false),[outs,setOuts]=useState<MediaDeviceInfo[]|null>(null),[outId,setOutId]=useState('');
  const callRef=useRef<Call|null>(null),phaseRef=useRef<Phase>('idle');
  const pc=useRef<RTCPeerConnection|null>(null),stream=useRef<MediaStream|null>(null),sig=useRef<RealtimeChannel|null>(null);
  const pendingIce=useRef<RTCIceCandidateInit[]>([]),stopRing=useRef<(()=>void)|null>(null),timers=useRef<ReturnType<typeof setTimeout>[]>([]),tick=useRef<ReturnType<typeof setInterval>|null>(null);
@@ -33,7 +33,7 @@ export default function CallProvider({children}:{children:React.ReactNode}){
   stopRing.current?.();stopRing.current=null;timers.current.forEach(clearTimeout);timers.current=[];if(tick.current)clearInterval(tick.current);tick.current=null;
   pc.current?.close();pc.current=null;stream.current?.getTracks().forEach(t=>t.stop());stream.current=null;
   if(sig.current){void db.removeChannel(sig.current);sig.current=null;}
-  pendingIce.current=[];callRef.current=null;setCall(null);setMuted(false);setSecs(0);go('idle');
+  pendingIce.current=[];callRef.current=null;setCall(null);setMuted(false);setSecs(0);setMini(false);setOuts(null);go('idle');
   if(msg){setNotice(msg);timers.current.push(setTimeout(()=>setNotice(''),4000));}
   
  },[db]);
@@ -126,23 +126,43 @@ export default function CallProvider({children}:{children:React.ReactNode}){
  useEffect(()=>()=>cleanup(),[cleanup]);
  useEffect(()=>{const t=stream.current?.getAudioTracks()[0];if(t)t.enabled=!muted;},[muted]);
 
+ // Speaker choice: browsers that allow it can send call audio to another output (headphones, speakers). Phones route audio themselves.
+ const canSink=typeof HTMLMediaElement!=='undefined'&&'setSinkId' in HTMLMediaElement.prototype;
+ async function toggleOutputs(){
+  if(outs){setOuts(null);return;}
+  try{const all=await navigator.mediaDevices.enumerateDevices();setOuts(all.filter(d=>d.kind==='audiooutput'));}catch{setOuts([]);}
+ }
+ async function pickOutput(id:string){
+  try{await (audio.current as HTMLAudioElement&{setSinkId:(id:string)=>Promise<void>}).setSinkId(id);setOutId(id);}catch{setNotice('Could not switch the speaker.');timers.current.push(setTimeout(()=>setNotice(''),3000));}
+  setOuts(null);
+ }
+
  const value=useMemo(()=>({start,busy:phase!=='idle'}),[start,phase]);
  const peer=call?people[call.peer]:undefined,name=peer?.display_name??'Someone';
  return <Ctx.Provider value={value}>{children}
   <audio ref={audio} autoPlay playsInline/>
   {notice&&<div className="zn-call-toast" role="status">{notice}</div>}
-  {phase!=='idle'&&call&&<div className="zn-call-scrim"><div className="zn-call" role="dialog" aria-modal="true" aria-label="Voice call">
-   <div className={`zn-call-avatar${phase==='incoming'||phase==='calling'?' is-ringing':''}`}><Avatar m={peer} size={112}/></div>
+  {phase!=='idle'&&call&&mini&&<div className="zn-call-mini" role="status">
+   <button type="button" className="zn-call-mini-main" aria-label="Expand call" onClick={()=>setMini(false)}><Avatar m={peer} size={28}/><b>{name}</b><small>{phase==='active'?fmt(secs):phase==='incoming'?'Incoming':'Calling…'}</small></button>
+   {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={16}/>:<Mic size={16}/>}</button>}
+   <button type="button" aria-label="Expand" onClick={()=>setMini(false)}><Maximize2 size={16}/></button>
+   <button type="button" className="is-decline" aria-label="End call" onClick={()=>void finish(phase==='incoming'?'decline':'end')}><PhoneOff size={16}/></button>
+  </div>}
+  {phase!=='idle'&&call&&!mini&&<div className="zn-call-scrim"><div className="zn-call" role="dialog" aria-modal="true" aria-label="Voice call">
+   {phase!=='incoming'&&<button type="button" className="zn-call-min" aria-label="Minimize call" data-tip="Minimize" onClick={()=>setMini(true)}><Minimize2 size={16}/></button>}
+   <div className={`zn-call-avatar${phase==='incoming'||phase==='calling'?' is-ringing':''}`}><Avatar m={peer} size={96}/></div>
    <div className="zn-call-info"><b>{name}</b><small>{phase==='incoming'?'Incoming voice call':phase==='calling'?'Calling…':phase==='connecting'?'Connecting…':fmt(secs)}</small></div>
    <div className="zn-call-actions">
     {phase==='incoming'?<>
-     <button type="button" className="is-decline" aria-label="Decline" onClick={()=>void finish('decline')}><PhoneOff size={24}/><span>Decline</span></button>
-     <button type="button" className="is-accept" aria-label="Accept" onClick={()=>void accept()}><Phone size={24}/><span>Accept</span></button>
+     <button type="button" className="is-decline" aria-label="Decline" onClick={()=>void finish('decline')}><PhoneOff size={22}/><span>Decline</span></button>
+     <button type="button" className="is-accept" aria-label="Accept" onClick={()=>void accept()}><Phone size={22}/><span>Accept</span></button>
     </>:<>
-     {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={24}/>:<Mic size={24}/>}<span>{muted?'Unmute':'Mute'}</span></button>}
-     <button type="button" className="is-decline" aria-label={phase==='active'?'End call':'Cancel'} onClick={()=>void finish('end')}><PhoneOff size={24}/><span>{phase==='active'?'End':'Cancel'}</span></button>
+     {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={22}/>:<Mic size={22}/>}<span>{muted?'Unmute':'Mute'}</span></button>}
+     {phase==='active'&&canSink&&<button type="button" aria-label="Choose speaker" aria-expanded={!!outs} onClick={()=>void toggleOutputs()}><Volume2 size={22}/><span>Speaker</span></button>}
+     <button type="button" className="is-decline" aria-label={phase==='active'?'End call':'Cancel'} onClick={()=>void finish('end')}><PhoneOff size={22}/><span>{phase==='active'?'End':'Cancel'}</span></button>
     </>}
    </div>
+   {outs&&<ul className="zn-call-outs" aria-label="Speakers">{outs.length?outs.map(d=><li key={d.deviceId}><button type="button" onClick={()=>void pickOutput(d.deviceId)}>{(outId||'default')===d.deviceId?<Check size={14}/>:<i/>}<span>{d.label||'Speaker'}</span></button></li>):<li className="is-empty">No other speakers found.</li>}</ul>}
   </div></div>}
  </Ctx.Provider>;
 }
