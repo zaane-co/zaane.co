@@ -37,6 +37,7 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
  const [title,setTitle]=useState(doc.title),[state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
  const editorRef=useRef<Editor|null>(null),fileRef=useRef<HTMLInputElement>(null);
  const [img,setImg]=useState({busy:false,error:''});
+ // eslint-disable-next-line react-hooks/refs -- the editor is only read when a picture is pasted or chosen, never while rendering
  const tools=imageTools('doc',doc.id,()=>editorRef.current,setImg);
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null),latest=useRef({title:doc.title,content:doc.content});
  const save=useCallback(async()=>{

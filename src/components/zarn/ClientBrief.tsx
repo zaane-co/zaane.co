@@ -22,6 +22,7 @@ export default function ClientBrief({lead,canEdit}:{lead:L;canEdit:boolean}){
  const [html,setHtml]=useState(lead.brief_html||(plain?fromText(plain):'')),[editing,setEditing]=useState(false),[previewing,setPreviewing]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
  const editorRef=useRef<Editor|null>(null),fileRef=useRef<HTMLInputElement>(null);
  const [img,setImg]=useState({busy:false,error:''});
+ // eslint-disable-next-line react-hooks/refs -- the editor is only read when a picture is pasted or chosen, never while rendering
  const tools=imageTools('lead',lead.id,()=>editorRef.current,setImg);
  const editor=useEditor({
   immediatelyRender:false,shouldRerenderOnTransaction:true,content:html,editable:editing,
