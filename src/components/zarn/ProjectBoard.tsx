@@ -208,7 +208,7 @@ export default function ProjectBoard({id}:{id?:string}){
  return <div className="zn-page zp-page">
   <header className="zp-head">
    {mine?<div className="zp-title"><span className="zp-badge is-ink"><ListChecks size={22}/></span><div><h1>To-dos</h1><p>Tasks you created or were assigned, across every project.</p></div></div>
-    :<div className="zp-title"><span className="zp-badge" style={{background:project!.color}}>{project!.name.slice(0,1).toUpperCase()}</span><div><h1>{project!.name}</h1>{project!.description&&<p>{project!.description}</p>}</div></div>}
+    :<div className="zp-title"><span className="zp-badge" style={{background:project!.color}}>{project!.name.slice(0,1).toUpperCase()}</span><div><h1>{project!.name}</h1>{project!.description&&<p>{project!.description}</p>}{project!.lead_id&&(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project!.lead_id);return c?<p><Link href={`/zarn/clients/${project!.lead_id}`} className="zp-client-link">Client: {z.title(c)}</Link></p>:null;})()}</div></div>}
    {!mine&&<div className="zp-head-right">
     <button type="button" className="zp-members" aria-label="Project members" data-tip="Members" onClick={()=>setShowMembers(true)}><Stack ids={members} max={4}/></button>
     <button type="button" className="zp-btn" onClick={()=>setInviting(true)}><UserPlus size={15}/>Invite</button>

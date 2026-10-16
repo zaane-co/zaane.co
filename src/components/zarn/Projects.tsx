@@ -9,10 +9,10 @@ import Dropdown from '@/components/ui/Dropdown';
 
 const colors=['#c40a3a','#2563eb','#16a34a','#7c3aed','#ea580c','#0891b2','#db2777','#52525b'];
 
-export function NewProject({onClose,onCreated}:{onClose:()=>void;onCreated?:(id:string)=>void}){
+export function NewProject({onClose,onCreated,clientId}:{onClose:()=>void;onCreated?:(id:string)=>void;clientId?:string}){
  const {db,me,reloadProjects,channels,title}=useZarn(),router=useRouter();
  const clients=channels.filter(c=>c.kind==='client'&&c.lead_id&&!c.archived_at);
- const [client,setClient]=useState(''),[brief,setBrief]=useState('');
+ const [client,setClient]=useState(clientId??''),[brief,setBrief]=useState('');
  const [name,setName]=useState(''),[description,setDescription]=useState(''),[color,setColor]=useState(colors[0]),[busy,setBusy]=useState(false),[error,setError]=useState('');
  async function create(e:React.FormEvent){
   e.preventDefault();if(!name.trim())return;setBusy(true);setError('');

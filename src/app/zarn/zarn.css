@@ -1197,3 +1197,9 @@ html[data-kb] .zn-prompt{display:none}
 .zp-brief-body{white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.7;padding:18px 20px;border-radius:14px;background:var(--z-panel);border:1px solid var(--z-border)}
 .zp-brief-edit{min-height:260px;resize:vertical;line-height:1.6}
 .zp-brief-actions{display:flex;justify-content:flex-end;gap:8px}
+/* Client projects tab */
+.zcp-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.zcp-card{display:flex;gap:14px;align-items:flex-start;padding:14px;border-radius:12px;background:var(--z-panel);border:1px solid var(--z-border)}.zcp-card:hover{border-color:var(--z-muted)}
+.zcp-main{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}.zcp-main b{font-size:15px}.zcp-main small{font-size:12.5px;color:var(--z-muted)}
+.zcp-bar{display:block;height:6px;border-radius:999px;background:var(--z-panel-2);overflow:hidden}.zcp-bar i{display:block;height:100%;border-radius:999px}
+.zp-client-link{color:var(--z-muted);text-decoration:underline;text-underline-offset:2px}.zp-client-link:hover{color:var(--z-fg)}
