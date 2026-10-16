@@ -16,6 +16,8 @@ import {useSound} from '@/lib/zarn-sound';
 import SoundDialog from './SoundDialog';
 import Invites from './Invites';
 import NotifyPrompt from './NotifyPrompt';
+import InstallPrompt from './InstallPrompt';
+import {inAppBrowser} from './ZarnPwa';
 import ConfirmProvider from './ConfirmProvider';
 import {usePushState} from '@/lib/zarn-push-client';
 import CallProvider from './CallProvider';
@@ -34,7 +36,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false);
  const router=useRouter();
- const {mode:installMode,install}=useInstall(),sound=useSound(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false);
+ const {mode:installMode,install}=useInstall(),sound=useSound(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false),[installDone,setInstallDone]=useState(false);
  const routeArea=areaOf(pathname);
  const [area,setArea]=useState<Area>(routeArea);
  // Follow the route's area whenever the route changes.
@@ -157,7 +159,8 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
    <button type="button" className={`zn-fab${quick?' is-open':''}`} aria-label={quick?'Close quick actions':'Quick actions'} aria-expanded={quick} onClick={()=>setQuick(v=>!v)}><Plus size={26}/></button>
   </div>
   {profileId&&<ProfileSheet userId={profileId} onClose={()=>setProfileId(null)} onEdit={()=>{setProfileId(null);setDialog('profile');}}/>}
-  <NotifyPrompt installMode={installMode} onInstall={()=>setDialog('install')}/>
+  <InstallPrompt onDone={()=>setInstallDone(true)} onHelp={()=>setDialog('install')}/>
+  <NotifyPrompt wait={!installDone} installMode={installMode} onInstall={()=>setDialog('install')}/>
   {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {newProject&&<NewProject onClose={()=>setNewProject(false)}/>}
@@ -169,9 +172,14 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
   {dialog==='invite'&&<Invite onClose={()=>setDialog(null)}/>}
   {dialog==='client'&&<AddClient onClose={()=>setDialog(null)}/>}
   {dialog==='install'&&<div className="zn-modal-scrim" onClick={()=>setDialog(null)}><div className="zn-modal" role="dialog" aria-label="Install ZARN" onClick={e=>e.stopPropagation()}>
-   <div className="zn-modal-head"><h2>Install ZARN on iPhone</h2><button type="button" aria-label="Close" onClick={()=>setDialog(null)}><X size={18}/></button></div>
-   <ol className="zn-steps"><li>Open zaane.co/zarn in <b>Safari</b>.</li><li>Tap the <b>Share</b> button (the square with an arrow).</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol>
-   <p className="zn-note">ZARN then opens full-screen from your home screen like any other app.</p>
+   <div className="zn-modal-head"><h2>Install ZARN on {installMode==='ios'?'iPhone':'Android'}</h2><button type="button" aria-label="Close" onClick={()=>setDialog(null)}><X size={18}/></button></div>
+   {installMode==='ios'
+    ?<ol className="zn-steps"><li>Open zaane.co/zarn in <b>Safari</b>.</li><li>Tap the <b>Share</b> button (the square with an arrow).</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol>
+    :inAppBrowser()
+     ?<ol className="zn-steps"><li>You’re inside another app’s browser, which can’t install ZARN.</li><li>Copy the link below and open it in <b>Chrome</b>.</li><li>Then tap <b>⋮</b> and choose <b>Install app</b>.</li></ol>
+     :<ol className="zn-steps"><li>Open zaane.co/zarn in <b>Chrome</b>.</li><li>Tap the <b>⋮</b> menu at the top right.</li><li>Choose <b>Install app</b> (not “Add to Home screen”), then <b>Install</b>.</li></ol>}
+   {installMode!=='ios'&&inAppBrowser()&&<button type="button" className="zn-btn is-primary" onClick={()=>{void navigator.clipboard.writeText('https://zaane.co/zarn');}}>Copy link</button>}
+   <p className="zn-note">ZARN then opens full-screen from your home screen like any other app. “Add to Home screen” on its own only saves a shortcut that opens in the browser.</p>
   </div></div>}
  </div>
  </ShellCtx.Provider></CallProvider></ConfirmProvider>;

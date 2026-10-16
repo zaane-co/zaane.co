@@ -12,9 +12,12 @@ if(typeof window!=='undefined'){
 }
 const standalone=()=>typeof window!=='undefined'&&(window.matchMedia('(display-mode: standalone)').matches||(navigator as Navigator&{standalone?:boolean}).standalone===true);
 const isIos=()=>typeof navigator!=='undefined'&&/iphone|ipad|ipod/i.test(navigator.userAgent);
-// 'prompt' = the browser can install it in one tap; 'ios' = show Add to Home Screen steps; null = already installed or unsupported.
+const isAndroid=()=>typeof navigator!=='undefined'&&/android/i.test(navigator.userAgent);
+// Links opened inside WhatsApp, Instagram, Facebook and similar apps use a stripped-down browser that cannot install apps.
+export const inAppBrowser=()=>typeof navigator!=='undefined'&&/FBAN|FBAV|FB_IAB|Instagram|WhatsApp|Line\/|Snapchat|MicroMessenger|; wv\)|GSA\//i.test(navigator.userAgent);
+// 'prompt' = the browser can install it in one tap; 'ios' = show Add to Home Screen steps; 'android' = installable, but the browser hasn't offered the one-tap prompt (use its menu); null = already installed or unsupported.
 export function useInstall(){
- const mode=useSyncExternalStore(cb=>{listeners.add(cb);return()=>{listeners.delete(cb);};},()=>standalone()?null:deferred?'prompt':isIos()?'ios':null,()=>null);
+ const mode=useSyncExternalStore(cb=>{listeners.add(cb);return()=>{listeners.delete(cb);};},()=>standalone()?null:deferred?'prompt':isIos()?'ios':isAndroid()?'android':null,()=>null);
  const install=async()=>{if(!deferred)return false;await deferred.prompt();const {outcome}=await deferred.userChoice;deferred=null;notify();return outcome==='accepted';};
  return {mode,install};
 }

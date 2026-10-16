@@ -5,19 +5,19 @@ import {useZarn} from './ZarnProvider';
 import {usePushState} from '@/lib/zarn-push-client';
 const KEY='zarn-notify-prompt';
 // Shown once when someone opens ZARN without notifications: messages and calls only reach a phone that has them on.
-export default function NotifyPrompt({installMode,onInstall}:{installMode:string|null;onInstall:()=>void}){
+export default function NotifyPrompt({installMode,onInstall,wait=false}:{installMode:string|null;onInstall:()=>void;wait?:boolean}){
  const z=useZarn(),push=usePushState();
  const [show,setShow]=useState(false);
  useEffect(()=>{
   let done=false;try{done=!!localStorage.getItem(KEY);}catch{}
-  if(done)return;
+  if(done||wait)return;
   const supported='Notification' in window;
   // iPhone only has notifications inside the installed app, so a browser tab is asked to install first.
   const need=supported?Notification.permission==='default':installMode==='ios';
   if(!need)return;
   const t=setTimeout(()=>setShow(true),2500);
   return()=>clearTimeout(t);
- },[installMode]);
+ },[installMode,wait]);
  if(!show||push.state==='on')return null;
  const close=()=>{try{localStorage.setItem(KEY,'1');}catch{}setShow(false);};
  const supported=typeof Notification!=='undefined';
