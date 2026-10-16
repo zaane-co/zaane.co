@@ -16,7 +16,7 @@ import {useConfirm} from './ConfirmProvider';
 
 export type TaskStatus=string;
 type Priority='low'|'medium'|'high';
-type Task={id:string;project_id:string|null;title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string|null;due_at:string|null;position:number;created_by:string|null;created_at:string};
+type Task={id:string;project_id:string|null;lead_id?:string|null;title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string|null;due_at:string|null;position:number;created_by:string|null;created_at:string};
 type Comment={id:string;task_id:string;user_id:string|null;body:string;created_at:string};
 type View='kanban'|'timeline'|'list'|'saved'|'brief';
 type Form={title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string;due_at:string;project_id:string;assignees:string[]};
@@ -47,8 +47,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  const [addingStatus,setAddingStatus]=useState<{then?:(key:string)=>void}|null>(null),[newProject,setNewProject]=useState<{then?:(id:string)=>void}|null>(null);
  // multi: tasks from several projects (my tasks, or one client's projects). mine: my own tasks across everything.
  const multi=!id,mine=!id&&!leadId;
- const clientProjects=useMemo(()=>leadId?(projects??[]).filter(p=>p.lead_id===leadId):[],[projects,leadId]);
- const clientKey=clientProjects.map(p=>p.id).join(',');
+
  const [project,setProject]=useState<ZProject|null|undefined>(multi?null:undefined),[members,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
  const [view,setView]=useState<View>('list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
@@ -68,28 +67,33 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
    ]);
    setProject((pr as ZProject|null)??null);setMembers(((pm??[]) as {user_id:string}[]).map(x=>x.user_id));taskRows=(tk??[]) as Task[];
   }else if(leadId){
-   const pids=clientKey?clientKey.split(','):[];
-   if(pids.length){const {data}=await db.from('zarn_tasks').select('*').in('project_id',pids).order('position');taskRows=(data??[]) as Task[];}
+   const {data}=await db.from('zarn_tasks').select('*').eq('lead_id',leadId).order('position');taskRows=(data??[]) as Task[];
   }else{
    const [{data:a},{data:c}]=await Promise.all([db.from('zarn_task_assignees').select('task_id').eq('user_id',me.user_id),db.from('zarn_tasks').select('id').eq('created_by',me.user_id)]);
    const ids=[...new Set([...((a??[]) as {task_id:string}[]).map(x=>x.task_id),...((c??[]) as {id:string}[]).map(x=>x.id)])];
    for(let i=0;i<ids.length;i+=100){const {data}=await db.from('zarn_tasks').select('*').in('id',ids.slice(i,i+100));taskRows.push(...((data??[]) as Task[]));}
+   taskRows=taskRows.filter(t=>!t.lead_id);
    taskRows.sort((x,y)=>x.position-y.position);
   }
   setTasks(taskRows);
   const map:Record<string,string[]>={};
   for(let i=0;i<taskRows.length;i+=100){const {data}=await db.from('zarn_task_assignees').select('task_id,user_id').in('task_id',taskRows.slice(i,i+100).map(t=>t.id));for(const r of (data??[]) as {task_id:string;user_id:string}[])(map[r.task_id]??=[]).push(r.user_id);}
   setAssign(map);setLoaded(true);
- },[db,id,leadId,clientKey,me.user_id]);
+ },[db,id,leadId,me.user_id]);
  useEffect(()=>{void load();},[load]);
 
  // Who can be assigned: the project's members, or the whole team for a task with no project.
+ const clientChannelId=leadId?z.channels.find(c=>c.kind==='client'&&c.lead_id===leadId)?.id:undefined;
+ const [clientTeam,setClientTeam]=useState<string[]>([]);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
+ useEffect(()=>{if(!clientChannelId)return;let live=true;void db.from('zarn_channel_members').select('user_id').eq('channel_id',clientChannelId).then(({data}:{data:{user_id:string}[]|null})=>{if(live)setClientTeam((data??[]).map(r=>r.user_id));});return()=>{live=false;};},[db,clientChannelId]);
  const chipMembersFor=useCallback(async(projectId:string|null):Promise<string[]>=>{
+  if(leadId)return clientTeam;
   if(!projectId)return everyone;
   if(projectId===id)return members;
   const {data}=await db.from('zarn_project_members').select('user_id').eq('project_id',projectId);
   return ((data??[]) as {user_id:string}[]).map(x=>x.user_id);
- },[db,everyone,id,members]);
+ },[db,everyone,id,members,leadId,clientTeam]);
  useEffect(()=>{if(!form){setFormMembers(null);return;}let live=true;void chipMembersFor(form.project_id||null).then(m=>{if(live)setFormMembers(m);});return()=>{live=false;};},[form?.project_id,!!form,chipMembersFor]); // eslint-disable-line react-hooks/exhaustive-deps
 
  const canManage=!multi&&!!project&&(project.created_by===me.user_id||me.staffRole==='super_admin'||me.staffRole==='admin');
@@ -101,12 +105,11 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  async function create(e:React.FormEvent){
   e.preventDefault();if(!form)return;
   if(!form.title.trim()){setError('Give the task a name.');return;}
-  if(leadId&&!form.project_id){setError('Choose which of this client’s projects the task belongs to.');return;}
   if(form.start_at&&form.due_at&&form.start_at>form.due_at){setError('The start date can’t be after the due date.');return;}
   setBusy(true);setError('');
   try{
    const projectId=id??(form.project_id||null);
-   const {data,error:err}=await db.from('zarn_tasks').insert({title:form.title.trim(),description:form.description,status:form.status,type:form.type.trim(),priority:form.priority,start_at:form.start_at||null,due_at:form.due_at||null,project_id:projectId,created_by:me.user_id,position:Date.now()/1000}).select('*').single();
+   const {data,error:err}=await db.from('zarn_tasks').insert({title:form.title.trim(),description:form.description,status:form.status,type:form.type.trim(),priority:form.priority,start_at:form.start_at||null,due_at:form.due_at||null,project_id:projectId,lead_id:leadId??null,created_by:me.user_id,position:Date.now()/1000}).select('*').single();
    if(err||!data)throw err;
    const t=data as Task;
    if(form.assignees.length){const {error:e2}=await db.from('zarn_task_assignees').insert(form.assignees.map(u=>({task_id:t.id,user_id:u,project_id:projectId})));if(e2)throw e2;}
@@ -148,7 +151,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   if(!await confirm({title:'Delete this project?',message:`“${project?.name}” and all its tasks will be deleted. This can’t be undone.`,confirm:'Delete project',danger:true}))return;
   await db.from('zarn_projects').delete().eq('id',id!);await reloadProjects();router.push('/zarn/projects');
  }
- const add=(s:TaskStatus='todo')=>{setError('');setForm(blank(s,me.user_id,id??clientProjects[0]?.id??''));};
+ const add=(s:TaskStatus='todo')=>{setError('');setForm(blank(s,me.user_id,id??''));};
  const pill=(p:Priority)=>{const x=priorities.find(i=>i.key===p)!;return <span className="zp-pill" style={{background:x.color}}>{x.label}</span>;};
  const typePill=(t:string)=>t?<span className="zp-pill" style={{background:typeColor(t)}}>{t}</span>:<span className="zp-muted">-</span>;
  const projectPill=(pid:string|null)=>pid?<Link href={`/zarn/projects/${pid}`} className="zp-proj" onClick={e=>e.stopPropagation()}>{projectName(pid)}</Link>:<span className="zp-muted">Personal</span>;
@@ -158,8 +161,6 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
 
  if(project===undefined)return <div className="zn-page"><p className="zn-loading">Loading…</p></div>;
  if(project===null&&!multi)return <div className="zn-page"><div className="zn-empty-state"><h2>Project not found</h2><p>It may have been deleted, or you haven’t been added to it.</p></div></div>;
- // A client with no projects yet: tasks live inside projects, so start one first.
- if(leadId&&loaded&&!clientProjects.length)return <div className="zn-pane"><div className="zn-empty-state"><FolderKanban size={26}/><h2>No projects for this client yet</h2><p>Tasks live inside projects. Start a project for this client, then add its tasks here as a list, board or timeline.</p><button type="button" className="zn-btn is-primary" onClick={()=>setNewProject({})}><Plus size={14}/>New project</button></div>{newProject&&<NewProject clientId={leadId} onClose={()=>setNewProject(null)} onCreated={()=>setNewProject(null)}/>}</div>;
 
  const empty=!loaded?<p className="zn-loading">Loading…</p>:null;
  const listView=<div className="zp-list">{statuses.map(g=>{const rows=shown.filter(t=>t.status===g.key);return <section key={g.key} className="zp-group">
@@ -238,7 +239,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   {form&&<Modal title="New task" onClose={()=>setForm(null)} wide><form className="zn-modal-body" onSubmit={create}>
    <label className="zn-label">Task name<input className="zn-input" autoFocus maxLength={200} value={form.title} onChange={e=>setForm(f=>f&&{...f,title:e.target.value})} placeholder="What needs doing?"/></label>
    <label className="zn-label">Description (optional)<textarea className="zn-input" rows={3} maxLength={4000} value={form.description} onChange={e=>setForm(f=>f&&{...f,description:e.target.value})}/></label>
-   {multi&&<div className="zn-label">Project<Dropdown label="Project" value={form.project_id} onChange={v=>{if(v==='__new'){setNewProject({then:pid=>setForm(f=>f&&{...f,project_id:pid,assignees:[me.user_id]})});return;}setForm(f=>f&&{...f,project_id:v,assignees:[me.user_id]});}} options={[{value:'',label:'No project (personal)'},...(leadId?clientProjects:(projects??[])).map(p=>({value:p.id,label:p.name})),{value:'__new',label:'+ Create a new project…',group:' '}]}/></div>}
+   {mine&&<div className="zn-label">Project<Dropdown label="Project" value={form.project_id} onChange={v=>{if(v==='__new'){setNewProject({then:pid=>setForm(f=>f&&{...f,project_id:pid,assignees:[me.user_id]})});return;}setForm(f=>f&&{...f,project_id:v,assignees:[me.user_id]});}} options={[{value:'',label:'No project (personal)'},...(projects??[]).map(p=>({value:p.id,label:p.name})),{value:'__new',label:'+ Create a new project…',group:' '}]}/></div>}
    <div className="zn-form-row">
     <div className="zn-label">Status<Dropdown label="Status" value={form.status} onChange={v=>{if(v==='__new'){setAddingStatus({then:k=>setForm(f=>f&&{...f,status:k})});return;}setForm(f=>f&&{...f,status:v});}} options={[...statuses.map(g=>({value:g.key,label:g.label,color:g.color})),{value:'__new',label:'+ Add a status…',group:' '}]}/></div>
     <div className="zn-label">Priority<Dropdown label="Priority" value={form.priority} onChange={v=>setForm(f=>f&&{...f,priority:v as Priority})} options={priorities.map(p=>({value:p.key,label:p.label}))}/></div>

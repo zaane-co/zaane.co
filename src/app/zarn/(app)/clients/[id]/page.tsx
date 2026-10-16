@@ -14,7 +14,14 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
   db.from('leads').select('id,name,company,email,phone,website,service_interested,brief_html,budget_range,message,project_description,status,deal_value,currency,categories,owner_id,created_at,last_activity_at').eq('id',id).single(),
   db.from('pipeline_stages').select('key,label,color,kind,position'),
   db.from('zarn_channel_members').select('user_id').eq('channel_id',channel.id),
-  db.from('lead_tasks').select('id,title,due_at,done_at,assignee_id,created_at').eq('lead_id',id).order('done_at',{nullsFirst:true}).order('due_at',{nullsFirst:false}),
+  // The client's tasks now live in the same task system as everything else (shown on the Tasks tab); the Overview summarises them.
+  (async()=>{
+   const {data:t}=await db.from('zarn_tasks').select('id,title,due_at,status,created_at').eq('lead_id',id).order('due_at',{nullsFirst:false});
+   const ids=(t??[]).map(x=>x.id);
+   const {data:a}=ids.length?await db.from('zarn_task_assignees').select('task_id,user_id').in('task_id',ids):{data:[]};
+   const first=new Map<string,string>();for(const r of (a??[]) as {task_id:string;user_id:string}[])if(!first.has(r.task_id))first.set(r.task_id,r.user_id);
+   return {data:(t??[]).map(x=>({id:x.id,title:x.title,due_at:x.due_at,done_at:x.status==='done'?x.created_at:null,assignee_id:first.get(x.id)??null,created_at:x.created_at}))};
+  })(),
   db.from('lead_materials').select('id,title,note,link,file_key,file_name,received_at').eq('lead_id',id).order('position'),
   db.from('lead_activities').select('id,kind,body,meta,author_id,created_at').eq('lead_id',id).order('created_at',{ascending:false}).limit(60),
   canSeeInvoices(me)?db.from('invoices').select('id,number,status,total,amount_paid,currency,due_date').eq('lead_id',id).order('created_at',{ascending:false}):Promise.resolve({data:null}),

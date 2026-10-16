@@ -195,7 +195,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
   const {data:a}=await db.from('zarn_task_assignees').select('task_id').eq('user_id',me.user_id);
   const ids=((a??[]) as {task_id:string}[]).map(x=>x.task_id).slice(0,500);
   if(!ids.length){setDueTasks(0);return;}
-  const {count}=await db.from('zarn_tasks').select('id',{count:'exact',head:true}).in('id',ids).neq('status','done').lte('due_at',new Date().toISOString().slice(0,10));
+  const {count}=await db.from('zarn_tasks').select('id',{count:'exact',head:true}).in('id',ids).is('lead_id',null).neq('status','done').lte('due_at',new Date().toISOString().slice(0,10));
   setDueTasks(count??0);
  },[db,me.user_id]);
  useEffect(()=>{if(me.account_type!=='guest')void refreshDue();},[refreshDue,me.account_type]);
