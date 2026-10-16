@@ -7,10 +7,12 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import LinkExt from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import {Bold,Check,ChevronLeft,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,Loader2,Quote,Redo2,Share2,Strikethrough,Trash2,Underline as UnderlineIcon,Undo2} from 'lucide-react';
+import {ImagePlus,Bold,Check,ChevronLeft,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,Loader2,Quote,Redo2,Share2,Strikethrough,Trash2,Underline as UnderlineIcon,Undo2} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import ShareDoc from './ShareDoc';
+import Image from '@tiptap/extension-image';
+import {imageTools} from './editor-images';
 type Doc={id:string;title:string;content:string;owner_id:string;updated_at:string};
 type Role='owner'|'edit'|'view';
 // Opens a document: owners and editors can type, everyone else reads. Changes save by themselves.
@@ -33,6 +35,9 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
  const {db}=useZarn(),router=useRouter(),confirm=useConfirm();
  const canEdit=role==='owner'||role==='edit';
  const [title,setTitle]=useState(doc.title),[state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
+ const editorRef=useRef<Editor|null>(null),fileRef=useRef<HTMLInputElement>(null);
+ const [img,setImg]=useState({busy:false,error:''});
+ const tools=imageTools('doc',doc.id,editorRef,setImg);
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null),latest=useRef({title:doc.title,content:doc.content});
  const save=useCallback(async()=>{
   setState('saving');
@@ -42,8 +47,9 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
  const queue=useCallback(()=>{setState('saving');if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void save(),1200);},[save]);
  const editor=useEditor({
   immediatelyRender:false,shouldRerenderOnTransaction:true,editable:canEdit,content:doc.content,
-  extensions:[StarterKit.configure({link:false,underline:false}),Underline,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:canEdit?'Start writing…':''})],
-  editorProps:{attributes:{class:'zd-prose','aria-label':'Document'}},
+  extensions:[StarterKit.configure({link:false,underline:false}),Underline,Image,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:canEdit?'Start writing…':''})],
+  editorProps:{attributes:{class:'zd-prose','aria-label':'Document'},...tools.handlers},
+  onCreate:({editor:e})=>{editorRef.current=e;},
   onUpdate:({editor:e})=>{latest.current.content=e.getHTML();queue();},
  });
  // Save anything pending when leaving the page.
@@ -59,12 +65,14 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
    <span className={`zd-state${state==='error'?' is-error':''}`}>{!canEdit?'View only':state==='saving'?<><Loader2 size={13} className="zn-spin"/>Saving…</>:state==='error'?'Not saved. Retry by typing.':<><Check size={13}/>Saved</>}</span>
    {role==='owner'&&<><button type="button" className="zn-btn" onClick={()=>setSharing(true)}><Share2 size={14}/>Share</button><button type="button" className="zd-del" aria-label="Delete document" data-tip="Delete" onClick={()=>void remove()}><Trash2 size={16}/></button></>}
   </header>
-  {canEdit&&editor&&<Toolbar editor={editor} linkOpen={linkOpen} setLinkOpen={setLinkOpen} url={url} setUrl={setUrl}/>}
+  {canEdit&&editor&&<Toolbar editor={editor} linkOpen={linkOpen} setLinkOpen={setLinkOpen} url={url} setUrl={setUrl} onImage={()=>fileRef.current?.click()}/>}
+  <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={e=>{void tools.insert(Array.from(e.target.files??[]));e.target.value='';}}/>
+  {(img.busy||img.error)&&<p className={`zd-imgstate${img.error?' is-error':''}`} role="status">{img.busy?'Uploading picture…':img.error}</p>}
   <div className="zd-scroll" data-lenis-prevent><div className="zd-sheet"><EditorContent editor={editor}/></div></div>
   {sharing&&<ShareDoc docId={doc.id} onClose={()=>setSharing(false)}/>}
  </div>;
 }
-export function Toolbar({editor,linkOpen,setLinkOpen,url,setUrl}:{editor:Editor;linkOpen:boolean;setLinkOpen:(v:boolean)=>void;url:string;setUrl:(v:string)=>void}){
+export function Toolbar({editor,linkOpen,setLinkOpen,url,setUrl,onImage}:{onImage?:()=>void;editor:Editor;linkOpen:boolean;setLinkOpen:(v:boolean)=>void;url:string;setUrl:(v:string)=>void}){
  const b=(label:string,icon:React.ReactNode,active:boolean,run:()=>void)=><button key={label} type="button" className={active?'is-on':''} aria-label={label} aria-pressed={active} data-tip={label} onMouseDown={e=>e.preventDefault()} onClick={run}>{icon}</button>;
  function applyLink(){
   const href=url.trim();
@@ -85,6 +93,7 @@ export function Toolbar({editor,linkOpen,setLinkOpen,url,setUrl}:{editor:Editor;
   {b('Numbered list',<ListOrdered size={16}/>,editor.isActive('orderedList'),()=>editor.chain().focus().toggleOrderedList().run())}
   {b('Quote',<Quote size={16}/>,editor.isActive('blockquote'),()=>editor.chain().focus().toggleBlockquote().run())}
   {b('Code',<Code2 size={16}/>,editor.isActive('codeBlock'),()=>editor.chain().focus().toggleCodeBlock().run())}
+  {onImage&&b('Add picture',<ImagePlus size={16}/>,false,onImage)}
   {b('Link',<Link2 size={16}/>,editor.isActive('link'),()=>{setUrl(editor.getAttributes('link').href??'');setLinkOpen(!linkOpen);})}
   <i/>
   {b('Undo',<Undo2 size={16}/>,false,()=>editor.chain().focus().undo().run())}

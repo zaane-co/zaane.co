@@ -19,7 +19,7 @@ export default async function Page({params}:{params:Promise<{token:string}>}){
  void db.from('zarn_doc_links').update({views:l.views+1}).eq('id',l.id);
  return <main className="docpub"><article className="docpub-doc">
   <h1>{doc.title||'Untitled'}</h1>
-  <div className="docpub-body" dangerouslySetInnerHTML={{__html:cleanHtml(doc.content)}}/>
+  <div className="docpub-body" dangerouslySetInnerHTML={{__html:cleanHtml(doc.content).replaceAll('/api/zarn/editor-image?k=',`/api/zarn/editor-image?t=${token}&k=`)}}/>
   <footer>Shared from Zaane · updated {new Date(doc.updated_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</footer>
  </article></main>;
 }
