@@ -25,6 +25,7 @@ export default function Files(){
   setItems(rows.flatMap(m=>(m.attachments??[]).map((a,i)=>({key:`${m.id}:${i}`,m:{id:m.id,channel_id:m.channel_id,user_id:m.user_id,created_at:m.created_at},i,a}))));
   setLoading(false);
  },[db]);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
  useEffect(()=>{void load();},[load]);
  const counts=useMemo(()=>({all:items.length,images:items.filter(x=>isImage(x.a)).length,documents:items.filter(x=>!isImage(x.a)&&isDoc(x.a)).length,other:items.filter(x=>!isImage(x.a)&&!isDoc(x.a)).length}),[items]);
  const shown=items.filter(x=>(kind==='all'||(kind==='images'?isImage(x.a):kind==='documents'?!isImage(x.a)&&isDoc(x.a):!isImage(x.a)&&!isDoc(x.a)))&&`${x.a.name} ${people[x.m.user_id??'']?.display_name??''}`.toLowerCase().includes(q.toLowerCase()));
