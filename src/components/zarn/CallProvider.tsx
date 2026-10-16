@@ -131,18 +131,18 @@ export default function CallProvider({children}:{children:React.ReactNode}){
  return <Ctx.Provider value={value}>{children}
   <audio ref={audio} autoPlay playsInline/>
   {notice&&<div className="zn-call-toast" role="status">{notice}</div>}
-  {phase!=='idle'&&call&&<div className="zn-call" role="dialog" aria-label="Voice call">
-   <Avatar m={peer} size={56}/>
+  {phase!=='idle'&&call&&<div className="zn-call-scrim"><div className="zn-call" role="dialog" aria-modal="true" aria-label="Voice call">
+   <div className={`zn-call-avatar${phase==='incoming'||phase==='calling'?' is-ringing':''}`}><Avatar m={peer} size={112}/></div>
    <div className="zn-call-info"><b>{name}</b><small>{phase==='incoming'?'Incoming voice call':phase==='calling'?'Calling…':phase==='connecting'?'Connecting…':fmt(secs)}</small></div>
    <div className="zn-call-actions">
     {phase==='incoming'?<>
-     <button type="button" className="is-decline" aria-label="Decline" onClick={()=>void finish('decline')}><PhoneOff size={20}/></button>
-     <button type="button" className="is-accept" aria-label="Accept" onClick={()=>void accept()}><Phone size={20}/></button>
+     <button type="button" className="is-decline" aria-label="Decline" onClick={()=>void finish('decline')}><PhoneOff size={24}/><span>Decline</span></button>
+     <button type="button" className="is-accept" aria-label="Accept" onClick={()=>void accept()}><Phone size={24}/><span>Accept</span></button>
     </>:<>
-     {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={20}/>:<Mic size={20}/>}</button>}
-     <button type="button" className="is-decline" aria-label={phase==='active'?'End call':'Cancel'} onClick={()=>void finish('end')}><PhoneOff size={20}/></button>
+     {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={24}/>:<Mic size={24}/>}<span>{muted?'Unmute':'Mute'}</span></button>}
+     <button type="button" className="is-decline" aria-label={phase==='active'?'End call':'Cancel'} onClick={()=>void finish('end')}><PhoneOff size={24}/><span>{phase==='active'?'End':'Cancel'}</span></button>
     </>}
    </div>
-  </div>}
+  </div></div>}
  </Ctx.Provider>;
 }
