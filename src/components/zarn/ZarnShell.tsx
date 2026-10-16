@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {Bookmark,FolderKanban,Sparkles,Hash,AtSign,BarChart3,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {FileText,Bookmark,FolderKanban,Sparkles,Hash,AtSign,BarChart3,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -101,6 +101,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       {link('/zarn/activity',<Bell size={15}/>,'Activity')}
       {link('/zarn/mentions',<AtSign size={15}/>,'Mentions',badges.activity)}
       {link('/zarn/saved',<Bookmark size={15}/>,'Saved')}
+      {link('/zarn/docs',<FileText size={15}/>,'Docs',undefined,false)}
       {link('/zarn/files',<Files size={15}/>,'Files')}
       {link('/zarn/todos',<ListChecks size={15}/>,'To-dos',z.dueTasks)}
       {link('/zarn/people',<Contact size={15}/>,'People')}
