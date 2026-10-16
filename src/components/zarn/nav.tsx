@@ -17,8 +17,10 @@ export function useNav(){
  const z=useZarn(),{me,channels,membership,unread,title}=z;
  const staffAdmin=me.staffRole==='super_admin'||me.staffRole==='admin';
  const guest=me.account_type==='guest';
- const canCreate=!guest&&me.can_create_channels,canBusiness=!guest&&(me.can_view_crm||staffAdmin);
- const canAddClient=!guest&&(me.can_view_crm||staffAdmin||me.staffRole==='sales');
+ const canCreate=!guest&&me.can_create_channels,canBusiness=!guest&&staffAdmin;
+ const canAddClient=!guest&&(staffAdmin||me.staffRole==='sales');
+ // Amounts (deal values, invoice totals) are for admins only.
+
  // Conversations with deactivated people are hidden from the lists; they're still found by searching for the person.
  const gone=(c:ZChannel)=>c.kind==='dm'&&(c.dm_key??'').split(',').some(id=>id!==me.user_id&&z.people[id]?.deactivated_at);
  const live=channels.filter(c=>!c.archived_at&&!gone(c)),mine=live.filter(c=>membership[c.id]);

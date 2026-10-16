@@ -25,7 +25,7 @@ type Tab='chat'|'overview'|'tasks'|'files'|'activity'|'invoices';
 
 // A client's private space: team chat plus everything we're tracking for them.
 export default function ClientSpace({data}:{data:SpaceData}){
- const {lead,team,stages}=data,z=useZarn(),router=useRouter(),[pending,start]=useTransition();
+ const {lead,team,stages}=data,z=useZarn(),router=useRouter(),[pending,start]=useTransition(),isAdmin=z.me.staffRole==='super_admin'||z.me.staffRole==='admin';
  const [tab,setTab]=useState<Tab>('chat'),[adding,setAdding]=useState(false),[flash,setFlash]=useState('');
  const stage=stages.find(s=>s.key===lead.status);
  const openTasks=data.tasks.filter(t=>!t.done_at);
@@ -59,7 +59,7 @@ export default function ClientSpace({data}:{data:SpaceData}){
    {tab==='activity'&&<Activity data={data}/>}
    {tab==='invoices'&&data.invoices&&<div className="zn-pane"><div className="zn-pane-inner">
     {data.invoices.length?<ul className="zn-rows">{data.invoices.map(i=>{const st=invoiceStateStyle[invoiceState({status:i.status as InvoiceStatus,due_date:i.due_date,total:Number(i.total),amount_paid:Number(i.amount_paid)})]!;return <li key={i.id}>
-     <span><b>{i.number}</b><small>Due {fmtDate(i.due_date)}</small></span><span className="zn-stage" style={{background:st.color}}>{st.label}</span><b>{money(Number(i.total),i.currency)}</b>
+     <span><b>{i.number}</b><small>Due {fmtDate(i.due_date)}</small></span><span className="zn-stage" style={{background:st.color}}>{st.label}</span>{isAdmin&&<b>{money(Number(i.total),i.currency)}</b>}
      {data.canStudio&&<a href={`/admin/invoices/${i.id}`} target="_blank" rel="noopener noreferrer" aria-label="Open in admin"><ExternalLink size={14}/></a>}</li>;})}</ul>
      :<p className="zn-note">No invoices for this client yet.</p>}</div></div>}
   </div>
@@ -68,7 +68,7 @@ export default function ClientSpace({data}:{data:SpaceData}){
 }
 
 function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=>Promise<boolean>;onTab:(t:Tab)=>void}){
- const {lead}=data,z=useZarn(),{profile}=useShell();
+ const {lead}=data,z=useZarn(),{profile}=useShell(),isAdmin=z.me.staffRole==='super_admin'||z.me.staffRole==='admin';
  const [note,setNote]=useState(''),[copied,setCopied]=useState(false);
  const owner=lead.owner_id?(z.people[lead.owner_id]?.display_name??data.names[lead.owner_id]):null;
  const stage=data.stages.find(s=>s.key===lead.status);
@@ -78,7 +78,7 @@ function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=
  return <div className="zn-pane"><div className="zn-pane-inner zn-ov">
   <div className="zn-ov-stats">
    <div><small>Stage</small><b><i style={{background:stage?.color??'#52525b'}}/>{stage?.label??lead.status}</b></div>
-   <div><small>Deal value</small><b>{lead.deal_value!=null?money(Number(lead.deal_value),lead.currency):<span className="zn-muted">Not set</span>}</b></div>
+   {isAdmin&&<div><small>Deal value</small><b>{lead.deal_value!=null?money(Number(lead.deal_value),lead.currency):<span className="zn-muted">Not set</span>}</b></div>}
    <button type="button" onClick={()=>onTab('tasks')}><small>Open tasks</small><b>{open.length}</b></button>
    <button type="button" onClick={()=>onTab('files')}><small>Materials</small><b>{got}/{data.materials.length}</b></button>
    <button type="button" onClick={()=>onTab('activity')}><small>Last activity</small><b>{ago(lead.last_activity_at)}</b></button>

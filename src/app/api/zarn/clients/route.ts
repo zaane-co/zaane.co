@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
-import {canAddClients,canManageTeams,clientAccess} from '@/lib/zarn-clients';
+import {canAddClients,canManageTeams,clientAccess,isStudioAdmin} from '@/lib/zarn-clients';
 import {currencies} from '@/lib/crm';
 // Client spaces in ZARN. A client is a CRM lead plus a private conversation for the staff assigned to it.
 const id=z.uuid();
@@ -37,7 +37,7 @@ export async function POST(request:Request){
   case 'create':{
    if(!canAddClients(me))return fail('You don’t have permission to add clients.',403);
    const {data:won}=await db.from('pipeline_stages').select('key').eq('kind','won').order('position').limit(1).maybeSingle();
-   const {data:lead,error}=await db.from('leads').insert({name:b.name,company:b.company,email:b.email.toLowerCase(),phone:b.phone,service_interested:b.service,message:b.brief,project_description:b.brief,deal_value:b.deal_value,currency:b.currency,source:'other',status:won?.key??'new',owner_id:me.user_id}).select('id').single();
+   const {data:lead,error}=await db.from('leads').insert({name:b.name,company:b.company,email:b.email.toLowerCase(),phone:b.phone,service_interested:b.service,message:b.brief,project_description:b.brief,deal_value:isStudioAdmin(me)?b.deal_value:null,currency:b.currency,source:'other',status:won?.key??'new',owner_id:me.user_id}).select('id').single();
    if(error||!lead)return fail('Could not save the client.');
    try{await openSpace(lead.id,b.team);}catch(e){return fail(e instanceof Error?e.message:'Could not open the client space.');}
    return Response.json({ok:true,lead_id:lead.id});

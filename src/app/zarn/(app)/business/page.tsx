@@ -7,7 +7,7 @@ export const dynamic='force-dynamic';
 export default async function Page(){
  const me=await zarnMember();if(!me)redirect('/zarn/login');
  const admin=me.staffRole==='super_admin'||me.staffRole==='admin';
- if(me.account_type==='guest'||(!me.can_view_crm&&!admin))redirect('/zarn');
+ if(me.account_type==='guest'||!admin)redirect('/zarn');
  const db=serviceClient();
  const [{data:leads},{data:spaces},{data:mine},{data:tasks}]=await Promise.all([
   me.db.from('zarn_leads').select('id,name,company,status,stage_label,stage_color,stage_kind,deal_value,currency,last_activity_at'),

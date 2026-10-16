@@ -1,6 +1,6 @@
 'use client';
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
-import {Check,Maximize2,Mic,MicOff,Minimize2,Phone,PhoneOff,ScreenShare,ScreenShareOff,Video,VideoOff,Volume2} from 'lucide-react';
+import {Check,Expand,Maximize2,PictureInPicture2,Shrink,Mic,MicOff,Minimize2,Phone,PhoneOff,ScreenShare,ScreenShareOff,Video,VideoOff,Volume2} from 'lucide-react';
 import {createPortal} from 'react-dom';
 import type {RealtimeChannel} from '@supabase/supabase-js';
 import {useZarn} from './ZarnProvider';
@@ -25,20 +25,21 @@ async function api(body:object){
 const portal=(node:React.ReactNode)=>createPortal(node,document.querySelector('.zarn')??document.body);
 export default function CallProvider({children}:{children:React.ReactNode}){
  const {db,me,people}=useZarn();
- const [phase,setPhase]=useState<Phase>('idle'),[call,setCall]=useState<Call|null>(null),[muted,setMuted]=useState(false),[secs,setSecs]=useState(0),[notice,setNotice]=useState(''),[mini,setMini]=useState(false),[outs,setOuts]=useState<MediaDeviceInfo[]|null>(null),[outId,setOutId]=useState(''),[camOn,setCamOn]=useState(false),[sharing,setSharing]=useState(false),[peerVideo,setPeerVideo]=useState(false);
+ const [phase,setPhase]=useState<Phase>('idle'),[call,setCall]=useState<Call|null>(null),[muted,setMuted]=useState(false),[secs,setSecs]=useState(0),[notice,setNotice]=useState(''),[mini,setMini]=useState(false),[outs,setOuts]=useState<MediaDeviceInfo[]|null>(null),[outId,setOutId]=useState(''),[camOn,setCamOn]=useState(false),[sharing,setSharing]=useState(false),[peerVideo,setPeerVideo]=useState(false),[peerScreen,setPeerScreen]=useState(false),[big,setBig]=useState(false),[pos,setPos]=useState({x:0,y:0}),[fs,setFs]=useState(false);
  const callRef=useRef<Call|null>(null),phaseRef=useRef<Phase>('idle');
  const pc=useRef<RTCPeerConnection|null>(null),stream=useRef<MediaStream|null>(null),sig=useRef<RealtimeChannel|null>(null);
  const pendingIce=useRef<RTCIceCandidateInit[]>([]),stopRing=useRef<(()=>void)|null>(null),timers=useRef<ReturnType<typeof setTimeout>[]>([]),tick=useRef<ReturnType<typeof setInterval>|null>(null);
  const audio=useRef<HTMLAudioElement>(null),iceRef=useRef<RTCIceServer[]>([]),initiator=useRef(false);
+ const callEl=useRef<HTMLDivElement>(null),drag=useRef<{x:number;y:number;ox:number;oy:number}|null>(null),remoteVideoEl=useRef<HTMLVideoElement|null>(null);
  const remoteStream=useRef<MediaStream|null>(null),camTrack=useRef<MediaStreamTrack|null>(null),screenTrack=useRef<MediaStreamTrack|null>(null),vSender=useRef<RTCRtpSender|null>(null),makingOffer=useRef(false),negotiated=useRef(false);
  // Video elements mount and unmount as the call is minimised, so they pick their stream up when they appear.
- const remoteEl=useCallback((el:HTMLVideoElement|null)=>{if(el){el.srcObject=remoteStream.current;void el.play().catch(()=>{});}},[]);
+ const remoteEl=useCallback((el:HTMLVideoElement|null)=>{remoteVideoEl.current=el;if(el){el.srcObject=remoteStream.current;void el.play().catch(()=>{});}},[]);
  const localEl=useCallback((el:HTMLVideoElement|null)=>{if(el){el.srcObject=screenTrack.current?new MediaStream([screenTrack.current]):camTrack.current?new MediaStream([camTrack.current]):null;void el.play().catch(()=>{});}},[]);
  const go=(p:Phase)=>{phaseRef.current=p;setPhase(p);};
 
  const cleanup=useCallback((msg='')=>{
   stopRing.current?.();stopRing.current=null;timers.current.forEach(clearTimeout);timers.current=[];if(tick.current)clearInterval(tick.current);tick.current=null;
-  pc.current?.close();pc.current=null;stream.current?.getTracks().forEach(t=>t.stop());stream.current=null;camTrack.current?.stop();camTrack.current=null;screenTrack.current?.stop();screenTrack.current=null;vSender.current=null;remoteStream.current=null;negotiated.current=false;makingOffer.current=false;setCamOn(false);setSharing(false);setPeerVideo(false);
+  pc.current?.close();pc.current=null;stream.current?.getTracks().forEach(t=>t.stop());stream.current=null;camTrack.current?.stop();camTrack.current=null;screenTrack.current?.stop();screenTrack.current=null;vSender.current=null;remoteStream.current=null;negotiated.current=false;makingOffer.current=false;setCamOn(false);setSharing(false);setPeerVideo(false);setPeerScreen(false);setBig(false);setPos({x:0,y:0});if(document.fullscreenElement)void document.exitFullscreen().catch(()=>{});
   if(sig.current){void db.removeChannel(sig.current);sig.current=null;}
   pendingIce.current=[];callRef.current=null;setCall(null);setMuted(false);setSecs(0);setMini(false);setOuts(null);go('idle');
   if(msg){setNotice(msg);timers.current.push(setTimeout(()=>setNotice(''),4000));}
@@ -78,7 +79,7 @@ export default function CallProvider({children}:{children:React.ReactNode}){
   ch.on('broadcast',{event:'sig'},async({payload}:{payload:Sig})=>{
    const p=pc.current;
    if(payload.t==='ready'&&initiator.current&&p){if(p.localDescription)send({t:'offer',sdp:p.localDescription.toJSON()});else{const o=await p.createOffer();await p.setLocalDescription(o);send({t:'offer',sdp:o});}}
-   else if(payload.t==='video'){setPeerVideo(payload.on);}
+   else if(payload.t==='video'){setPeerVideo(payload.on);setPeerScreen(payload.on&&!!payload.screen);if(payload.on&&payload.screen)setBig(true);}
    else if(payload.t==='offer'&&p){
     const collision=makingOffer.current||p.signalingState!=='stable';
     if(collision&&initiator.current)return; // the caller is the impolite side and ignores a clashing offer
@@ -200,21 +201,44 @@ export default function CallProvider({children}:{children:React.ReactNode}){
  }
  const canShare=typeof navigator!=='undefined'&&!!navigator.mediaDevices&&'getDisplayMedia' in navigator.mediaDevices;
 
+ useEffect(()=>{const h=()=>setFs(!!document.fullscreenElement);document.addEventListener('fullscreenchange',h);return()=>document.removeEventListener('fullscreenchange',h);},[]);
+ function toggleFullscreen(){if(document.fullscreenElement)void document.exitFullscreen().catch(()=>{});else void callEl.current?.requestFullscreen?.().catch(()=>setNotice('Full screen isn’t available here.'));}
+ const canPip=typeof document!=='undefined'&&!!document.pictureInPictureEnabled;
+ async function togglePip(){
+  try{if(document.pictureInPictureElement)await document.exitPictureInPicture();else if(remoteVideoEl.current)await remoteVideoEl.current.requestPictureInPicture();}
+  catch{setNotice('Picture in picture isn’t available for this.');timers.current.push(setTimeout(()=>setNotice(''),3000));}
+ }
+ // Drag the floating call by its top bar so it never covers what you are working on.
+ const grip={
+  onPointerDown:(e:React.PointerEvent<HTMLDivElement>)=>{if(fs)return;drag.current={x:e.clientX,y:e.clientY,ox:pos.x,oy:pos.y};e.currentTarget.setPointerCapture(e.pointerId);},
+  onPointerMove:(e:React.PointerEvent<HTMLDivElement>)=>{const d=drag.current;if(!d)return;setPos({x:d.ox+e.clientX-d.x,y:d.oy+e.clientY-d.y});},
+  onPointerUp:()=>{drag.current=null;},
+ };
+
  const value=useMemo(()=>({start,busy:phase!=='idle'}),[start,phase]);
  const peer=call?people[call.peer]:undefined,name=peer?.display_name??'Someone',stage=phase==='active'&&(peerVideo||camOn||sharing);
  return <Ctx.Provider value={value}>{children}
   <audio ref={audio} autoPlay playsInline/>
   {(notice||phase!=='idle')&&portal(<>
   {notice&&<div className="zn-call-toast" role="status">{notice}</div>}
-  {phase!=='idle'&&call&&mini&&<div className="zn-call-mini" role="status">
-   <button type="button" className="zn-call-mini-main" aria-label="Expand call" onClick={()=>setMini(false)}><Avatar m={peer} size={28}/><b>{name}</b><small>{phase==='active'?fmt(secs):phase==='incoming'?'Incoming':'Calling…'}</small></button>
-   {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={16}/>:<Mic size={16}/>}</button>}
-   <button type="button" aria-label="Expand" onClick={()=>setMini(false)}><Maximize2 size={16}/></button>
-   <button type="button" className="is-decline" aria-label="End call" onClick={()=>void finish(phase==='incoming'?'decline':'end')}><PhoneOff size={16}/></button>
+  {phase!=='idle'&&call&&mini&&<div className={`zn-call-mini${stage?' has-video':''}`} role="status">
+   <button type="button" className="zn-call-mini-stage" aria-label="Expand call" onClick={()=>setMini(false)}>
+    {stage?<video ref={remoteEl} className="zn-call-remote" autoPlay playsInline muted style={{display:peerVideo?undefined:'none'}}/>:null}
+    {(!stage||!peerVideo)&&<Avatar m={peer} size={stage?56:40}/>}
+    <span className="zn-call-mini-label"><b>{name}</b><small>{phase==='active'?fmt(secs):phase==='incoming'?'Incoming':'Calling…'}</small></span>
+   </button>
+   <div className="zn-call-mini-bar">
+    {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={16}/>:<Mic size={16}/>}</button>}
+    {phase==='active'&&<button type="button" className={camOn?'':'is-on'} aria-label={camOn?'Turn camera off':'Turn camera on'} onClick={()=>void toggleCamera()}>{camOn?<Video size={16}/>:<VideoOff size={16}/>}</button>}
+    <button type="button" aria-label="Expand call" onClick={()=>setMini(false)}><Maximize2 size={16}/></button>
+    <button type="button" className="is-decline" aria-label="End call" onClick={()=>void finish(phase==='incoming'?'decline':'end')}><PhoneOff size={16}/></button>
+   </div>
   </div>}
-  {phase!=='idle'&&call&&!mini&&<div className="zn-call-scrim"><div className={`zn-call${stage?' is-video':''}`} role="dialog" aria-modal="true" aria-label="Call">
+  {phase!=='idle'&&call&&!mini&&<div className={phase==='active'?'zn-call-float':'zn-call-scrim'}><div ref={callEl} className={`zn-call${stage?' is-video':''}${phase==='active'?' is-floating':''}${big?' is-big':''}${fs?' is-fs':''}`} style={phase==='active'&&!fs?{transform:`translate(${pos.x}px,${pos.y}px)`}:undefined} role="dialog" aria-modal={phase!=='active'} aria-label="Call">
+   {phase==='active'&&<div className="zn-call-grip" {...grip} aria-hidden="true"><i/></div>}
    {phase!=='incoming'&&<button type="button" className="zn-call-min" aria-label="Minimize call" data-tip="Minimize" onClick={()=>setMini(true)}><Minimize2 size={16}/></button>}
-   {stage?<div className="zn-call-stage"><video ref={remoteEl} className="zn-call-remote" autoPlay playsInline muted style={{display:peerVideo?undefined:'none'}}/>{!peerVideo&&<div className="zn-call-avatar"><Avatar m={peer} size={96}/></div>}{(camOn||sharing)&&<video key={sharing?'screen':'cam'} ref={localEl} className={`zn-call-local${sharing?'':' is-mirror'}`} autoPlay playsInline muted/>}</div>
+   {stage?<div className="zn-call-stage"><video ref={remoteEl} className="zn-call-remote" autoPlay playsInline muted style={{display:peerVideo?undefined:'none'}}/>{!peerVideo&&<div className="zn-call-avatar"><Avatar m={peer} size={96}/></div>}{(camOn||sharing)&&<video key={sharing?'screen':'cam'} ref={localEl} className={`zn-call-local${sharing?'':' is-mirror'}`} autoPlay playsInline muted/>}
+    <div className="zn-call-tools">{canPip&&peerVideo&&<button type="button" aria-label="Picture in picture" data-tip="Keep watching in a small window" onClick={()=>void togglePip()}><PictureInPicture2 size={16}/></button>}{!fs&&<button type="button" aria-label={big?'Smaller window':'Larger window'} data-tip={big?'Smaller':'Larger'} onClick={()=>setBig(b=>!b)}>{big?<Shrink size={16}/>:<Expand size={16}/>}</button>}<button type="button" aria-label={fs?'Exit full screen':'Full screen'} data-tip={fs?'Exit full screen':'Full screen'} onClick={toggleFullscreen}>{fs?<Minimize2 size={16}/>:<Maximize2 size={16}/>}</button></div></div>
     :<div className={`zn-call-avatar${phase==='incoming'||phase==='calling'?' is-ringing':''}`}><Avatar m={peer} size={96}/></div>}
    <div className="zn-call-info"><b>{name}</b><small>{phase==='incoming'?(call.video?'Incoming video call':'Incoming voice call'):phase==='calling'?'Calling…':phase==='connecting'?'Connecting…':fmt(secs)}</small></div>
    <div className="zn-call-actions">

@@ -20,7 +20,7 @@ const filters:{k:Filter;label:string;match:(e:Ev)=>boolean}[]=[
 
 // Company news: people who joined, projects completed and clients closed. Mentions have their own page.
 export default function Activity(){
- const {db,people}=useZarn();
+ const {db,people,me}=useZarn(),admin=me.staffRole==='super_admin'||me.staffRole==='admin';
  const [events,setEvents]=useState<Ev[]>([]),[loading,setLoading]=useState(true),[filter,setFilter]=useState<Filter>('all'),[seen]=useState(()=>{try{return Number(localStorage.getItem(SEEN))||0;}catch{return 0;}});
  useEffect(()=>{let live=true;void (async()=>{
   const {data}=await db.from('zarn_events').select('id,kind,lead_id,user_id,title,detail,meta,created_at').order('created_at',{ascending:false}).limit(200);
@@ -29,7 +29,7 @@ export default function Activity(){
  })();return()=>{live=false;};},[db]);
  const active=filters.find(f=>f.k===filter)!,shown=events.filter(active.match);
  const text=(e:Ev)=>e.kind==='member_joined'?<><b>{e.title}</b> joined the team{e.detail?<span className="zn-in"> · {e.detail}</span>:null}</>
-  :e.kind==='client_won'?<><b>{e.title}</b> closed as a client{e.meta.deal_value?<span className="zn-in"> · {money(e.meta.deal_value,e.meta.currency??'NGN')}</span>:null}</>
+  :e.kind==='client_won'?<><b>{e.title}</b> closed as a client{admin&&e.meta.deal_value?<span className="zn-in"> · {money(e.meta.deal_value,e.meta.currency??'NGN')}</span>:null}</>
   :e.kind==='client_lost'?<><b>{e.title}</b> <span className="zn-in">was closed as lost</span></>
   :<>Project completed for <b>{e.title}</b>{e.detail?<span className="zn-in"> · {e.detail}</span>:null}</>;
  const icon=(k:Kind)=>k==='member_joined'?<UserPlus size={16}/>:k==='client_won'?<Handshake size={16}/>:k==='client_lost'?<HeartCrack size={16}/>:<CircleCheck size={16}/>;

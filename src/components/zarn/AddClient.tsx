@@ -10,7 +10,7 @@ import {Avatar} from './format';
 
 // New client from inside ZARN: saves it to the CRM (Won stage) and opens a private client space for the chosen team.
 export default function AddClient({onClose}:{onClose:()=>void}){
- const z=useZarn(),router=useRouter();
+ const z=useZarn(),router=useRouter(),admin=z.me.staffRole==='super_admin'||z.me.staffRole==='admin';
  const [v,setV]=useState({name:'',company:'',email:'',phone:'',service:'',deal_value:'',currency:'NGN',brief:''});
  const [team,setTeam]=useState<string[]>([]),[q,setQ]=useState(''),[busy,setBusy]=useState(false),[err,setErr]=useState('');
  const people=z.members.filter(m=>!m.deactivated_at&&m.account_type==='member'&&m.user_id!==z.me.user_id&&`${m.display_name} ${m.title}`.toLowerCase().includes(q.toLowerCase()));
@@ -29,8 +29,8 @@ export default function AddClient({onClose}:{onClose:()=>void}){
     <label className="zn-label">Email<input className="zn-input" type="email" maxLength={254} value={v.email} onChange={set('email')}/></label>
     <label className="zn-label">Phone<input className="zn-input" type="tel" maxLength={40} value={v.phone} onChange={set('phone')}/></label>
     <label className="zn-label">Service<input className="zn-input" maxLength={120} placeholder="e.g. Brand identity" value={v.service} onChange={set('service')}/></label>
-    <div className="zn-grid-2 zn-tight"><label className="zn-label">Deal value<input className="zn-input" type="number" min={0} step="any" value={v.deal_value} onChange={set('deal_value')}/></label>
-     <label className="zn-label">Currency<Dropdown label="Currency" value={v.currency} onChange={x=>setV(s=>({...s,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></label></div>
+    {admin&&<div className="zn-grid-2 zn-tight"><label className="zn-label">Deal value<input className="zn-input" type="number" min={0} step="any" value={v.deal_value} onChange={set('deal_value')}/></label>
+     <label className="zn-label">Currency<Dropdown label="Currency" value={v.currency} onChange={x=>setV(s=>({...s,currency:x}))} options={currencies.map(c=>({value:c,label:c}))}/></label></div>}
    </div>
    <label className="zn-label">Brief<textarea className="zn-input" rows={3} maxLength={10000} placeholder="What are we doing for them?" value={v.brief} onChange={set('brief')}/></label>
    <div className="zn-label">Team <small>Only these people (and admins) can see this client’s space. You’re added automatically.</small></div>
