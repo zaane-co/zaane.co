@@ -17,7 +17,7 @@ export default function SavedMessages(){
   if(live)setMessages(Object.fromEntries(((data??[]) as ZMessage[]).map(m=>[m.id,m])));
  })();return()=>{live=false;};},[db,ids]);
  if(todos===null)return <p className="zn-loading">Loading…</p>;
- if(!saved.length)return <div className="zn-empty-state"><h2>Nothing saved</h2><p>Hover a message and tap the bookmark to keep it here for later.</p></div>;
+ if(!saved.length)return <div className="zn-empty-state"><h2>Nothing saved yet</h2><p>Tap the bookmark on a message, or star a chat from its header, to keep it here.</p></div>;
  return <div className="zp-saved">{saved.map(t=>{
   const m=t.message_id?messages[t.message_id]:undefined,c=channels.find(x=>x.id===t.channel_id);
   return <div key={t.id} className="zp-saved-row">
