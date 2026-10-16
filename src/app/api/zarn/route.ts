@@ -10,6 +10,7 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('channel_add'),id,members:z.array(id).min(1).max(200)}),
  z.object({action:z.literal('invites')}),
  z.object({action:z.literal('invite_list'),id}),
+ z.object({action:z.literal('channel_remove'),id,user_id:id}),
  z.object({action:z.literal('invite_cancel'),id,user_id:id}),
  z.object({action:z.literal('invite_accept'),channel_id:id}),
  z.object({action:z.literal('invite_decline'),channel_id:id}),
@@ -76,6 +77,18 @@ export async function POST(request:Request){
    if(!await inChannel(b.id))return fail('Join the channel first.',403);
    const {data}=await admin.from('zarn_channel_invites').select('user_id').eq('channel_id',b.id);
    return Response.json({ok:true,pending:(data??[]).map(r=>r.user_id)});
+  }
+  case 'channel_remove':{
+   // Private channels: the person who created it, or an admin, can remove someone. They can be invited again later.
+   const {data:ch}=await admin.from('zarn_channels').select('kind,created_by,is_default').eq('id',b.id).single();
+   if(!ch||ch.kind!=='private')return fail('People can only be removed from private channels.');
+   const staff=me.staffRole==='super_admin'||me.staffRole==='admin';
+   if(ch.created_by!==me.user_id&&!staff)return fail('Only the person who created this channel, or an admin, can remove people.',403);
+   if(b.user_id===me.user_id)return fail('Use Leave channel to remove yourself.');
+   if(b.user_id===ch.created_by&&!staff)return fail('The channel’s creator can’t be removed.',403);
+   await admin.from('zarn_channel_members').delete().eq('channel_id',b.id).eq('user_id',b.user_id);
+   await admin.from('zarn_messages').insert({channel_id:b.id,kind:'system',meta:{event:'members_removed',by:me.user_id,users:b.user_id}});
+   return Response.json({ok:true});
   }
   case 'invite_cancel':{
    if(!await inChannel(b.id))return fail('Join the channel first.',403);

@@ -2,6 +2,7 @@
 import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {useCall} from './CallProvider';
+import {useConfirm} from './ConfirmProvider';
 import {Bell,BellOff,Briefcase,Hash,Info,Lock,Phone,Pin,Star,Trash2,UserPlus,Video,X} from 'lucide-react';
 import {zarnApi,type ZChannel,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {useZarn,type ZEvent} from './ZarnProvider';
@@ -166,7 +167,7 @@ function Thread({parent,typers,onTyping,onClose}:{parent:ZMessage;typers:string[
 
 function Details({c,pinned,onClose,onJump}:{c:ZChannel;pinned:ZMessage[];onClose:()=>void;onJump:(id:string)=>void}){
  const {profile:profileOf}=useShell();
- const z=useZarn(),{db,me,people,membership,title,online}=z,router=useRouter();
+ const z=useZarn(),{db,me,people,membership,title,online}=z,router=useRouter(),confirm=useConfirm();
  const [tab,setTab]=useState<'about'|'members'|'pins'>('about'),[ids,setIds]=useState<string[]>([]),[pending,setPending]=useState<string[]>([]),[topic,setTopic]=useState(c.topic),[adding,setAdding]=useState(false),[msg,setMsg]=useState(''),[confirmDel,setConfirmDel]=useState(false),[deleting,setDeleting]=useState(false);
  useEffect(()=>{
   void db.from('zarn_channel_members').select('user_id').eq('channel_id',c.id).then(({data}:{data:{user_id:string}[]|null})=>setIds((data??[]).map(r=>r.user_id)));
@@ -196,7 +197,7 @@ function Details({c,pinned,onClose,onJump}:{c:ZChannel;pinned:ZMessage[];onClose
   :tab==='pins'?<div className="zn-modal-body">{pinned.length?pinned.map(m=><button key={m.id} type="button" className="zn-pin-row" onClick={()=>onJump(m.id)}><b>{people[m.user_id??'']?.display_name??'CRM'}</b><span>{renderBody(m.body.slice(0,240),people,me.user_id)}</span></button>):<p className="zn-note">Nothing pinned yet. Hover a message and click the pin.</p>}</div>
   :<div className="zn-modal-body">
    {mine&&c.kind!=='dm'&&<button type="button" className="zn-btn" onClick={()=>setAdding(true)}><UserPlus size={14}/>Add people</button>}
-   <ul className="zn-list">{ids.map(u=>people[u]).filter(Boolean).map(p=><li key={p!.user_id}><div className="zn-person is-click" role="button" tabIndex={0} onClick={()=>{onClose();profileOf(p!.user_id);}}><Avatar m={p} size={32} online={online.has(p!.user_id)}/><span><b>{p!.display_name}{p!.user_id===me.user_id&&' (you)'}</b><small>{p!.title||p!.email}</small></span></div></li>)}</ul>
+   <ul className="zn-list">{ids.map(u=>people[u]).filter(Boolean).map(p=><li key={p!.user_id}><div className="zn-person is-click" role="button" tabIndex={0} onClick={()=>{onClose();profileOf(p!.user_id);}}><Avatar m={p} size={32} online={online.has(p!.user_id)}/><span><b>{p!.display_name}{p!.user_id===me.user_id&&' (you)'}</b><small>{p!.title||p!.email}</small></span>{c.kind==='private'&&(staff||c.created_by===me.user_id)&&p!.user_id!==me.user_id&&p!.user_id!==c.created_by&&<button type="button" className="zn-remove" onClick={async e=>{e.stopPropagation();if(!await confirm({title:`Remove ${p!.display_name}?`,message:'They will lose access to this channel. You can invite them again later.',confirm:'Remove',danger:true}))return;try{await zarnApi('/api/zarn',{action:'channel_remove',id:c.id,user_id:p!.user_id});setIds(x=>x.filter(y=>y!==p!.user_id));}catch(err){setMsg(err instanceof Error?err.message:'Could not remove them.');}}}>Remove</button>}</div></li>)}</ul>
   {pending.length>0&&<div className="zn-pending"><p className="zn-section-label">Invited · {pending.length}</p><ul className="zn-list">{pending.map(u=>people[u]).filter(Boolean).map(p=><li key={p!.user_id}><div className="zn-person"><Avatar m={p} size={32}/><span><b>{p!.display_name}</b><small>Waiting to accept the invitation</small></span>{mine&&<button type="button" className="zn-remove" onClick={async()=>{await zarnApi('/api/zarn',{action:'invite_cancel',id:c.id,user_id:p!.user_id});setPending(x=>x.filter(y=>y!==p!.user_id));}}>Cancel</button>}</div></li>)}</ul></div>}
   </div>}
   {adding&&<PeoplePicker title="Add people" exclude={[...ids,...pending]} confirm="Add" onClose={()=>setAdding(false)} onPick={async sel=>{await zarnApi('/api/zarn',{action:'channel_add',id:c.id,members:sel});setAdding(false);}}/>}
