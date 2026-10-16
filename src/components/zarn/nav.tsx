@@ -19,11 +19,12 @@ export function useNav(){
  const guest=me.account_type==='guest';
  const canCreate=!guest&&me.can_create_channels,canBusiness=!guest&&(me.can_view_crm||staffAdmin);
  const canAddClient=!guest&&(me.can_view_crm||staffAdmin||me.staffRole==='sales');
- const live=channels.filter(c=>!c.archived_at),mine=live.filter(c=>membership[c.id]);
+ // Conversations with deactivated people are hidden from the lists; they're still found by searching for the person.
+ const gone=(c:ZChannel)=>c.kind==='dm'&&(c.dm_key??'').split(',').some(id=>id!==me.user_id&&z.people[id]?.deactivated_at);
+ const live=channels.filter(c=>!c.archived_at&&!gone(c)),mine=live.filter(c=>membership[c.id]);
  const starred=mine.filter(c=>c.kind!=='client'&&membership[c.id]?.starred);
  const rooms=mine.filter(c=>(c.kind==='public'||c.kind==='private')&&!membership[c.id]?.starred).sort((a,b)=>(a.name??'').localeCompare(b.name??''));
- const gone=(c:ZChannel)=>(c.dm_key??'').split(',').some(id=>id!==me.user_id&&z.people[id]?.deactivated_at);
- const dms=mine.filter(c=>c.kind==='dm').sort((a,b)=>Number(gone(a))-Number(gone(b))||(unread[b.id]?.unread??0)-(unread[a.id]?.unread??0));
+ const dms=mine.filter(c=>c.kind==='dm').sort((a,b)=>(unread[b.id]?.unread??0)-(unread[a.id]?.unread??0));
  const clients=live.filter(c=>c.kind==='client'&&(membership[c.id]||staffAdmin)).sort((a,b)=>title(a).localeCompare(title(b)));
  const count=(list:ZChannel[],k:'unread'|'mentions')=>list.reduce((t,c)=>t+(membership[c.id]?.muted&&k==='unread'?0:unread[c.id]?.[k]??0),0);
  const badges={
