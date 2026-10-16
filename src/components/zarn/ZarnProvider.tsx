@@ -98,7 +98,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
 
  // Anything sent while this person was offline counts as delivered once ZARN is open again.
  useEffect(()=>{
-  const mark=()=>{if(document.visibilityState==='visible')void db.rpc('zarn_mark_delivered');};
+  const mark=()=>{if(document.visibilityState==='visible')void db.rpc('zarn_mark_delivered',{c:null});};
   mark();document.addEventListener('visibilitychange',mark);window.addEventListener('online',mark);
   return()=>{document.removeEventListener('visibilitychange',mark);window.removeEventListener('online',mark);};
  },[db]);
