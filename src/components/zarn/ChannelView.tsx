@@ -28,7 +28,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  useEffect(()=>{if(channel?.kind==='client'&&!embedded&&channel.lead_id)router.replace(`/zarn/clients/${channel.lead_id}`);},[channel,embedded,router]);
  const counted=useRef(new Set<string>());
  // Read receipts: each member's last_read_at in this channel, kept live.
- const [reads,setReads]=useState<Record<string,string>>({});
+ const [reads,setReads]=useState<Record<string,string>>({}),[delivs,setDelivs]=useState<Record<string,string>>({});
 
  const load=useCallback(async(before?:string)=>{
   let q=db.from('zarn_messages').select('*').eq('channel_id',id).is('parent_id',null).order('created_at',{ascending:false}).limit(PAGE);
@@ -60,15 +60,15 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
   }
  }),[subscribe,id,joined,markRead]);
  useEffect(()=>{
-  void db.from('zarn_channel_members').select('user_id,last_read_at').eq('channel_id',id).then(({data}:{data:{user_id:string;last_read_at:string}[]|null})=>setReads(Object.fromEntries((data??[]).map(r=>[r.user_id,r.last_read_at]))));
+  void db.from('zarn_channel_members').select('user_id,last_read_at,delivered_at').eq('channel_id',id).then(({data}:{data:{user_id:string;last_read_at:string;delivered_at:string}[]|null})=>{setReads(Object.fromEntries((data??[]).map(r=>[r.user_id,r.last_read_at])));setDelivs(Object.fromEntries((data??[]).map(r=>[r.user_id,r.delivered_at])));});
   const ch=db.channel(`zarn-reads-${id}`).on('postgres_changes',{event:'*',schema:'public',table:'zarn_channel_members',filter:`channel_id=eq.${id}`},(p:{eventType:string;new:Record<string,string>;old:Record<string,string>})=>{
    if(p.eventType==='DELETE')setReads(r=>{const n={...r};delete n[p.old.user_id!];return n;});
-   else setReads(r=>({...r,[p.new.user_id!]:p.new.last_read_at!}));
+   else{setReads(r=>({...r,[p.new.user_id!]:p.new.last_read_at!}));setDelivs(r=>({...r,[p.new.user_id!]:p.new.delivered_at as string}));}
   }).subscribe();
   return()=>{void db.removeChannel(ch);};
  },[db,id]);
  const others=Object.keys(reads).filter(u=>u!==me.user_id);
- const receipt=(m:ZMessage)=>m.user_id!==me.user_id||m.kind!=='user'||m.deleted_at?undefined:{pending:!!m.pending,seen:others.filter(u=>reads[u]!>=m.created_at).map(u=>({id:u,at:reads[u]!})),unseen:others.filter(u=>!(reads[u]!>=m.created_at))};
+ const receipt=(m:ZMessage)=>m.user_id!==me.user_id||m.kind!=='user'||m.deleted_at?undefined:{pending:!!m.pending,seen:others.filter(u=>reads[u]!>=m.created_at).map(u=>({id:u,at:reads[u]!})),unseen:others.filter(u=>!(reads[u]!>=m.created_at)),delivered:others.filter(u=>!(reads[u]!>=m.created_at)&&delivs[u]!>=m.created_at)};
  // Typing indicator over a broadcast channel (no database writes).
  useEffect(()=>{
   const ch=db.channel(`zarn-typing-${id}`).on('broadcast',{event:'typing'},({payload}:{payload:{user:string}})=>{if(payload.user!==me.user_id)setTyping(t=>({...t,[payload.user]:Date.now()}));}).subscribe();

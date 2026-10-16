@@ -76,6 +76,12 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  // Client spaces are named after their client, so keep those leads loaded.
  useEffect(()=>{for(const c of channels)if(c.kind==='client'&&c.lead_id)loadLead(c.lead_id);},[channels,loadLead]);
 
+ // Anything sent while this person was offline counts as delivered once ZARN is open again.
+ useEffect(()=>{
+  const mark=()=>{if(document.visibilityState==='visible')void db.rpc('zarn_mark_delivered');};
+  mark();document.addEventListener('visibilitychange',mark);window.addEventListener('online',mark);
+  return()=>{document.removeEventListener('visibilitychange',mark);window.removeEventListener('online',mark);};
+ },[db]);
  // Initial unread + live updates.
  useEffect(()=>{void db.rpc('zarn_unread').then(({data}:{data:unknown})=>setUnread(Object.fromEntries(((data??[]) as {channel_id:string;unread:number;mentions:number}[]).map(r=>[r.channel_id,{unread:r.unread,mentions:r.mentions}]))));},[db]);
  useEffect(()=>{
@@ -84,6 +90,8 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
     const row=(p.eventType==='DELETE'?p.old:p.new) as unknown as ZMessage;
     listeners.current.forEach(fn=>fn({table:'zarn_messages',type:p.eventType,row}));
     if(p.eventType!=='INSERT'||row.parent_id||row.user_id===me.user_id)return;
+    // This app has the message, so the sender's tick moves from Sent to Delivered.
+    if(membershipRef.current[row.channel_id])void db.rpc('zarn_mark_delivered',{c:row.channel_id});
     const mention=row.body.includes(`<@${me.user_id}>`)||row.body.includes('<!channel>');
     if(row.channel_id===activeRef.current&&document.visibilityState==='visible')return;
     // Sound for DMs, client spaces and @mentions (not every channel message), unless the conversation is muted.

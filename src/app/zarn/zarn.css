@@ -965,3 +965,6 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 .zarn.is-light .zp-card{background:#fff;border-color:var(--z-border)}
 .zp-tools .dd-toolbar{height:36px;border-radius:10px}
 .zn-label>.dd{margin-top:2px}
+/* Typing and delivery */
+.zn-typing{color:#16a34a;font-weight:600}
+.zn-ticks.is-delivered{color:var(--z-muted)}

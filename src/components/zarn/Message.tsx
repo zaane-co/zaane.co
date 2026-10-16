@@ -9,7 +9,7 @@ import {useShell} from './nav';
 import {Avatar,StatusMark,renderBody,timeOf,tokensToText,textToTokens} from './format';
 
 // One message row. compact = same author as the previous message within a few minutes (no avatar/name).
-export type Receipt={pending:boolean;seen:{id:string;at:string}[];unseen:string[]};
+export type Receipt={pending:boolean;seen:{id:string;at:string}[];unseen:string[];delivered:string[]};
 export default function Message({m,reactions,compact,inThread,onThread,receipt}:{m:ZMessage;reactions:ZReaction[];compact:boolean;inThread?:boolean;onThread?:(m:ZMessage)=>void;receipt?:Receipt}){
  const {me,people,members,db,membership,emit,saved,toggleSaved}=useZarn(),{profile}=useShell();
  const [viewer,setViewer]=useState<number|null>(null),[seenOpen,setSeenOpen]=useState(false);
@@ -51,10 +51,14 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
    {Object.keys(groups).length>0&&<div className="zn-reactions">{Object.entries(groups).map(([e,users])=><button key={e} type="button" className={users.includes(me.user_id)?'is-mine':''} title={users.map(u=>people[u]?.display_name??'Someone').join(', ')} onClick={()=>void toggle(e)}>{e}<span>{users.length}</span></button>)}
     {canAct&&<button type="button" className="zn-react-add" aria-label="Add reaction" onClick={()=>setPicker(v=>!v)}><SmilePlus size={14}/></button>}</div>}
    {!inThread&&m.reply_count>0&&<button type="button" className="zn-thread-link" onClick={()=>onThread?.(m)}><MessageSquareText size={13}/>{m.reply_count} repl{m.reply_count===1?'y':'ies'}{m.last_reply_at&&<span>Last reply {timeOf(m.last_reply_at)}</span>}</button>}
-   {receipt&&<button type="button" className={`zn-ticks${receipt.pending?' is-pending':!receipt.seen.length?' is-sent':receipt.unseen.length?' is-some':' is-all'}`} aria-label={receipt.pending?'Sending':receipt.unseen.length?`Seen by ${receipt.seen.length} of ${receipt.seen.length+receipt.unseen.length}`:'Seen by everyone'} onClick={()=>setSeenOpen(v=>!v)}>
-    {receipt.pending?<Clock3 size={13}/>:receipt.seen.length?<CheckCheck size={15}/>:<Check size={15}/>}
-    {!receipt.pending&&<small>{receipt.seen.length===0?'Sent':receipt.unseen.length===0?(receipt.seen.length===1?`Seen ${timeOf(receipt.seen[0]!.at)}`:'Seen by everyone'):`Seen by ${receipt.seen.length}`}</small>}
-   </button>}
+   {receipt&&(()=>{
+    // Sent: saved, recipient offline. Delivered: recipient's app has it. Seen: they opened the conversation.
+    const state=receipt.pending?'pending':receipt.seen.length?(receipt.unseen.length?'some':'all'):receipt.delivered.length?'delivered':'sent';
+    const label=state==='pending'?'Sending':state==='sent'?'Sent':state==='delivered'?'Delivered':state==='all'?(receipt.seen.length===1?`Seen ${timeOf(receipt.seen[0]!.at)}`:'Seen by everyone'):`Seen by ${receipt.seen.length}`;
+    return <button type="button" className={`zn-ticks is-${state}`} aria-label={state==='some'?`Seen by ${receipt.seen.length} of ${receipt.seen.length+receipt.unseen.length}`:label} onClick={()=>setSeenOpen(v=>!v)}>
+     {state==='pending'?<Clock3 size={13}/>:state==='sent'?<Check size={15}/>:<CheckCheck size={15}/>}
+     {state!=='pending'&&<small>{label}</small>}
+    </button>;})()}
    {seenOpen&&receipt&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setSeenOpen(false)}/><div className="zn-seen-pop" role="dialog" aria-label="Message info">
     <p className="zn-seen-title">Seen by {receipt.seen.length}</p>
     {receipt.seen.sort((a,b)=>a.at.localeCompare(b.at)).map(r=><div key={r.id} className="zn-seen-row"><Avatar m={people[r.id]} size={26}/><span>{people[r.id]?.display_name??'Someone'}</span><time>{timeOf(r.at)}</time></div>)}
