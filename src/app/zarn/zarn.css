@@ -372,9 +372,9 @@ select.zn-input{appearance:none;padding-right:34px;background-image:url("data:im
 .zn-client-meta{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .zn-stage-select{appearance:none;height:30px;padding:0 28px 0 12px;border-radius:999px;border:0;color:#fff;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 10px center!important}
 .zn-stage-select option{color:#111;background:#fff}
-.zn-team-stack{display:flex;align-items:center}
-.zn-team-stack .zn-avatar{margin-left:-6px;box-shadow:0 0 0 2px var(--z-bg)}
-.zn-team-stack .zn-avatar:first-child{margin-left:0}
+.zn-team-stack{display:flex;align-items:center;gap:8px}
+/* Side by side, not stacked: the online dot sits at each avatar's corner and used to be covered by the next face. */
+.zn-team-stack .zn-avatar{margin-left:0}
 .zn-more{margin-left:4px;font-size:11.5px;font-weight:700;color:var(--z-muted)}
 .zn-client-tabs{display:flex;gap:2px;padding:0 14px;border-bottom:1px solid var(--z-border);overflow-x:auto;flex-shrink:0}
 .zn-client-tabs button{display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 12px;font-size:13px;font-weight:700;color:var(--z-muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
