@@ -22,7 +22,7 @@ export default function ClientBrief({lead,canEdit}:{lead:L;canEdit:boolean}){
  const [html,setHtml]=useState(lead.brief_html||(plain?fromText(plain):'')),[editing,setEditing]=useState(false),[previewing,setPreviewing]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
  const editorRef=useRef<Editor|null>(null),fileRef=useRef<HTMLInputElement>(null);
  const [img,setImg]=useState({busy:false,error:''});
- const tools=imageTools('lead',lead.id,editorRef,setImg);
+ const tools=imageTools('lead',lead.id,()=>editorRef.current,setImg);
  const editor=useEditor({
   immediatelyRender:false,shouldRerenderOnTransaction:true,content:html,editable:editing,
   extensions:[StarterKit.configure({link:false,underline:false}),Underline,Image,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:'Describe the project: goals, scope, deliverables, deadlines, links to designs or documents…'})],

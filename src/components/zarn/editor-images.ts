@@ -9,10 +9,10 @@ export async function uploadEditorImage(file:File,scope:'lead'|'doc',id:string){
  if(!r.ok)throw new Error(d.error||'Could not upload the picture.');
  return d.url as string;
 }
-export function imageTools(scope:'lead'|'doc',id:string,editorRef:{current:Editor|null},onState:(s:{busy:boolean;error:string})=>void){
+export function imageTools(scope:'lead'|'doc',id:string,getEditor:()=>Editor|null,onState:(s:{busy:boolean;error:string})=>void){
  const insert=async(files:File[])=>{
   onState({busy:true,error:''});
-  try{for(const f of files.slice(0,6)){const src=await uploadEditorImage(f,scope,id);editorRef.current?.chain().focus().setImage({src}).run();}onState({busy:false,error:''});}
+  try{for(const f of files.slice(0,6)){const src=await uploadEditorImage(f,scope,id);getEditor()?.chain().focus().setImage({src}).run();}onState({busy:false,error:''});}
   catch(e){onState({busy:false,error:e instanceof Error?e.message:'Could not upload the picture.'});}
  };
  const pick=(list:FileList|File[]|null|undefined)=>Array.from(list??[]).filter(f=>f.type.startsWith('image/'));

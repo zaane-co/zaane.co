@@ -37,7 +37,7 @@ function Editing({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
  const [title,setTitle]=useState(doc.title),[state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
  const editorRef=useRef<Editor|null>(null),fileRef=useRef<HTMLInputElement>(null);
  const [img,setImg]=useState({busy:false,error:''});
- const tools=imageTools('doc',doc.id,editorRef,setImg);
+ const tools=imageTools('doc',doc.id,()=>editorRef.current,setImg);
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null),latest=useRef({title:doc.title,content:doc.content});
  const save=useCallback(async()=>{
   setState('saving');
