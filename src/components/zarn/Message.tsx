@@ -6,13 +6,14 @@ import {quickReactions,zarnApi,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {money} from '@/lib/crm';
 import {useZarn} from './ZarnProvider';
 import {useShell} from './nav';
+import DocViewer,{docKind} from './DocViewer';
 import {Avatar,StatusMark,renderBody,timeOf,tokensToText,textToTokens} from './format';
 
 // One message row. compact = same author as the previous message within a few minutes (no avatar/name).
 export type Receipt={pending:boolean;seen:{id:string;at:string}[];unseen:string[];delivered:string[]};
 export default function Message({m,reactions,compact,inThread,onThread,receipt}:{m:ZMessage;reactions:ZReaction[];compact:boolean;inThread?:boolean;onThread?:(m:ZMessage)=>void;receipt?:Receipt}){
  const {me,people,members,db,membership,emit,saved,toggleSaved}=useZarn(),{profile}=useShell();
- const [viewer,setViewer]=useState<number|null>(null),[seenOpen,setSeenOpen]=useState(false);
+ const [viewer,setViewer]=useState<number|null>(null),[doc,setDoc]=useState<number|null>(null),[seenOpen,setSeenOpen]=useState(false);
  const [tapped,setTapped]=useState(false),[picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[confirm,setConfirm]=useState(false);
  const author=m.user_id?people[m.user_id]:undefined,mine=m.user_id===me.user_id,canAct=!!membership[m.channel_id];
  const groups=reactions.reduce<Record<string,string[]>>((g,r)=>{(g[r.emoji]??=[]).push(r.user_id);return g;},{});
@@ -47,6 +48,7 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
    {m.kind!=='crm'&&m.lead_id&&<LeadCard id={m.lead_id}/>}
    {m.attachments.length>0&&<div className="zn-files">{m.attachments.map((a,i)=>a.type.startsWith('image/')&&a.type!=='image/svg+xml'
     ?<button type="button" key={i} className="zn-image" aria-label={`Open ${a.name}`} onClick={()=>setViewer(i)}><img src={`/api/zarn/files?m=${m.id}&i=${i}`} alt={a.name} loading="lazy"/></button>
+    :docKind(a)?<button type="button" key={i} className="zn-file" onClick={()=>setDoc(i)}><FileText size={18}/><span><b>{a.name}</b><small>{(a.size/1024).toFixed(a.size>1024*1024?0:1)} KB · Click to preview</small></span><Download size={15}/></button>
     :<a key={i} href={`/api/zarn/files?m=${m.id}&i=${i}&download=1`} className="zn-file"><FileText size={18}/><span><b>{a.name}</b><small>{(a.size/1024).toFixed(a.size>1024*1024?0:1)} KB</small></span><Download size={15}/></a>)}</div>}
    {Object.keys(groups).length>0&&<div className="zn-reactions">{Object.entries(groups).map(([e,users])=><button key={e} type="button" className={users.includes(me.user_id)?'is-mine':''} title={users.map(u=>people[u]?.display_name??'Someone').join(', ')} onClick={()=>void toggle(e)}>{e}<span>{users.length}</span></button>)}
     {canAct&&<button type="button" className="zn-react-add" aria-label="Add reaction" onClick={()=>setPicker(v=>!v)}><SmilePlus size={14}/></button>}</div>}
@@ -76,6 +78,7 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
   </div>}
   {canAct&&m.kind==='crm'&&<div className="zn-actions">{quickReactions.slice(0,3).map(e=><button key={e} type="button" aria-label={`React ${e}`} onClick={()=>void toggle(e)}>{e}</button>)}{!inThread&&<button type="button" aria-label="Reply in thread" onClick={()=>onThread?.(m)}><MessageSquareText size={15}/></button>}</div>}
   {picker&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setPicker(false)}/><div className="zn-picker">{quickReactions.concat(['😮','😢','💯','🚀','👏','🤝','💡','⏳']).map(e=><button key={e} type="button" onClick={()=>void toggle(e)}>{e}</button>)}</div></>}
+  {doc!==null&&m.attachments[doc]&&<DocViewer messageId={m.id} index={doc} att={m.attachments[doc]!} onClose={()=>setDoc(null)}/>}
   {viewer!==null&&<Viewer m={m} index={viewer} onIndex={setViewer} onClose={()=>setViewer(null)}/>}
   {confirm&&<div className="zn-confirm"><span>Delete this message?</span><button type="button" onClick={()=>setConfirm(false)}>Cancel</button><button type="button" className="is-danger" onClick={()=>void remove()}>Delete</button></div>}
  </div>;

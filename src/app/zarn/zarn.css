@@ -999,3 +999,17 @@ button.zp-members{display:inline-flex;align-items:center;border-radius:999px;pad
 .zn-drop{display:flex;flex-direction:column;align-items:center;gap:4px;padding:22px 14px;border-radius:12px;border:1.5px dashed var(--z-border);color:var(--z-muted);text-align:center}
 .zn-drop:hover{border-color:var(--z-muted);background:var(--z-hover)}.zn-drop b{color:var(--z-fg);font-size:14px}.zn-drop small{font-size:12px}
 .zn-chips{display:flex;flex-wrap:wrap;gap:6px}
+/* In-app document viewer */
+.zn-doc{position:fixed;inset:0;z-index:110;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.65);backdrop-filter:blur(4px)}
+.zn-doc-card{display:flex;flex-direction:column;width:min(1000px,100%);height:min(88dvh,900px);border-radius:16px;overflow:hidden;background:var(--z-panel);border:1px solid var(--z-border);color:var(--z-fg)}
+.zn-doc-card>header{display:flex;align-items:center;gap:10px;height:52px;padding:0 12px 0 16px;border-bottom:1px solid var(--z-border);flex-shrink:0}
+.zn-doc-card>header b{flex:1;min-width:0;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zn-doc-card>header a,.zn-doc-card>header button{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--z-muted)}
+.zn-doc-card>header a:hover,.zn-doc-card>header button:hover{background:var(--z-hover);color:var(--z-fg)}
+.zn-doc-body{flex:1;min-height:0;position:relative;background:#fff;color:#111;display:flex}
+.zn-doc-body iframe{flex:1;width:100%;border:0;background:#fff}
+.zn-doc-scroll{flex:1;overflow:auto;padding:16px}
+.zn-doc-table{border-collapse:collapse;font-size:13px}.zn-doc-table th,.zn-doc-table td{border:1px solid #d9d9e0;padding:6px 10px;text-align:left;white-space:nowrap}.zn-doc-table th{background:#f3f3f6;position:sticky;top:0}
+.zn-doc-text{flex:1;margin:0;padding:18px;overflow:auto;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-word}
+.zn-doc-none{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#555;background:#fff;text-align:center;padding:20px}
+@media(max-width:700px){.zn-doc{padding:0}.zn-doc-card{height:100dvh;border-radius:0}}

@@ -32,6 +32,6 @@ export async function GET(request:Request){
  if(!msg||msg.deleted_at||!att?.key?.startsWith('private/zarn/'))return new Response('Not found',{status:404});
  try{
   const f=await getPrivate(att.key);const inline=inlineTypes.includes(f.type)&&u.searchParams.get('download')!=='1';
-  return new Response(f.body,{headers:{'Content-Type':f.type,'Content-Disposition':`${inline?'inline':'attachment'}; filename="${att.name.replace(/"/g,'')}"`,'X-Content-Type-Options':'nosniff','Cache-Control':'private, max-age=3600','Content-Security-Policy':"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"}});
+  return new Response(f.body,{headers:{'Content-Type':f.type,'Content-Disposition':`${inline?'inline':'attachment'}; filename="${att.name.replace(/"/g,'')}"`,'X-Content-Type-Options':'nosniff','Cache-Control':'private, max-age=3600','Content-Security-Policy':f.type==='application/pdf'?"frame-ancestors 'self'":"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"}});
  }catch{return new Response('File unavailable',{status:502});}
 }

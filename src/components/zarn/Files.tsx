@@ -6,6 +6,7 @@ import {channelHref,type ZAttachment,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {dayOf} from './format';
 import {Modal} from './Dialogs';
+import DocViewer,{docKind} from './DocViewer';
 import Dropdown from '@/components/ui/Dropdown';
 import {optimizeImage} from '@/components/admin/blog/shared';
 
@@ -18,7 +19,7 @@ const size=(n:number)=>n>1024*1024?`${(n/1024/1024).toFixed(1)} MB`:`${Math.max(
 // Every file shared in the conversations you can read, newest first.
 export default function Files(){
  const {db,people,channels,title}=useZarn();
- const [items,setItems]=useState<Item[]>([]),[loading,setLoading]=useState(true),[q,setQ]=useState(''),[kind,setKind]=useState<Kind>('all'),[uploading,setUploading]=useState(false),[dropped,setDropped]=useState<File[]>([]);
+ const [items,setItems]=useState<Item[]>([]),[loading,setLoading]=useState(true),[q,setQ]=useState(''),[kind,setKind]=useState<Kind>('all'),[uploading,setUploading]=useState(false),[docOpen,setDocOpen]=useState<Item|null>(null),[dropped,setDropped]=useState<File[]>([]);
  const load=useCallback(async()=>{
   const {data}=await db.from('zarn_messages').select('id,channel_id,user_id,attachments,created_at').neq('attachments','[]').is('deleted_at',null).order('created_at',{ascending:false}).limit(500);
   const rows=(data??[]) as (Item['m']&{attachments:ZAttachment[]})[];
@@ -31,6 +32,7 @@ export default function Files(){
  const shown=items.filter(x=>(kind==='all'||(kind==='images'?isImage(x.a):kind==='documents'?!isImage(x.a)&&isDoc(x.a):!isImage(x.a)&&!isDoc(x.a)))&&`${x.a.name} ${people[x.m.user_id??'']?.display_name??''}`.toLowerCase().includes(q.toLowerCase()));
  const where=(id:string)=>{const c=channels.find(x=>x.id===id);return c?(c.kind==='dm'||c.kind==='client'?title(c):`#${c.name}`):'a channel';};
  return <div className="zn-page" onDragOver={e=>{if(e.dataTransfer.types.includes('Files'))e.preventDefault();}} onDrop={e=>{if(!e.dataTransfer.files.length)return;e.preventDefault();setDropped(Array.from(e.dataTransfer.files));setUploading(true);}}>
+  {docOpen&&<DocViewer messageId={docOpen.m.id} index={docOpen.i} att={docOpen.a} onClose={()=>setDocOpen(null)}/>}
   {uploading&&<UploadDialog initial={dropped} onClose={()=>{setUploading(false);setDropped([]);}} onDone={()=>{setUploading(false);setDropped([]);void load();}}/>}
   <header className="zn-page-head"><div><h1><FilesIcon size={20}/>Files</h1><p>Everything shared in the conversations you’re part of.</p></div><button type="button" className="zn-btn is-primary" onClick={()=>setUploading(true)}><Upload size={14}/>Upload</button></header>
   <div className="zn-tools">
@@ -40,6 +42,7 @@ export default function Files(){
   <div className="zn-crm-list" data-lenis-prevent>
    {loading?<p className="zn-loading">Loading…</p>:shown.length?<div className="zn-file-grid">{shown.map(x=>{const c=channels.find(ch=>ch.id===x.m.channel_id);return <article key={x.key} className="zn-file-card">
     {isImage(x.a)?<a href={`/api/zarn/files?m=${x.m.id}&i=${x.i}`} target="_blank" rel="noopener noreferrer" className="zn-file-thumb" aria-label={`Open ${x.a.name}`}><img src={`/api/zarn/files?m=${x.m.id}&i=${x.i}`} alt={x.a.name} loading="lazy"/></a>
+     :docKind(x.a)?<button type="button" className="zn-file-thumb is-doc" aria-label={`Preview ${x.a.name}`} onClick={()=>setDocOpen(x)}><FileText size={30}/><em>{(x.a.name.split('.').pop()||'file').slice(0,5)}</em></button>
      :<a href={`/api/zarn/files?m=${x.m.id}&i=${x.i}&download=1`} className="zn-file-thumb is-doc" aria-label={`Download ${x.a.name}`}><FileText size={30}/><em>{(x.a.name.split('.').pop()||'file').slice(0,5)}</em></a>}
     <div className="zn-file-meta"><b title={x.a.name}>{x.a.name}</b><small>{size(x.a.size)} · {people[x.m.user_id??'']?.display_name??'Someone'} · {dayOf(x.m.created_at)}</small>
      <div className="zn-file-links"><Link href={channelHref(c,x.m.channel_id)}>{where(x.m.channel_id)}</Link><a href={`/api/zarn/files?m=${x.m.id}&i=${x.i}&download=1`} aria-label={`Download ${x.a.name}`}><Download size={13}/></a></div></div>
