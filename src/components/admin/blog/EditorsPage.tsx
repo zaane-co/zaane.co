@@ -19,7 +19,7 @@ export default function EditorsPage({initialEditors,now}:{initialEditors:Editor[
  const [editors,setEditors]=useState(initialEditors);
  const [selected,setSelected]=useState<Editor|null>(null);
  const [firstName,setFirstName]=useState(''),[lastName,setLastName]=useState(''),[email,setEmail]=useState(''),[bio,setBio]=useState('');
- const [saving,setSaving]=useState(false),[formError,setFormError]=useState(''),[success,setSuccess]=useState<{editor:Editor;emailed:boolean}|null>(null);
+ const [saving,setSaving]=useState(false),[formError,setFormError]=useState(''),[success,setSuccess]=useState<{editor:Editor;emailed:boolean;existing?:boolean}|null>(null);
  const [subject,setSubject]=useState(''),[message,setMessage]=useState(''),[sending,setSending]=useState(false),[sent,setSent]=useState(false),[emailError,setEmailError]=useState(''),[compose,setCompose]=useState(false);
  const [deleteConfirm,setDeleteConfirm]=useState<Editor|null>(null),[deleting,setDeleting]=useState(false),[copied,setCopied]=useState(false);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')setSelected(null);};document.addEventListener('keydown',k);return()=>document.removeEventListener('keydown',k);},[]);
@@ -27,7 +27,7 @@ export default function EditorsPage({initialEditors,now}:{initialEditors:Editor[
  async function handleAdd(){
   if(!firstName.trim()||!email.trim())return setFormError('First name and email are required.');
   setSaving(true);setFormError('');
-  try{const d=await api({action:'invite',first_name:firstName,last_name:lastName,email,bio});setEditors(p=>[d.editor,...p]);setSuccess({editor:d.editor,emailed:d.emailed});setFirstName('');setLastName('');setEmail('');setBio('');router.refresh();}
+  try{const d=await api({action:'invite',first_name:firstName,last_name:lastName,email,bio});setEditors(p=>[d.editor,...p]);setSuccess({editor:d.editor,emailed:d.emailed,existing:d.existing});setFirstName('');setLastName('');setEmail('');setBio('');router.refresh();}
   catch(e){setFormError(e instanceof Error?e.message:'Failed to invite editor.');}
   setSaving(false);
  }
@@ -128,7 +128,7 @@ export default function EditorsPage({initialEditors,now}:{initialEditors:Editor[
    <div className={`w-full max-w-md rounded-2xl border shadow-2xl p-6 space-y-5 ${t.modal}`}>
     <div className="flex items-center gap-4">
      <div className={`h-12 w-12 rounded-full flex items-center justify-center flex-none text-white ${success.emailed?'bg-[#16a34a]':'bg-[#f59e0b]'}`}>{success.emailed?<Check className="h-6 w-6"/>:<AlertTriangle className="h-6 w-6"/>}</div>
-     <div><p className={`text-base font-bold ${t.heading}`}>{success.emailed?'Invite Sent!':'Editor Created'}</p><p className={`text-xs mt-0.5 ${t.sub}`}>{success.emailed?`${success.editor.name} will get an email to set their password.`:'The invite email could not be sent. Remove and re-add them to try again.'}</p></div>
+     <div><p className={`text-base font-bold ${t.heading}`}>{success.existing?'Editor Added!':success.emailed?'Invite Sent!':'Editor Created'}</p><p className={`text-xs mt-0.5 ${t.sub}`}>{success.existing?`${success.editor.name} already had an account, so they’re now an editor and can sign in with their current password.`:success.emailed?`${success.editor.name} will get an email to set their password.`:'The invite email could not be sent. Remove and re-add them to try again.'}</p></div>
     </div>
     <div className={`rounded-xl p-4 space-y-1 border ${t.soft} ${t.divider}`}><p className={`text-xs font-medium ${t.sub}`}>Login Email</p><p className={`text-sm font-semibold ${t.heading}`}>{success.editor.email}</p></div>
     <button onClick={()=>setSuccess(null)} className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${t.brandBtn}`}>Done</button>

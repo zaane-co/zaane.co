@@ -21,7 +21,26 @@ export async function POST(request:Request){
   if(!first||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return Response.json({error:'First name and a valid email are required.'},{status:400});
   const name=[first,last].filter(Boolean).join(' ');
   const {data:link,error}=await db.auth.admin.generateLink({type:'invite',email,options:{data:{name}}});
-  if(error||!link.user||!link.properties?.hashed_token)return Response.json({error:/already|registered|exists/i.test(error?.message||'')?'That email already has an account. Assign its role under Users & roles.':'Could not create the invite.'},{status:400});
+  if(error&&/already|registered|exists/i.test(error.message||'')){
+   // They already have an account (for example a ZARN member): give that account the editor role instead of failing.
+   let found:{id:string;last_sign_in_at?:string|null}|null=null;
+   for(let page=1;page<=10&&!found;page++){
+    const {data:list}=await db.auth.admin.listUsers({page,perPage:200});
+    found=list?.users.find(u=>u.email?.toLowerCase()===email)??null;
+    if(!list||list.users.length<200)break;
+   }
+   if(!found)return Response.json({error:'That email already has an account, but it could not be found. Assign its role under Users & roles.'},{status:400});
+   const {data:cur}=await db.from('users').select('role').eq('id',found.id).maybeSingle();
+   if(cur?.role==='editor')return Response.json({error:'That person is already an editor.'},{status:400});
+   if(cur?.role)return Response.json({error:`That person is already ${cur.role==='super_admin'?'a super admin':'on the team as '+cur.role}. Change their role under Users & roles.`},{status:400});
+   const {data:row,error:e}=await db.from('users').upsert({id:found.id,email,name,role:'editor',bio}).select('id,email,name,bio,role,created_at').single();
+   if(e||!row)return Response.json({error:'Could not make them an editor.'},{status:400});
+   const login=`${emailBase()}/admin/login`;
+   const ok=await send({to:[email],reply_to:me.email,subject:'You’re now an editor on the Zaane blog',text:`Hi ${first},\n\n${me.name||'The Zaane team'} made you an editor on the Zaane blog. Sign in with your existing password at ${login} (use "Forgot password" if you need a new one).\n\nThe Zaane team`});
+   revalidatePath('/admin/editors');
+   return Response.json({editor:{...row,first_name:first,last_name:last,last_sign_in_at:found.last_sign_in_at??null,verified:true,post_count:0},emailed:ok,existing:true});
+  }
+  if(error||!link.user||!link.properties?.hashed_token)return Response.json({error:'Could not create the invite.'},{status:400});
   const {data:row,error:e}=await db.from('users').upsert({id:link.user.id,email,name,role:'editor',bio}).select('id,email,name,bio,role,created_at').single();
   if(e){await db.auth.admin.deleteUser(link.user.id);return Response.json({error:'Could not create the editor.'},{status:400});}
   const url=`${emailBase()}/admin/auth/callback?token_hash=${encodeURIComponent(link.properties.hashed_token)}&type=invite&next=/admin/reset-password`;
