@@ -2,6 +2,7 @@
 import {useRef,useState} from 'react';
 import {Download,File as FileIcon,FileImage,FileText,FileVideo,Loader2,Trash2,UploadCloud} from 'lucide-react';
 import './lead-files.css';
+import DocViewer,{docKind} from '@/components/zarn/DocViewer';
 
 export type LeadFile={id:string;name:string;size:number;type:string;uploaded_by:string|null;created_at:string};
 type Up={tmp:string;name:string;pct:number;error?:string};
@@ -17,9 +18,9 @@ function put(url:string,file:File,type:string,onPct:(n:number)=>void){
 }
 
 // Shared files on a lead/client. Same list in the Studio admin and the ZARN client space.
-export default function LeadFiles({endpoint,leadId,initial,names,canUpload=true,me}:{endpoint:string;leadId:string;initial:LeadFile[];names:Record<string,string>;canUpload?:boolean;me:string}){
+export default function LeadFiles({endpoint,leadId,initial,names,canUpload=true,me,preview=false}:{endpoint:string;leadId:string;initial:LeadFile[];names:Record<string,string>;canUpload?:boolean;me:string;preview?:boolean}){
  const [files,setFiles]=useState(initial),[ups,setUps]=useState<Up[]>([]),[drag,setDrag]=useState(false),[err,setErr]=useState('');
- const input=useRef<HTMLInputElement>(null);
+ const input=useRef<HTMLInputElement>(null),[viewing,setViewing]=useState<LeadFile|null>(null);
  const patch=(tmp:string,p:Partial<Up>)=>setUps(u=>u.map(x=>x.tmp===tmp?{...x,...p}:x));
  async function one(file:File){
   const tmp=crypto.randomUUID();setUps(u=>[...u,{tmp,name:file.name,pct:0}]);
@@ -54,10 +55,11 @@ export default function LeadFiles({endpoint,leadId,initial,names,canUpload=true,
    <span className="lf-name"><b>{u.name}</b><small>{u.error?u.error:`Uploading… ${u.pct}%`}</small>{!u.error&&<i className="lf-bar"><i style={{width:`${u.pct}%`}}/></i>}</span>
    {u.error&&<button type="button" onClick={()=>setUps(x=>x.filter(y=>y.tmp!==u.tmp))}>Dismiss</button>}
   </li>)}</ul>}
+  {viewing&&<DocViewer att={viewing} src={`${endpoint}?id=${viewing.id}&preview=1`} dl={`${endpoint}?id=${viewing.id}`} onClose={()=>setViewing(null)}/>}
   {err&&<p className="lf-err">{err}</p>}
   {files.length?<ul className="lf-list">{files.map(f=><li key={f.id}>
    <span className="lf-icon">{icon(f.type)}</span>
-   <span className="lf-name"><b title={f.name}>{f.name}</b><small>{fmt(f.size)} · {f.uploaded_by?(f.uploaded_by===me?'You':names[f.uploaded_by]??'Someone'):'Someone'} · {new Date(f.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</small></span>
+   {(()=>{const pv=preview&&docKind(f)!==null;const body=<><b title={f.name}>{f.name}</b><small>{fmt(f.size)} · {f.uploaded_by?(f.uploaded_by===me?'You':names[f.uploaded_by]??'Someone'):'Someone'} · {new Date(f.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</small></>;return pv?<button type="button" className="lf-name is-link" aria-label={`Preview ${f.name}`} onClick={()=>setViewing(f)}>{body}</button>:<span className="lf-name">{body}</span>;})()}
    <a href={`${endpoint}?id=${f.id}`} aria-label={`Download ${f.name}`} title="Download"><Download size={16}/></a>
    {canUpload&&<button type="button" className="lf-del" aria-label={`Delete ${f.name}`} title="Delete" onClick={()=>void remove(f)}><Trash2 size={15}/></button>}
   </li>)}</ul>:!ups.length&&<p className="lf-empty">No files yet.</p>}

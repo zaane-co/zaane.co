@@ -155,7 +155,7 @@ function Files({data}:{data:SpaceData}){
  const got=data.materials.filter(m=>m.received_at).length;
  return <div className="zn-pane"><div className="zn-pane-inner">
   <section className="zn-card"><div className="zn-card-head"><h3>Files</h3><small className="zn-muted">Shared with the team and staff</small></div>
-   <LeadFiles endpoint="/api/zarn/clients/files" leadId={data.lead.id} initial={data.files} names={data.names} me={data.me}/></section>
+   <LeadFiles preview endpoint="/api/zarn/clients/files" leadId={data.lead.id} initial={data.files} names={data.names} me={data.me}/></section>
   <h3 className="zn-files-sub">Materials checklist</h3>
   <p className="zn-note">Materials from the client: {got} of {data.materials.length} received.{data.canStudio?' Add or tick items off in the Studio admin (Leads → Materials).':''}</p>
   {data.materials.length?<ul className="zn-rows">{data.materials.map(m=><li key={m.id}><span className={`zn-tick${m.received_at?' is-on':''}`}>{m.received_at?<Check size={13}/>:null}</span><span><b>{m.title}</b>{m.note&&<small>{m.note}</small>}</span>

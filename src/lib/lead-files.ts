@@ -1,7 +1,7 @@
 import 'server-only';
 import {z} from 'zod';
 import {serviceClient} from '@/lib/supabase/server';
-import {deleteFile,headPrivate,putPrivate,r2Configured,signGet,signPut} from '@/lib/r2';
+import {deleteFile,getPrivate,headPrivate,putPrivate,r2Configured,signGet,signPut} from '@/lib/r2';
 // Shared files on a lead/client, used by both the Studio admin and ZARN client spaces.
 // Each route supplies its own access check; storage and validation live here.
 export const MAX_FILE=100*1024*1024;
@@ -67,5 +67,15 @@ export async function filesGet(request:Request,check:(leadId:string)=>Promise<Fi
  const fid=new URL(request.url).searchParams.get('id')??'';if(!id.safeParse(fid).success)return new Response('Invalid request',{status:400});
  const {data:f}=await serviceClient().from('lead_files').select('lead_id,key,name').eq('id',fid).maybeSingle();
  if(!f||!await check(f.lead_id))return new Response('Not found',{status:404});
+ const sp=new URL(request.url).searchParams;
+ // ?preview=1 streams the file through this site (so the in-app viewer can read it); otherwise it's a download link.
+ if(sp.get('preview')==='1'){
+  try{
+   const g=await getPrivate(f.key);
+   if((g.size??0)>15*1024*1024)return new Response('Too large to preview',{status:413});
+   const pdf=g.type==='application/pdf',img=/^image\/(jpeg|png|webp|gif|avif)$/.test(g.type);
+   return new Response(g.body,{headers:{'Content-Type':g.type,'Content-Disposition':`${pdf||img?'inline':'attachment'}; filename="${f.name.replace(/"/g,'')}"`,'X-Content-Type-Options':'nosniff','Cache-Control':'private, max-age=600','Content-Security-Policy':pdf?"frame-ancestors 'self'":"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"}});
+  }catch{return new Response('File unavailable',{status:502});}
+ }
  return Response.redirect(await signGet(f.key,f.name),302);
 }
