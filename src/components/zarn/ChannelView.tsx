@@ -20,7 +20,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  const channel=channels.find(c=>c.id===id);
  const [messages,setMessages]=useState<ZMessage[]>([]),[reactions,setReactions]=useState<ZReaction[]>([]);
  const [loading,setLoading]=useState(true),[more,setMore]=useState(false),[thread,setThread]=useState<ZMessage|null>(null);
- const [details,setDetails]=useState(false),[typing,setTyping]=useState<Record<string,number>>({});
+ const [details,setDetails]=useState(false),[typing,setTyping]=useState<Record<string,{at:number;thread:string|null}>>({});
  const list=useRef<HTMLDivElement>(null),stick=useRef(true),typingCh=useRef<ReturnType<typeof db.channel>|null>(null),lastTyping=useRef(0);
  const joined=!!membership[id];
  // Admins can read and post in client spaces they aren't on.
@@ -71,11 +71,11 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  const receipt=(m:ZMessage)=>m.user_id!==me.user_id||m.kind!=='user'||m.deleted_at?undefined:{pending:!!m.pending,seen:others.filter(u=>reads[u]!>=m.created_at).map(u=>({id:u,at:reads[u]!})),unseen:others.filter(u=>!(reads[u]!>=m.created_at)),delivered:others.filter(u=>!(reads[u]!>=m.created_at)&&delivs[u]!>=m.created_at)};
  // Typing indicator over a broadcast channel (no database writes).
  useEffect(()=>{
-  const ch=db.channel(`zarn-typing-${id}`).on('broadcast',{event:'typing'},({payload}:{payload:{user:string}})=>{if(payload.user!==me.user_id)setTyping(t=>({...t,[payload.user]:Date.now()}));}).subscribe();
-  typingCh.current=ch;const tick=setInterval(()=>setTyping(t=>{const now=Date.now(),n=Object.fromEntries(Object.entries(t).filter(([,v])=>now-v<4000));return Object.keys(n).length===Object.keys(t).length?t:n;}),1500);
+  const ch=db.channel(`zarn-typing-${id}`).on('broadcast',{event:'typing'},({payload}:{payload:{user:string;thread?:string|null}})=>{if(payload.user!==me.user_id)setTyping(t=>({...t,[payload.user]:{at:Date.now(),thread:payload.thread??null}}));}).subscribe();
+  typingCh.current=ch;const tick=setInterval(()=>setTyping(t=>{const now=Date.now(),n=Object.fromEntries(Object.entries(t).filter(([,v])=>now-v.at<4000));return Object.keys(n).length===Object.keys(t).length?t:n;}),1500);
   return()=>{clearInterval(tick);void db.removeChannel(ch);typingCh.current=null;};
  },[db,id,me.user_id]);
- const onTyping=()=>{const now=Date.now();if(now-lastTyping.current>2500){lastTyping.current=now;void typingCh.current?.send({type:'broadcast',event:'typing',payload:{user:me.user_id}});}};
+ const onTyping=(thread:string|null=null)=>{const now=Date.now();if(now-lastTyping.current>2500){lastTyping.current=now;void typingCh.current?.send({type:'broadcast',event:'typing',payload:{user:me.user_id,thread}});}};
  useEffect(()=>{const on=()=>{if(document.visibilityState==='visible'&&joined)markRead(id);};document.addEventListener('visibilitychange',on);return()=>document.removeEventListener('visibilitychange',on);},[id,joined,markRead]);
 
  // Keep pinned to the bottom unless the reader scrolled up.
@@ -90,7 +90,9 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  async function join(){await db.from('zarn_channel_members').insert({channel_id:id,user_id:me.user_id});await z.reload();}
 
  if(!channel)return <div className="zn-empty-state"><h2>Channel not found</h2><p>It may have been deleted, or you don’t have access.</p><button type="button" className="zn-btn" onClick={()=>router.push('/zarn')}>Back to ZARN</button></div>;
- const typers=Object.keys(typing).map(u=>people[u]?.display_name).filter(Boolean);
+ // The channel line shows people typing in the main box; the thread panel shows people typing a reply to that thread.
+ const typersIn=(thread:string|null)=>Object.entries(typing).filter(([,v])=>v.thread===thread).map(([u])=>people[u]?.display_name).filter(Boolean) as string[];
+ const typers=typersIn(null);
  const pinned=messages.filter(m=>m.pinned_at&&!m.deleted_at);
  return <div className={`zn-channel${thread?' has-thread':''}`}>
   <div className="zn-chan-main">
@@ -119,10 +121,10 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
     })}
    </div>
    <div className="zn-typing">{typers.length>0&&<>{`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></>}</div>
-   {canPost?<Composer channelId={id} placeholder={`Message ${channel.kind==='dm'?title(channel):channel.kind==='client'?`the ${title(channel)} team`:'#'+channel.name}`} onSent={()=>{stick.current=true;}} onTyping={onTyping} disabled={channel.archived_at?'This channel is archived.':channel.kind==='dm'&&(channel.dm_key??'').split(',').some(u=>u!==me.user_id&&people[u]?.deactivated_at)?'This person’s account was deactivated, so you can’t message them.':undefined}/>
+   {canPost?<Composer channelId={id} placeholder={`Message ${channel.kind==='dm'?title(channel):channel.kind==='client'?`the ${title(channel)} team`:'#'+channel.name}`} onSent={()=>{stick.current=true;}} onTyping={()=>onTyping(null)} disabled={channel.archived_at?'This channel is archived.':channel.kind==='dm'&&(channel.dm_key??'').split(',').some(u=>u!==me.user_id&&people[u]?.deactivated_at)?'This person’s account was deactivated, so you can’t message them.':undefined}/>
     :<div className="zn-join"><p>You’re previewing <b>#{channel.name}</b>.</p><button type="button" className="zn-btn is-primary" onClick={()=>void join()}>Join channel</button></div>}
   </div>
-  {thread&&<Thread parent={thread} onClose={()=>setThread(null)}/>}
+  {thread&&<Thread parent={thread} typers={typersIn(thread.id)} onTyping={()=>onTyping(thread.id)} onClose={()=>setThread(null)}/>}
   {details&&<Details c={channel} pinned={pinned} onClose={()=>setDetails(false)} onJump={mid=>{setDetails(false);document.getElementById(`m-${mid}`)?.scrollIntoView({block:'center',behavior:'smooth'});}}/>}
  </div>;
 }
@@ -134,7 +136,7 @@ function ChannelIntro({c}:{c:ZChannel}){
   <p>{c.kind==='client'?'Private to this client’s team and admins. Nobody else on ZARN can see it.':c.kind==='dm'?'This is the start of your direct conversation.':c.crm_feed?`CRM updates (${c.crm_feed==='leads'?'new leads and stage changes':'invoices sent and paid'}) are posted here automatically.`:c.topic||'This is the very beginning of the channel.'}</p></div>;
 }
 
-function Thread({parent,onClose}:{parent:ZMessage;onClose:()=>void}){
+function Thread({parent,typers,onTyping,onClose}:{parent:ZMessage;typers:string[];onTyping:()=>void;onClose:()=>void}){
  const {db,subscribe,me,people}=useZarn();
  const [replies,setReplies]=useState<ZMessage[]>([]),[reactions,setReactions]=useState<ZReaction[]>([]);
  const end=useRef<HTMLDivElement>(null);
@@ -156,7 +158,8 @@ function Thread({parent,onClose}:{parent:ZMessage;onClose:()=>void}){
    {replies.map((m,i)=><Message key={m.id} m={m} reactions={reactions.filter(r=>r.message_id===m.id)} compact={sameGroup(replies[i-1],m)} inThread/>)}
    <div ref={end}/>
   </div>
-  <Composer channelId={parent.channel_id} parentId={parent.id} placeholder="Reply…"/>
+  <div className="zn-typing">{typers.length>0&&<>{`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></>}</div>
+  <Composer channelId={parent.channel_id} parentId={parent.id} placeholder="Reply…" onTyping={onTyping}/>
   <span hidden>{me.user_id}</span>
  </aside>;
 }
