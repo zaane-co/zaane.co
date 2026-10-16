@@ -8,7 +8,7 @@ import {useZarn} from './ZarnProvider';
 import {Avatar,StatusMark} from './format';
 
 // Shared navigation pieces for the desktop sidebar and the phone tab screens.
-export type Dialog='channel'|'dm'|'browse'|'search'|'profile'|'invite'|'client'|'install'|null;
+export type Dialog='channel'|'dm'|'browse'|'search'|'profile'|'invite'|'client'|'install'|'assistant'|null;
 export const ShellCtx=createContext<{open:(d:Dialog)=>void;profile:(userId:string)=>void}>({open:()=>{},profile:()=>{}});
 export const useShell=()=>useContext(ShellCtx);
 

@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import {useState} from 'react';
-import {AtSign,BarChart3,Bell,Files,FolderKanban,ListChecks,Volume2,VolumeX,Briefcase,ChevronRight,Contact,Download,LayoutDashboard,LogOut,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users} from 'lucide-react';
+import {AtSign,BarChart3,Bell,Files,FolderKanban,Sparkles,ListChecks,Volume2,VolumeX,Briefcase,ChevronRight,Contact,Download,LayoutDashboard,LogOut,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {liveStatus} from '@/lib/zarn';
@@ -75,6 +75,7 @@ export function YouTab(){
    {mode&&<Row icon={<Download size={18}/>} label="Install ZARN on this device" onClick={()=>{if(mode==='prompt')void install();else open('install');}}/>}
   </Group>
   <Group label="Go to">
+   {!z.me.account_type.includes('guest')&&<Row icon={<Sparkles size={18}/>} label="Assistant" onClick={()=>open('assistant')}/>}
    <Row href="/zarn/mentions" icon={<AtSign size={18}/>} label="Mentions"/>
    <Row href="/zarn/projects" icon={<FolderKanban size={18}/>} label="Projects"/>
    <Row href="/zarn/files" icon={<Files size={18}/>} label="Files"/>
