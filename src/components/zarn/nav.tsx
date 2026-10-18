@@ -22,7 +22,7 @@ export function useNav(){
  // Amounts (deal values, invoice totals) are for admins only.
 
  // Conversations with deactivated people are hidden from the lists; they're still found by searching for the person.
- const gone=(c:ZChannel)=>c.kind==='dm'&&(c.dm_key??'').split(',').some(id=>id!==me.user_id&&z.people[id]?.deactivated_at);
+ const gone=(c:ZChannel)=>c.kind==='dm'&&(c.dm_key??'').split(',').some(id=>id!==me.user_id&&(!z.people[id]||z.people[id]?.deactivated_at))&&Object.keys(z.people).length>0;
  const live=channels.filter(c=>!c.archived_at&&!gone(c)),mine=live.filter(c=>membership[c.id]);
  const starred=mine.filter(c=>c.kind!=='client'&&membership[c.id]?.starred);
  const rooms=mine.filter(c=>(c.kind==='public'||c.kind==='private')&&!membership[c.id]?.starred).sort((a,b)=>(a.name??'').localeCompare(b.name??''));
@@ -48,7 +48,7 @@ export function ChannelRow({c,big}:{c:ZChannel;big?:boolean}){
  const u=unread[c.id],muted=membership[c.id]?.muted,href=channelPath(c),isActive=pathname===href;
  const other=c.kind==='dm'?(c.dm_key??'').split(',').find(id=>id!==me.user_id):undefined;
  const lead=c.kind==='client'&&c.lead_id?z.lead(c.lead_id):undefined;
- const gone=c.kind==='dm'&&!!people[other??'']?.deactivated_at;
+ const gone=c.kind==='dm'&&Object.keys(people).length>0&&(!people[other??'']||!!people[other??'']?.deactivated_at);
  const icon=c.kind==='dm'?<Avatar m={people[other??me.user_id]} size={big?36:20} online={online.has(other??me.user_id)}/>
   :c.kind==='client'?<i className="zn-client-dot" style={{background:lead?.stage_color??'#52525b'}}/>
   :c.kind==='private'?<Lock size={big?17:15}/>:<Hash size={big?18:15}/>;
