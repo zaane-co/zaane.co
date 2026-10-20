@@ -20,7 +20,8 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
  useEffect(()=>{try{setText(localStorage.getItem(draftKey)??'');}catch{}},[draftKey]);
  useEffect(()=>{try{if(text)localStorage.setItem(draftKey,text);else localStorage.removeItem(draftKey);}catch{}},[text,draftKey]);
  useEffect(()=>{const el=box.current;if(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,240)+'px';}},[text]);
- useEffect(()=>{box.current?.focus();},[channelId,parentId]);
+ // Phones: opening a chat shouldn't throw the keyboard up. Native chat apps wait for a tap on the box.
+ useEffect(()=>{if(!window.matchMedia('(pointer: coarse)').matches)box.current?.focus();},[channelId,parentId]);
 
  // Guests only see people they share a channel with (RLS), so `members` is already scoped for them.
  const active=members.filter(m=>!m.deactivated_at&&m.user_id!==me.user_id&&people[m.user_id]);
