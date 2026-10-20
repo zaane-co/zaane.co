@@ -36,8 +36,9 @@ export const plain=(body:string,people:Record<string,ZMember>)=>tokensToText(bod
 const palette=['#f10c45','#2563eb','#16a34a','#7c3aed','#f59e0b','#0891b2','#db2777','#4f46e5'];
 export const colorFor=(id:string)=>palette[[...id].reduce((h,c)=>(h*31+c.charCodeAt(0))>>>0,7)%palette.length]!;
 export const initialsOf=(s:string)=>s.split(/[\s@.]+/).filter(Boolean).slice(0,2).map(w=>w[0]!.toUpperCase()).join('')||'?';
-export function Avatar({m,size=36,online}:{m?:ZMember;size?:number;online?:boolean}){
- const name=m?.display_name??'?';
+// `name` is the fallback for someone no longer in ZARN (their saved author name).
+export function Avatar({m,size=36,online,name:fallback}:{m?:ZMember;size?:number;online?:boolean;name?:string|null}){
+ const name=m?.display_name??fallback??'?';
  return <span className="zn-avatar" style={{width:size,height:size,fontSize:size*.38,background:m?colorFor(m.user_id):'#52525b'}}>
   {m?.avatar_url?<img src={m.avatar_url} alt=""/>:initialsOf(name)}
   {online!==undefined&&<i className={`zn-dot${online?' is-on':''}`}/>}
