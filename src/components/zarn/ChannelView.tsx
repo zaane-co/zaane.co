@@ -157,10 +157,21 @@ function Thread({parent,typers,onTyping,onClose}:{parent:ZMessage;typers:string[
  const {db,subscribe,me,people}=useZarn();
  const [replies,setReplies]=useState<ZMessage[]>([]),[reactions,setReactions]=useState<ZReaction[]>([]);
  const end=useRef<HTMLDivElement>(null);
- useEffect(()=>{void (async()=>{
-  const {data}=await db.from('zarn_messages').select('*').eq('parent_id',parent.id).order('created_at');const rows=(data??[]) as ZMessage[];setReplies(rows);
+ const loadReplies=useCallback(async()=>{
+  const {data}=await db.from('zarn_messages').select('*').eq('parent_id',parent.id).order('created_at');const rows=(data??[]) as ZMessage[];
+  // Keep replies still being sent (not in the database yet); take everything else as the database has it.
+  setReplies(cur=>{const ids=new Set(rows.map(r=>r.id));const next=[...rows,...cur.filter(x=>x.pending&&!ids.has(x.id))];
+   return next.length===cur.length&&next.every((x,i)=>x.id===cur[i].id&&x.body===cur[i].body&&x.edited_at===cur[i].edited_at&&x.deleted_at===cur[i].deleted_at)?cur:next;});
   const ids=[parent.id,...rows.map(r=>r.id)];const {data:r}=await db.from('zarn_reactions').select('*').in('message_id',ids);setReactions((r??[]) as ZReaction[]);
- })();},[db,parent.id]);
+ },[db,parent.id]);
+ useEffect(()=>{void loadReplies();},[loadReplies]);
+ // Same safety net as the channel: the realtime socket drops in the background and misses are never replayed.
+ useEffect(()=>{
+  const sync=()=>{if(document.visibilityState==='visible')void loadReplies();};
+  const t=setInterval(sync,20000);
+  document.addEventListener('visibilitychange',sync);window.addEventListener('online',sync);window.addEventListener('focus',sync);
+  return()=>{clearInterval(t);document.removeEventListener('visibilitychange',sync);window.removeEventListener('online',sync);window.removeEventListener('focus',sync);};
+ },[loadReplies]);
  useEffect(()=>subscribe(e=>{
   if(e.table==='zarn_messages'){const m=e.row;if(m.parent_id!==parent.id)return;
    if(e.type==='INSERT')setReplies(l=>l.some(x=>x.id===m.id)?l.map(x=>x.id===m.id?m:x):[...l,m]);else if(e.type==='DELETE')setReplies(l=>l.filter(x=>x.id!==m.id));else setReplies(l=>l.map(x=>x.id===m.id?{...x,...m}:x));}
