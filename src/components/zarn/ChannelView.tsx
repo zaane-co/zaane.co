@@ -41,6 +41,20 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  // The page remounts this view per channel (key=id), so first load starts from fresh state.
  // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
  useEffect(()=>{void load().then(rows=>{setMessages(rows);setLoading(false);});},[load]);
+ // Safety net for live updates: phones drop the realtime socket when the app is backgrounded or the network blips, and anything
+ // sent meanwhile (new messages, edits, deletes) is never replayed. Re-read the latest page on return/reconnect and every 20s while visible.
+ useEffect(()=>{
+  const sync=()=>{if(document.visibilityState!=='visible')return;void load().then(rows=>setMessages(cur=>{
+   const byId=new Map(rows.map(r=>[r.id,r])),have=new Set(cur.map(x=>x.id));
+   const stale=(x:ZMessage,r?:ZMessage)=>!!r&&(r.body!==x.body||r.edited_at!==x.edited_at||r.deleted_at!==x.deleted_at||r.reply_count!==x.reply_count||r.pinned_at!==x.pinned_at);
+   const fresh=rows.filter(r=>!have.has(r.id));
+   if(!fresh.length&&!cur.some(x=>stale(x,byId.get(x.id))))return cur;
+   return cur.map(x=>stale(x,byId.get(x.id))?byId.get(x.id)!:x).concat(fresh).sort((a,b)=>a.created_at<b.created_at?-1:1);
+  }));};
+  const t=setInterval(sync,20000);
+  document.addEventListener('visibilitychange',sync);window.addEventListener('online',sync);window.addEventListener('focus',sync);
+  return()=>{clearInterval(t);document.removeEventListener('visibilitychange',sync);window.removeEventListener('online',sync);window.removeEventListener('focus',sync);};
+ },[load]);
  useEffect(()=>{setActive(id);if(joined)markRead(id);return()=>setActive(null);},[id,joined,markRead,setActive]);
  // Tells the app which thread is on screen, so replies you're already reading don't ring or notify.
  useEffect(()=>{z.setActiveThread(thread?.id??null);return()=>z.setActiveThread(null);},[thread?.id]); // eslint-disable-line react-hooks/exhaustive-deps
