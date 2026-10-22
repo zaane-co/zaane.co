@@ -51,7 +51,11 @@ export default function ZarnAuth({initial,name='',title='',notice=''}:{initial:V
  const [sheet,setSheet]=useState(!!notice);
  const email=useRef<HTMLInputElement>(null);
  useEffect(()=>{if(!window.matchMedia('(max-width: 860px)').matches)email.current?.focus();},[]);
- function openSheet(){setSheet(true);email.current?.focus();}
+ // No programmatic focus on phones: focusing a field that is still sliding in off-screen makes iOS raise the keyboard
+ // without bringing the field into view. The person taps the field once the sheet is up.
+ function openSheet(){setSheet(true);}
+ // Keep the tapped field clear of the keyboard once the visible area has resized.
+ function onFocus(e:React.FocusEvent<HTMLFormElement>){const el=e.target;setTimeout(()=>el.scrollIntoView({block:'center',behavior:'smooth'}),320);}
  async function submit(e:React.FormEvent<HTMLFormElement>){
   e.preventDefault();setBusy(true);setMsg('');const f=new FormData(e.currentTarget);
   try{
@@ -72,7 +76,7 @@ export default function ZarnAuth({initial,name='',title='',notice=''}:{initial:V
    {login&&<span className="zn-sheet-grab" aria-hidden/>}
    {login&&<button type="button" className="zn-sheet-close" aria-label="Close" onClick={()=>setSheet(false)}><X size={18}/></button>}
    <h2>{copy[view].title}</h2><p className="zn-note">{copy[view].sub}</p>
-   <form onSubmit={submit} className="zn-auth-form">
+   <form onSubmit={submit} onFocus={onFocus} className="zn-auth-form">
     {login&&<label className="zn-label">Email<input ref={email} className="zn-input" name="email" type="email" autoComplete="email" autoCapitalize="none" required/></label>}
     {login&&<Pw name="password" label="Password" auto="current-password"/>}
     {view==='welcome'&&<><label className="zn-label">Your name<input className="zn-input" name="display_name" required maxLength={80} defaultValue={name}/></label><label className="zn-label">Title (optional)<input className="zn-input" name="title" maxLength={80} defaultValue={title} placeholder="e.g. Product designer"/></label></>}
