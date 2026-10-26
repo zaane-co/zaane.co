@@ -50,7 +50,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  const multi=!id,mine=!id&&!leadId;
 
  const [project,setProject]=useState<ZProject|null|undefined>(multi?null:undefined),[members,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
- const [view,setView]=useState<View>('list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
+ const [view,setView]=useState<View>(id?'chat':'list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
  const [formMembers,setFormMembers]=useState<string[]|null>(null);
 
@@ -215,7 +215,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  })();
 
  const openTask=tasks.find(t=>t.id===open);
- const views:[View,string,React.ReactNode][]=[['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(leadId?[]:mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as [View,string,React.ReactNode]]:[['brief','Brief',<FileText key="b" size={15}/>] as [View,string,React.ReactNode],['chat','Chat',<MessageSquare key="c" size={15}/>] as [View,string,React.ReactNode]])];
+ const views:[View,string,React.ReactNode][]=[...(multi?[]:[['chat','Chat',<MessageSquare key="c" size={15}/>] as [View,string,React.ReactNode]]),['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(leadId?[]:mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as [View,string,React.ReactNode]]:[['brief','Brief',<FileText key="b" size={15}/>] as [View,string,React.ReactNode]])];
  // Every project has its own chat, shared by the project's members.
  const chatId=id?z.channels.find(c=>c.kind==='project'&&c.project_id===id)?.id:undefined,chatUnread=chatId&&view!=='chat'?z.unread[chatId]?.unread??0:0;
  return <div className="zn-page zp-page">
