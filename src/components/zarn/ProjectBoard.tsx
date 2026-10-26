@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
+import {FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,MessageSquare,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
 import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal,PeoplePicker} from './Dialogs';
 import AddStatusDialog from './AddStatusDialog';
@@ -11,6 +11,7 @@ import AssigneePicker from './AssigneePicker';
 import {NewProject} from './Projects';
 import {Avatar,dayOf,timeOf} from './format';
 import SavedMessages from './SavedMessages';
+import ChannelView from './ChannelView';
 import Dropdown from '@/components/ui/Dropdown';
 import {useConfirm} from './ConfirmProvider';
 
@@ -18,7 +19,7 @@ export type TaskStatus=string;
 type Priority='low'|'medium'|'high';
 type Task={id:string;project_id:string|null;lead_id?:string|null;title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string|null;due_at:string|null;position:number;created_by:string|null;created_at:string};
 type Comment={id:string;task_id:string;user_id:string|null;body:string;created_at:string};
-type View='kanban'|'timeline'|'list'|'saved'|'brief';
+type View='kanban'|'timeline'|'list'|'saved'|'brief'|'chat';
 type Form={title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string;due_at:string;project_id:string;assignees:string[]};
 
 const BASE_STATUSES:{key:TaskStatus;label:string;color:string}[]=[{key:'todo',label:'To-do',color:'#71717a'},{key:'in_progress',label:'On progress',color:'#2563eb'},{key:'in_review',label:'In review',color:'#d97706'},{key:'done',label:'Done',color:'#16a34a'}];
@@ -53,7 +54,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
  const [formMembers,setFormMembers]=useState<string[]|null>(null);
 
- useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!multi&&v==='brief'))setView(v);},[mine,multi]);
+ useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!multi&&(v==='brief'||v==='chat')))setView(v);},[mine,multi]);
  const pick=(v:View)=>{setView(v);window.history.replaceState(null,'',`?view=${v}`);};
  const everyone=useMemo(()=>team.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member').map(m=>m.user_id),[team]);
 
@@ -214,7 +215,9 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  })();
 
  const openTask=tasks.find(t=>t.id===open);
- const views:[View,string,React.ReactNode][]=[['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(leadId?[]:mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as [View,string,React.ReactNode]]:[['brief','Brief',<FileText key="b" size={15}/>] as [View,string,React.ReactNode]])];
+ const views:[View,string,React.ReactNode][]=[['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(leadId?[]:mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as [View,string,React.ReactNode]]:[['brief','Brief',<FileText key="b" size={15}/>] as [View,string,React.ReactNode],['chat','Chat',<MessageSquare key="c" size={15}/>] as [View,string,React.ReactNode]])];
+ // Every project has its own chat, shared by the project's members.
+ const chatId=id?z.channels.find(c=>c.kind==='project'&&c.project_id===id)?.id:undefined,chatUnread=chatId&&view!=='chat'?z.unread[chatId]?.unread??0:0;
  return <div className="zn-page zp-page">
   {!leadId&&<header className="zp-head">
    {mine?<div className="zp-title"><span className="zp-badge is-ink"><ListChecks size={22}/></span><div><h1>To-dos</h1><p>Tasks you created or were assigned, across every project.</p></div></div>
@@ -226,15 +229,16 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
    </div>}
   </header>}
   <div className="zp-bar">
-   <div className="zp-tabs" role="tablist" aria-label="View">{views.map(([k,l,i])=><button key={k} type="button" role="tab" aria-selected={view===k} className={view===k?'is-on':''} onClick={()=>pick(k)}>{i}{l}</button>)}</div>
-   {view!=='saved'&&<div className="zp-tools">
+   <div className="zp-tabs" role="tablist" aria-label="View">{views.map(([k,l,i])=><button key={k} type="button" role="tab" aria-selected={view===k} className={view===k?'is-on':''} onClick={()=>pick(k)}>{i}{l}{k==='chat'&&chatUnread>0&&<span className="zp-tab-count">{chatUnread>99?'99+':chatUnread}</span>}</button>)}</div>
+   {view!=='saved'&&view!=='chat'&&<div className="zp-tools">
     <label className="zp-search"><Search size={14}/><input placeholder="Search" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search tasks"/></label>
     <Dropdown variant="toolbar" label="Priority" icon={<ListFilter size={14}/>} value={prio} onChange={v=>setPrio(v as 'all'|Priority)} options={[{value:'all',label:'All priorities'},...priorities.map(p=>({value:p.key,label:p.label}))]}/>
     <Dropdown variant="toolbar" label="Assignee" value={who} onChange={setWho} options={[{value:'all',label:'Everyone'},{value:'me',label:'Assigned to me'},...filterPeople.map(m=>({value:m,label:people[m]?.display_name??'Member'}))]}/>
     <button type="button" className="zp-btn is-dark" onClick={()=>add()}><Plus size={15}/>New Task</button>
    </div>}
   </div>
-  <div className="zp-body" data-lenis-prevent>{view==='saved'?<SavedMessages/>:view==='brief'&&project?<ProjectBrief project={project} canEdit={canManage} onSaved={b=>setProject(p=>p&&{...p,brief:b})} clientName={project.lead_id?(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project.lead_id);return c?z.title(c):'';})():''}/>:empty??(view==='list'?listView:view==='kanban'?kanbanView:timelineView)}</div>
+  {view==='chat'?<div className="zn-client-body">{chatId?<ChannelView id={chatId} embedded/>:<p className="zn-loading">Setting up the project chat…</p>}</div>
+  :<div className="zp-body" data-lenis-prevent>{view==='saved'?<SavedMessages/>:view==='brief'&&project?<ProjectBrief project={project} canEdit={canManage} onSaved={b=>setProject(p=>p&&{...p,brief:b})} clientName={project.lead_id?(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project.lead_id);return c?z.title(c):'';})():''}/>:empty??(view==='list'?listView:view==='kanban'?kanbanView:timelineView)}</div>}
 
   {form&&<Modal title="New task" onClose={()=>setForm(null)} wide><form className="zn-modal-body" onSubmit={create}>
    <label className="zn-label">Task name<input className="zn-input" autoFocus maxLength={200} value={form.title} onChange={e=>setForm(f=>f&&{...f,title:e.target.value})} placeholder="What needs doing?"/></label>

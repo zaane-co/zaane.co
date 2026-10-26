@@ -46,7 +46,7 @@ export default function Files(){
  const counts=useMemo(()=>({all:scoped.length,images:scoped.filter(x=>match(x,'images')).length,voice:scoped.filter(x=>match(x,'voice')).length,documents:scoped.filter(x=>match(x,'documents')).length,other:scoped.filter(x=>match(x,'other')).length}),[scoped]);
  const scopeCount=(s:Scope)=>items.filter(x=>s==='all'||(s==='mine'?x.origin.type==='mine':s==='shared'?x.origin.type==='shared':x.origin.type==='chat')).length;
  const shown=scoped.filter(x=>match(x,kind)&&`${x.a.name} ${people[x.user_id??'']?.display_name??''}`.toLowerCase().includes(q.toLowerCase()));
- const where=(id:string)=>{const c=channels.find(x=>x.id===id);return c?(c.kind==='dm'||c.kind==='client'?title(c):`#${c.name}`):'a channel';};
+ const where=(id:string)=>{const c=channels.find(x=>x.id===id);return c?(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`):'a channel';};
  async function remove(x:Item){
   if(x.origin.type==='chat')return;
   setError('');
@@ -103,7 +103,7 @@ function UploadDialog({initial,onClose,onDone}:{initial:File[];onClose:()=>void;
  const dests=channels.filter(c=>membership[c.id]&&!c.archived_at);
  const [dest,setDest]=useState(PRIVATE),[files,setFiles]=useState<File[]>(initial.slice(0,10)),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[err,setErr]=useState('');
  const pick=useRef<HTMLInputElement>(null);
- const label=(c:typeof dests[number])=>c.kind==='dm'||c.kind==='client'?title(c):`#${c.name}`;
+ const label=(c:typeof dests[number])=>c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`;
  const personal=dest===PRIVATE;
  async function go(){
   if(!files.length||busy)return;
@@ -145,7 +145,7 @@ function PostDialog({item,onClose,onDone}:{item:Item;onClose:()=>void;onDone:()=
  const {db,me,channels,membership,title}=useZarn();
  const dests=channels.filter(c=>membership[c.id]&&!c.archived_at);
  const [dest,setDest]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[err,setErr]=useState('');
- const label=(c:typeof dests[number])=>c.kind==='dm'||c.kind==='client'?title(c):`#${c.name}`;
+ const label=(c:typeof dests[number])=>c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`;
  async function go(){
   if(!dest||busy)return;setBusy(true);setErr('');
   const id=crypto.randomUUID();

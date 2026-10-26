@@ -72,7 +72,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
     {railBtn('chat',<MessageSquare size={20}/>,'Chat',badges.home+badges.dms)}
     {canBusiness&&railBtn('business',<BarChart3 size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
-    {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',0)}
+    {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',badges.projects)}
     <button type="button" className="zn-rail-me" aria-label="Your profile" onClick={()=>setProfileId(me.user_id)}><Avatar m={me} size={34} online/></button>
    </nav>
    <aside className="zn-sidebar">
@@ -122,7 +122,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
      {area==='projects'&&<>
       {link('/zarn/projects',<FolderKanban size={15}/>,'All projects')}
       <button type="button" className="zn-nav-item zn-add-client" onClick={()=>setNewProject(true)}><Plus size={15}/><span>New project</span></button>
-      {section('myprojects','My projects',(z.projects??[]).length?(z.projects??[]).map(p=><Link key={p.id} href={`/zarn/projects/${p.id}`} className={`zn-nav-item${pathname===`/zarn/projects/${p.id}`?' is-active':''}`}><i className="zp-dot" style={{background:p.color}}>{p.name.slice(0,1).toUpperCase()}</i><span>{p.name}</span></Link>):<p className="zn-nav-note">No projects yet.</p>)}
+      {section('myprojects','My projects',(z.projects??[]).length?(z.projects??[]).map(p=><Link key={p.id} href={`/zarn/projects/${p.id}`} className={`zn-nav-item${pathname===`/zarn/projects/${p.id}`?' is-active':''}`}><i className="zp-dot" style={{background:p.color}}>{p.name.slice(0,1).toUpperCase()}</i><span>{p.name}</span>{(()=>{const c=z.channels.find(x=>x.kind==='project'&&x.project_id===p.id),n=c&&!z.membership[c.id]?.muted?z.unread[c.id]?.unread??0:0;return n?<em className="zn-badge is-soft">{n>99?'99+':n}</em>:null;})()}</Link>):<p className="zn-nav-note">No projects yet.</p>)}
      </>}
      {area==='clients'&&<>
       {clients.length>6&&<label className="zn-client-search"><Search size={14}/><input placeholder="Find a client" value={clientQ} onChange={e=>setClientQ(e.target.value)}/></label>}

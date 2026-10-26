@@ -2,7 +2,7 @@
 export type ZMember={user_id:string;email:string;display_name:string;title:string;status_text:string;avatar_url:string|null;joined_at:string|null;deactivated_at:string|null;last_seen_at:string|null;created_at:string;account_type:'member'|'guest';can_view_crm:boolean;can_create_channels:boolean;expires_at:string|null;username:string|null;phone:string;work_email:string;status_emoji:string;status_until:string|null};
 export type ZEmergency={user_id:string;name:string;relation:string;phone:string};
 export const usernameOk=(u:string)=>/^[a-z0-9][a-z0-9._]{1,29}$/.test(u);
-export type ZChannel={id:string;kind:'public'|'private'|'dm'|'client';lead_id:string|null;name:string|null;topic:string;crm_feed:string|null;dm_key:string|null;is_default:boolean;archived_at:string|null;created_at:string;created_by?:string|null};
+export type ZChannel={id:string;kind:'public'|'private'|'dm'|'client'|'project';lead_id:string|null;project_id?:string|null;name:string|null;topic:string;crm_feed:string|null;dm_key:string|null;is_default:boolean;archived_at:string|null;created_at:string;created_by?:string|null};
 export type ZMembership={channel_id:string;user_id:string;last_read_at:string;muted:boolean;starred:boolean};
 export type ZAttachment={key:string;name:string;size:number;type:string;duration?:number};
 export type ZMessage={id:string;channel_id:string;user_id:string|null;parent_id:string|null;body:string;attachments:ZAttachment[];lead_id:string|null;invoice_id:string|null;kind:'user'|'system'|'crm';meta:Record<string,string|number>;reply_count:number;last_reply_at:string|null;pinned_at:string|null;edited_at:string|null;deleted_at:string|null;created_at:string;author_name?:string|null;pending?:boolean};
@@ -10,7 +10,7 @@ export type ZReaction={message_id:string;user_id:string;channel_id:string;emoji:
 export type ZLead={id:string;name:string;company:string;status:string;stage_label:string|null;stage_color:string|null;stage_kind:string|null;deal_value:number|null;currency:string;categories:string[];service_interested:string;owner_id:string|null;owner_name:string|null;created_at:string;last_activity_at:string};
 export const quickReactions=['👍','❤️','😂','🎉','👀','✅','🙏','🔥'];
 export const channelSlug=(s:string)=>s.toLowerCase().trim().replace(/[^a-z0-9_-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80);
-// Name shown for a channel: #name, or the other people in a DM.
+// Name shown for a channel: #name, the project's name, or the other people in a DM.
 export function channelTitle(c:ZChannel,me:string,people:Record<string,ZMember>){
  if(c.kind==='client')return 'Client';
  if(c.kind!=='dm')return c.name??'';
@@ -21,8 +21,8 @@ export async function zarnApi<T=Record<string,unknown>>(path:string,body:object)
  const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Something went wrong.');return data;
 }
-// Where a conversation lives: client spaces have their own page.
-export const channelHref=(c:Pick<ZChannel,'id'|'kind'|'lead_id'>|undefined,id:string)=>c?.kind==='client'&&c.lead_id?`/zarn/clients/${c.lead_id}`:`/zarn/c/${id}`;
+// Where a conversation lives: client spaces have their own page, project chats sit in their project.
+export const channelHref=(c:Pick<ZChannel,'id'|'kind'|'lead_id'|'project_id'>|undefined,id:string)=>c?.kind==='client'&&c.lead_id?`/zarn/clients/${c.lead_id}`:c?.kind==='project'&&c.project_id?`/zarn/projects/${c.project_id}?view=chat`:`/zarn/c/${id}`;
 
 // Slack-style status presets. clear: minutes, 'today' (end of day), 'pick' (choose a date) or null (until cleared).
 export const statusPresets:{emoji:string;text:string;clear:number|'today'|'pick'|null}[]=[

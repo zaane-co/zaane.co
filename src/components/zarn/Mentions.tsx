@@ -22,7 +22,7 @@ export default function Mentions(){
   <header className="zn-page-head"><div><h1><AtSign size={20}/>Mentions</h1><p>Messages where someone @mentioned you or the channel.</p></div></header>
   <div className="zn-crm-list" data-lenis-prevent>
    {loading?<p className="zn-loading">Loading…</p>:rows.length?rows.map(m=>{const c=channels.find(x=>x.id===m.channel_id);return <Link key={m.id} href={channelHref(c,m.channel_id)} className={`zn-mention-row${m.read_at?'':' is-unread'}`}>
-    <Avatar m={people[m.user_id??'']} size={34}/><div><p className="zn-msg-head"><b>{people[m.user_id??'']?.display_name??'Someone'}</b><span className="zn-in">in {c?(c.kind==='dm'||c.kind==='client'?title(c):`#${c.name}`):'a channel'}</span><time>{dayOf(m.created_at)} {timeOf(m.created_at)}</time></p>
+    <Avatar m={people[m.user_id??'']} size={34}/><div><p className="zn-msg-head"><b>{people[m.user_id??'']?.display_name??'Someone'}</b><span className="zn-in">in {c?(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`):'a channel'}</span><time>{dayOf(m.created_at)} {timeOf(m.created_at)}</time></p>
     <div className="zn-body">{m.deleted_at?<em>Deleted message</em>:renderBody(m.body,people,me.user_id)}</div></div></Link>;})
    :<div className="zn-empty-state"><h2>No mentions yet</h2><p>When someone @mentions you, it shows up here.</p></div>}
   </div>

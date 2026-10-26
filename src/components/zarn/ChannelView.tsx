@@ -3,7 +3,7 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState} from 're
 import {useRouter} from 'next/navigation';
 import {useCall} from './CallProvider';
 import {useConfirm} from './ConfirmProvider';
-import {Bell,BellOff,Briefcase,Hash,Info,Lock,Phone,Pin,Star,Trash2,UserPlus,Video,X} from 'lucide-react';
+import {Bell,BellOff,Briefcase,FolderKanban,Hash,Info,Lock,Phone,Pin,Star,Trash2,UserPlus,Video,X} from 'lucide-react';
 import {zarnApi,type ZChannel,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {useZarn,type ZEvent} from './ZarnProvider';
 import Message from './Message';
@@ -15,7 +15,7 @@ import {useShell} from './nav';
 const PAGE=50;
 const sameGroup=(a:ZMessage|undefined,b:ZMessage)=>!!a&&a.kind==='user'&&b.kind==='user'&&a.user_id===b.user_id&&!a.deleted_at&&new Date(b.created_at).getTime()-new Date(a.created_at).getTime()<5*60000&&dayOf(a.created_at)===dayOf(b.created_at);
 
-// embedded: rendered inside a client space (no channel header; the client page has its own).
+// embedded: rendered inside a client space or project (no channel header; that page has its own).
 export default function ChannelView({id,embedded}:{id:string;embedded?:boolean}){
  const z=useZarn(),{db,me,people,channels,membership,subscribe,markRead,setActive,title}=z,router=useRouter(),{profile}=useShell(),call=useCall();
  const channel=channels.find(c=>c.id===id);
@@ -24,9 +24,9 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  const [details,setDetails]=useState(false),[typing,setTyping]=useState<Record<string,{at:number;thread:string|null}>>({});
  const list=useRef<HTMLDivElement>(null),stick=useRef(true),typingCh=useRef<ReturnType<typeof db.channel>|null>(null),lastTyping=useRef(0);
  const joined=!!membership[id];
- // Admins can read and post in client spaces they aren't on.
- const canPost=joined||(channel?.kind==='client'&&(me.staffRole==='super_admin'||me.staffRole==='admin'));
- useEffect(()=>{if(channel?.kind==='client'&&!embedded&&channel.lead_id)router.replace(`/zarn/clients/${channel.lead_id}`);},[channel,embedded,router]);
+ // Admins can read and post in client spaces and projects they aren't on.
+ const canPost=joined||((channel?.kind==='client'||channel?.kind==='project')&&(me.staffRole==='super_admin'||me.staffRole==='admin'));
+ useEffect(()=>{if(channel?.kind==='client'&&!embedded&&channel.lead_id)router.replace(`/zarn/clients/${channel.lead_id}`);if(channel?.kind==='project'&&!embedded&&channel.project_id)router.replace(`/zarn/projects/${channel.project_id}?view=chat`);},[channel,embedded,router]);
  const counted=useRef(new Set<string>());
  // Read receipts: each member's last_read_at in this channel, kept live.
  const [reads,setReads]=useState<Record<string,string>>({}),[delivs,setDelivs]=useState<Record<string,string>>({});
@@ -138,7 +138,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
     })}
    </div>
    <div className="zn-typing">{typers.length>0&&<>{`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></>}</div>
-   {canPost?<Composer channelId={id} placeholder={`Message ${channel.kind==='dm'?title(channel):channel.kind==='client'?`the ${title(channel)} team`:'#'+channel.name}`} onSent={()=>{stick.current=true;}} onTyping={()=>onTyping(null)} disabled={channel.archived_at?'This channel is archived.':channel.kind==='dm'&&(channel.dm_key??'').split(',').some(u=>u!==me.user_id&&(!people[u]||people[u]?.deactivated_at))?'This person’s account was deactivated, so you can’t message them.':undefined}/>
+   {canPost?<Composer channelId={id} placeholder={`Message ${channel.kind==='dm'?title(channel):channel.kind==='client'?`the ${title(channel)} team`:channel.kind==='project'?`the ${channel.name??'project'} team`:'#'+channel.name}`} onSent={()=>{stick.current=true;}} onTyping={()=>onTyping(null)} disabled={channel.archived_at?'This channel is archived.':channel.kind==='dm'&&(channel.dm_key??'').split(',').some(u=>u!==me.user_id&&(!people[u]||people[u]?.deactivated_at))?'This person’s account was deactivated, so you can’t message them.':undefined}/>
     :<div className="zn-join"><p>You’re previewing <b>#{channel.name}</b>.</p><button type="button" className="zn-btn is-primary" onClick={()=>void join()}>Join channel</button></div>}
   </div>
   {thread&&<Thread parent={thread} typers={typersIn(thread.id)} onTyping={()=>onTyping(thread.id)} onClose={()=>setThread(null)}/>}
@@ -148,9 +148,9 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
 
 function ChannelIntro({c}:{c:ZChannel}){
  const {title}=useZarn();
- return <div className="zn-intro"><span className="zn-intro-icon">{c.kind==='dm'?'@':c.kind==='client'?<Briefcase size={22}/>:c.kind==='private'?<Lock size={22}/>:<Hash size={24}/>}</span>
-  <h2>{c.kind==='dm'?title(c):c.kind==='client'?`${title(c)} team chat`:`Welcome to #${c.name}`}</h2>
-  <p>{c.kind==='client'?'Private to this client’s team and admins. Nobody else on ZARN can see it.':c.kind==='dm'?'This is the start of your direct conversation.':c.crm_feed?`CRM updates (${c.crm_feed==='leads'?'new leads and stage changes':'invoices sent and paid'}) are posted here automatically.`:c.topic||'This is the very beginning of the channel.'}</p></div>;
+ return <div className="zn-intro"><span className="zn-intro-icon">{c.kind==='dm'?'@':c.kind==='client'?<Briefcase size={22}/>:c.kind==='project'?<FolderKanban size={22}/>:c.kind==='private'?<Lock size={22}/>:<Hash size={24}/>}</span>
+  <h2>{c.kind==='dm'?title(c):c.kind==='client'?`${title(c)} team chat`:c.kind==='project'?`${c.name} team chat`:`Welcome to #${c.name}`}</h2>
+  <p>{c.kind==='client'?'Private to this client’s team and admins. Nobody else on ZARN can see it.':c.kind==='project'?'Everyone on this project is here. Add people to the project and they join the chat too.':c.kind==='dm'?'This is the start of your direct conversation.':c.crm_feed?`CRM updates (${c.crm_feed==='leads'?'new leads and stage changes':'invoices sent and paid'}) are posted here automatically.`:c.topic||'This is the very beginning of the channel.'}</p></div>;
 }
 
 function Thread({parent,typers,onTyping,onClose}:{parent:ZMessage;typers:string[];onTyping:()=>void;onClose:()=>void}){

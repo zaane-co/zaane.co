@@ -26,9 +26,9 @@ export async function POST(request:Request){
  const text=String(m.body??'').replace(/<@([0-9a-f-]{36})>/gi,(_,id)=>`@${names[id]??'someone'}`).replace(/<!channel>/g,'@channel').replace(/[*_~`]/g,'').trim();
  const body=(text||(((m.attachments as {type?:string}[]|null)?.[0]?.type?.startsWith('audio/')?'Voice note':(m.attachments as unknown[]|null)?.length?'Sent an attachment':''))).slice(0,140);
  const who=names[me.user_id]??'ZARN';
- const title=(ch.kind==='dm'?who:ch.kind==='client'?`${who} in a client space`:`${who} in #${ch.name??''}`)+(m.parent_id?' · thread':'');
+ const title=(ch.kind==='dm'?who:ch.kind==='client'?`${who} in a client space`:ch.kind==='project'?`${who} in ${ch.name??'a project'}`:`${who} in #${ch.name??''}`)+(m.parent_id?' · thread':'');
  const everyone=String(m.body).includes('<!channel>');
- const targets=mem.filter(r=>{const mention=everyone||String(m.body).includes(`<@${r.user_id}>`);return mention||(!r.muted&&(ch.kind==='dm'||ch.kind==='client'));}).map(r=>r.user_id).filter(u=>names[u]);
+ const targets=mem.filter(r=>{const mention=everyone||String(m.body).includes(`<@${r.user_id}>`);return mention||(!r.muted&&(ch.kind==='dm'||ch.kind==='client'||ch.kind==='project'));}).map(r=>r.user_id).filter(u=>names[u]);
  if(!targets.length)return Response.json({ok:true,sent:0});
  const {data:subs}=await svc.from('zarn_push_subscriptions').select('endpoint,p256dh,auth,user_id').in('user_id',targets);
  if(!subs?.length)return Response.json({ok:true,sent:0});

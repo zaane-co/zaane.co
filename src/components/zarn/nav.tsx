@@ -3,7 +3,7 @@ import {createContext,useContext} from 'react';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {Hash,Lock} from 'lucide-react';
-import type {ZChannel} from '@/lib/zarn';
+import {channelHref,type ZChannel} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,StatusMark} from './format';
 
@@ -24,7 +24,7 @@ export function useNav(){
  // Conversations with deactivated people are hidden from the lists; they're still found by searching for the person.
  const gone=(c:ZChannel)=>c.kind==='dm'&&(c.dm_key??'').split(',').some(id=>id!==me.user_id&&(!z.people[id]||z.people[id]?.deactivated_at))&&Object.keys(z.people).length>0;
  const live=channels.filter(c=>!c.archived_at&&!gone(c)),mine=live.filter(c=>membership[c.id]);
- const starred=mine.filter(c=>c.kind!=='client'&&membership[c.id]?.starred);
+ const starred=mine.filter(c=>c.kind!=='client'&&c.kind!=='project'&&membership[c.id]?.starred);
  const rooms=mine.filter(c=>(c.kind==='public'||c.kind==='private')&&!membership[c.id]?.starred).sort((a,b)=>(a.name??'').localeCompare(b.name??''));
  const dms=mine.filter(c=>c.kind==='dm').sort((a,b)=>(unread[b.id]?.unread??0)-(unread[a.id]?.unread??0));
  const clients=live.filter(c=>c.kind==='client'&&(membership[c.id]||staffAdmin)).sort((a,b)=>title(a).localeCompare(title(b)));
@@ -35,12 +35,13 @@ export function useNav(){
   home:count([...starred,...rooms].filter(c=>c.kind!=='dm'),'unread'),
   dms:count(dms,'unread'),
   clients:count(clients.filter(c=>membership[c.id]),'unread'),
+ projects:count(live.filter(c=>c.kind==='project'&&membership[c.id]),'unread'),
   activity:Object.values(unread).reduce((t,u)=>t+u.mentions,0),
  };
  return {staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,archivedClients,badges};
 }
 
-export const channelPath=(c:ZChannel)=>c.kind==='client'?`/zarn/clients/${c.lead_id}`:`/zarn/c/${c.id}`;
+export const channelPath=(c:ZChannel)=>channelHref(c,c.id);
 
 // One conversation in a list (channel, DM or client space).
 export function ChannelRow({c,big}:{c:ZChannel;big?:boolean}){

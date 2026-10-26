@@ -122,7 +122,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
      // A reply inside a thread. DMs and client spaces: counts and notifies like any message there. Channels: only when you're tagged
      // or it's a reply to your own message.
      if(row.channel_id===activeRef.current&&document.visibilityState==='visible'&&activeThreadRef.current===row.parent_id)return;
-     const ch=channelsRef.current.find(x=>x.id===row.channel_id),always=ch?.kind==='dm'||ch?.kind==='client',muted=!!membershipRef.current[row.channel_id]?.muted;
+     const ch=channelsRef.current.find(x=>x.id===row.channel_id),always=ch?.kind==='dm'||ch?.kind==='client'||ch?.kind==='project',muted=!!membershipRef.current[row.channel_id]?.muted;
      void (async()=>{
       let relevant=always||mention;
       if(!relevant){const {data:par}=await db.from('zarn_messages').select('user_id').eq('id',row.parent_id!).maybeSingle();relevant=(par as {user_id:string|null}|null)?.user_id===me.user_id;}
@@ -139,12 +139,12 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
     }
     if(row.channel_id===activeRef.current&&document.visibilityState==='visible')return;
     // Sound for DMs, client spaces and @mentions (not every channel message), unless the conversation is muted.
-    {const ch=channelsRef.current.find(x=>x.id===row.channel_id);if((mention||ch?.kind==='dm'||ch?.kind==='client'||getSound().scope==='all')&&!membershipRef.current[row.channel_id]?.muted)playChime();}
+    {const ch=channelsRef.current.find(x=>x.id===row.channel_id);if((mention||ch?.kind==='dm'||ch?.kind==='client'||ch?.kind==='project'||getSound().scope==='all')&&!membershipRef.current[row.channel_id]?.muted)playChime();}
     setUnread(u=>({...u,[row.channel_id]:{unread:(u[row.channel_id]?.unread??0)+1,mentions:(u[row.channel_id]?.mentions??0)+(mention?1:0)}}));
     const c=channelsRef.current.find(x=>x.id===row.channel_id);
     if((mention||c?.kind==='dm')&&document.visibilityState!=='visible'&&'Notification' in window&&Notification.permission==='granted'){
      const who=peopleRef.current[row.user_id??'']?.display_name??'ZARN';
-     const n=new Notification(c?.kind==='dm'?who:c?.kind==='client'?`${who} in a client space`:`${who} in #${c?.name??''}`,{body:plain(row.body,peopleRef.current).slice(0,140)||'Sent an attachment',tag:row.id});
+     const n=new Notification(c?.kind==='dm'?who:c?.kind==='client'?`${who} in a client space`:c?.kind==='project'?`${who} in ${c.name??'a project'}`:`${who} in #${c?.name??''}`,{body:plain(row.body,peopleRef.current).slice(0,140)||'Sent an attachment',tag:row.id});
      n.onclick=()=>{window.focus();router.push(channelHref(c,row.channel_id));};
     }
    })
@@ -179,7 +179,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
   // The app icon shows what we notify about: unread DMs and client chats plus @mentions anywhere (same rule the server uses for pushes),
   // so the number stays right after the app is closed.
   const nav=navigator as Navigator&{setAppBadge?:(n?:number)=>Promise<void>;clearAppBadge?:()=>Promise<void>};
-  const badge=Object.entries(unread).reduce((t,[id,u])=>{const k=channels.find(c=>c.id===id)?.kind;return t+(membership[id]?.muted||(k!=='dm'&&k!=='client')?u.mentions:u.unread);},0);
+  const badge=Object.entries(unread).reduce((t,[id,u])=>{const k=channels.find(c=>c.id===id)?.kind;return t+(membership[id]?.muted||(k!=='dm'&&k!=='client'&&k!=='project')?u.mentions:u.unread);},0);
   // Not before the real counts have loaded: offline, the icon keeps its last number instead of being wiped.
   const apply=()=>{if(!unreadReady.current)return;if(badge)void nav.setAppBadge?.(badge).catch(()=>{});else void nav.clearAppBadge?.().catch(()=>{});};
   apply();

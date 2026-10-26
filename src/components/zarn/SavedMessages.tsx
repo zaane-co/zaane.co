@@ -22,7 +22,7 @@ export default function SavedMessages(){
   const m=t.message_id?messages[t.message_id]:undefined,c=channels.find(x=>x.id===t.channel_id);
   return <div key={t.id} className="zp-saved-row">
    <Link href={channelHref(c,t.channel_id??'')}>
-    <span className="zn-todo-from"><Bookmark size={12}/>Saved from {c?(c.kind==='dm'||c.kind==='client'?title(c):`#${c.name}`):'a conversation'}</span>
+    <span className="zn-todo-from"><Bookmark size={12}/>Saved from {c?(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`):'a conversation'}</span>
     {m?<><span className="zn-todo-who"><Avatar m={people[m.user_id??'']} size={18}/><b>{people[m.user_id??'']?.display_name??'Someone'}</b><time>{dayOf(m.created_at)} {timeOf(m.created_at)}</time></span><span className="zn-todo-body">{m.deleted_at?<em>Deleted message</em>:renderBody(m.body||(m.attachments.length?'Shared a file':''),people,me.user_id)}</span></>:<span className="zn-todo-body"><em>Message unavailable</em></span>}
    </Link>
    <button type="button" className="zn-todo-del" aria-label="Remove from saved" data-tip="Remove" onClick={()=>void removeTodo(t.id)}><Trash2 size={15}/></button>
