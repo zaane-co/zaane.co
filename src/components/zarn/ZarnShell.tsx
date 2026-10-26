@@ -17,6 +17,7 @@ import SoundDialog from './SoundDialog';
 import Invites from './Invites';
 import NotifyPrompt from './NotifyPrompt';
 import InstallPrompt from './InstallPrompt';
+import CareAlerts from './CareAlerts';
 import {inAppBrowser} from './ZarnPwa';
 import ConfirmProvider from './ConfirmProvider';
 import {usePushState} from '@/lib/zarn-push-client';
@@ -161,6 +162,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
   </div>
   {profileId&&<ProfileSheet userId={profileId} onClose={()=>setProfileId(null)} onEdit={()=>{setProfileId(null);setDialog('profile');}}/>}
   <InstallPrompt onDone={()=>setInstallDone(true)} onHelp={()=>setDialog('install')}/>
+  <CareAlerts/>
   <NotifyPrompt wait={!installDone} installMode={installMode} onInstall={()=>setDialog('install')}/>
   {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}

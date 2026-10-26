@@ -5,9 +5,11 @@ import ClientProjects from './ClientProjects';
 import ProjectBoard from './ProjectBoard';
 import ClientBrief from './ClientBrief';
 import ClientVault from './ClientVault';
+import {ClientDeliverables,ClientReceipts,ClientReminders} from './ClientCare';
+import {dueText,dueTone} from '@/lib/zarn-care';
 import {useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
-import {KeyRound,FolderKanban,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Receipt,ListChecks,LayoutGrid,History,UserPlus,X,Archive,ArchiveRestore,Ellipsis,Trash2} from 'lucide-react';
+import {KeyRound,FolderKanban,Check,ExternalLink,FileText,Link2,Lock,Mail,MessageSquare,Phone,Receipt,ListChecks,LayoutGrid,History,UserPlus,X,Archive,Bell,PackageCheck,ReceiptText,ArchiveRestore,Ellipsis,Trash2} from 'lucide-react';
 import {money,ago,dueLabel,dueState,invoiceState,invoiceStateStyle,fmtDate,type InvoiceStatus} from '@/lib/crm';
 import {zarnApi} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
@@ -24,9 +26,10 @@ export type SpaceData={
  materials:{id:string;title:string;note:string;link:string;file_key:string|null;file_name:string;received_at:string|null}[];
  activities:{id:string;kind:string;body:string;meta:Record<string,string>;author_id:string|null;created_at:string}[];
  invoices:{id:string;number:string;status:string;total:number;amount_paid:number;currency:string;due_date:string}[]|null;
+ care:{reminders:{id:string;title:string;next_on:string}[];deliverables:{id:string;title:string;next_on:string}[];today:string};
  names:Record<string,string>;canManage:boolean;canStudio:boolean;archived:boolean;canDelete:boolean;
 };
-type Tab='chat'|'overview'|'tasks'|'projects'|'files'|'vault'|'activity'|'invoices';
+type Tab='chat'|'overview'|'tasks'|'projects'|'reminders'|'deliverables'|'files'|'vault'|'receipts'|'activity'|'invoices';
 
 // A client's private space: team chat plus everything we're tracking for them.
 export default function ClientSpace({data}:{data:SpaceData}){
@@ -43,8 +46,8 @@ export default function ClientSpace({data}:{data:SpaceData}){
   try{await zarnApi('/api/zarn/clients',{lead_id:lead.id,...body});if(msg)setFlash(msg);start(()=>router.refresh());return true;}
   catch(e){setFlash(e instanceof Error?e.message:'Something went wrong.');return false;}
  }
- const tabs:[Tab,string,React.ReactNode,number?][]=[['chat','Chat',<MessageSquare key="c" size={15}/>,z.unread[data.channelId]?.unread],['overview','Overview',<LayoutGrid key="o" size={15}/>],['tasks','Tasks',<ListChecks key="t" size={15}/>],['projects','Projects',<FolderKanban key="p" size={15}/>,(z.projects??[]).filter(p=>p.lead_id===lead.id).length||undefined],['vault','Vault',<KeyRound key="v" size={15}/>],['files','Files',<FileText key="f" size={15}/>,data.files.length],['activity','Activity',<History key="a" size={15}/>]];
- if(data.invoices)tabs.push(['invoices','Invoices',<Receipt key="i" size={15}/>,data.invoices.length]);
+ const tabs:[Tab,string,React.ReactNode,number?][]=[['chat','Chat',<MessageSquare key="c" size={15}/>,z.unread[data.channelId]?.unread],['overview','Overview',<LayoutGrid key="o" size={15}/>],['tasks','Tasks',<ListChecks key="t" size={15}/>],['projects','Projects',<FolderKanban key="p" size={15}/>,(z.projects??[]).filter(p=>p.lead_id===lead.id).length||undefined],['reminders','Reminders',<Bell key="r" size={15}/>,data.care.reminders.filter(r=>r.next_on<=data.care.today).length||undefined],['deliverables','Deliverables',<PackageCheck key="d" size={15}/>,data.care.deliverables.filter(d=>d.next_on<=data.care.today).length||undefined],['vault','Vault',<KeyRound key="v" size={15}/>],['files','Files',<FileText key="f" size={15}/>,data.files.length],['activity','Activity',<History key="a" size={15}/>]];
+ if(data.invoices)tabs.push(['receipts','Receipts',<ReceiptText key="rc" size={15}/>],['invoices','Invoices',<Receipt key="i" size={15}/>,data.invoices.length]);
  const name=lead.company||lead.name;
  return <div className="zn-client">
   <header className="zn-client-head">
@@ -71,6 +74,9 @@ export default function ClientSpace({data}:{data:SpaceData}){
    {tab==='overview'&&<Overview data={data} onAct={act} onTab={setTab}/>}
    {tab==='tasks'&&<ProjectBoard leadId={lead.id}/>}
    {tab==='projects'&&<ClientProjects leadId={lead.id}/>}
+   {tab==='reminders'&&<ClientReminders leadId={lead.id}/>}
+   {tab==='deliverables'&&<ClientDeliverables leadId={lead.id}/>}
+   {tab==='receipts'&&data.invoices&&<ClientReceipts leadId={lead.id} currency={lead.currency}/>}
    {tab==='vault'&&<ClientVault leadId={lead.id}/>}
    {tab==='files'&&<Files data={data}/>}
    {tab==='activity'&&<Activity data={data}/>}
@@ -91,6 +97,7 @@ function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=
  const stage=data.stages.find(s=>s.key===lead.status);
  const open=data.tasks.filter(t=>!t.done_at),got=data.materials.filter(m=>m.received_at).length;
  const name=(id:string|null)=>id?(z.people[id]?.display_name??data.names[id]??'Someone'):'Unassigned';
+ const coming=[...data.care.reminders.map(r=>({...r,kind:'reminder'})),...data.care.deliverables.map(d=>({...d,kind:'deliverable'}))].sort((a,b)=>a.next_on.localeCompare(b.next_on));
   return <div className="zn-pane"><div className="zn-pane-inner zn-ov">
   <div className="zn-ov-stats">
    <div><small>Stage</small><b><i style={{background:stage?.color??'#52525b'}}/>{stage?.label??lead.status}</b></div>
@@ -110,6 +117,11 @@ function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=
      <div className="zn-card-head"><h3>Next up</h3><button type="button" className="zn-link-btn" onClick={()=>onTab('tasks')}>All tasks →</button></div>
      {open.length?<ul className="zn-mini-tasks">{open.slice(0,4).map(t=><li key={t.id}><span className={`zn-dotline${t.due_at?` is-${dueState(t.due_at)}`:''}`}/><span><b>{t.title}</b><small>{name(t.assignee_id)}{t.due_at?` · ${dueLabel(t.due_at)}`:''}</small></span></li>)}</ul>
       :<p className="zn-empty-line">Nothing open. <button type="button" className="zn-link-btn" onClick={()=>onTab('tasks')}>Add a task</button></p>}
+    </section>
+    <section className="zn-card">
+     <div className="zn-card-head"><h3>Coming up</h3><span className="zc-links"><button type="button" className="zn-link-btn" onClick={()=>onTab('reminders')}>Reminders →</button><button type="button" className="zn-link-btn" onClick={()=>onTab('deliverables')}>Deliverables →</button></span></div>
+     {coming.length?<ul className="zn-mini-tasks">{coming.slice(0,5).map(c=><li key={c.id}><span className={`zn-dotline is-${({late:'overdue',today:'today',later:'upcoming',none:'upcoming'} as const)[dueTone(c.next_on,data.care.today)]}`}/><span><b>{c.title}</b><small>{c.kind==='deliverable'?'Deliverable':'Reminder'} · {dueText(c.next_on,data.care.today)}</small></span></li>)}</ul>
+      :<p className="zn-empty-line">No reminders or deliverables set. <button type="button" className="zn-link-btn" onClick={()=>onTab('reminders')}>Add a reminder</button></p>}
     </section>
     <section className="zn-card">
      <div className="zn-card-head"><h3>Log a note</h3><small className="zn-muted">Goes on the CRM timeline, not the chat</small></div>
@@ -200,7 +212,7 @@ function DeleteClient({leadId,name,onClose}:{leadId:string;name:string;onClose:(
  return <div className="zn-modal-scrim" onClick={busy?undefined:onClose}><div className="zn-modal zn-confirm" role="alertdialog" aria-label="Delete client space" onClick={e=>e.stopPropagation()}>
   <span className="zn-confirm-ico is-danger"><Trash2 size={20}/></span>
   <h2>Delete {name}’s space?</h2>
-  <p>This permanently deletes the chat, tasks, vault logins and files, and the brief in ZARN. Projects and documents linked to this client are kept. The client’s CRM record and invoices stay in the Studio admin. This can’t be undone. If you may want it back, archive it instead.</p>
+  <p>This permanently deletes the chat, tasks, reminders, deliverables, vault logins and files, and the brief in ZARN. Projects and documents linked to this client are kept. The client’s CRM record, invoices and receipts are kept. This can’t be undone. If you may want it back, archive it instead.</p>
   <label className="zn-label" style={{width:'100%',textAlign:'left'}}>Type <b>{name}</b> to confirm<input className="zn-input" value={typed} onChange={e=>setTyped(e.target.value)} autoFocus autoComplete="off"/></label>
   {err&&<p className="zn-error" role="alert">{err}</p>}
   <div className="zn-modal-foot"><button type="button" className="zn-btn" disabled={busy} onClick={onClose}>Cancel</button><button type="button" className="zn-btn is-danger" disabled={busy||!typed.trim()} onClick={()=>void go()}>{busy?'Deleting…':'Delete space'}</button></div>

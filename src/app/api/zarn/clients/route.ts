@@ -99,17 +99,23 @@ export async function POST(request:Request){
    if(!lead||!ch)return fail('That client space no longer exists.',404);
    const expected=(lead.company||lead.name||'').trim().toLowerCase();
    if(!expected||b.confirm.trim().toLowerCase()!==expected)return fail('Type the client’s name exactly to confirm.');
-   // Stored files go too: vault files and chat attachments (best effort).
+   // Stored files go too: vault files, delivery files and chat attachments (best effort).
    const keys:string[]=[];
    const {data:vf}=await db.from('zarn_vault_items').select('file_key').eq('lead_id',b.lead_id).neq('file_key','');
    for(const r of vf??[])if(r.file_key)keys.push(r.file_key);
    const {data:ms}=await db.from('zarn_messages').select('attachments').eq('channel_id',ch.id).neq('attachments','[]');
    for(const m of (ms??[]) as {attachments:{key?:string}[]}[])for(const a of m.attachments??[])if(a.key?.startsWith('private/'))keys.push(a.key);
+   const {data:df}=await db.from('zarn_deliverable_log').select('file_key').eq('lead_id',b.lead_id).neq('file_key','');
+   for(const r of df??[])if(r.file_key)keys.push(r.file_key);
    for(const k of keys)await deleteFile(k).catch(()=>{});
    await db.from('zarn_vault_items').delete().eq('lead_id',b.lead_id);
    await db.from('zarn_vault_log').delete().eq('lead_id',b.lead_id);
    await db.from('zarn_vault_shares').delete().eq('lead_id',b.lead_id);
    await db.from('zarn_tasks').delete().eq('lead_id',b.lead_id);
+   // Reminders and deliverables go with the space; receipts are money records and are kept, like invoices.
+   await db.from('zarn_care_alerts').delete().eq('lead_id',b.lead_id);
+   await db.from('zarn_client_reminders').delete().eq('lead_id',b.lead_id);
+   await db.from('zarn_client_deliverables').delete().eq('lead_id',b.lead_id);
    await db.from('zarn_projects').update({lead_id:null}).eq('lead_id',b.lead_id);
    await db.from('zarn_docs').update({lead_id:null}).eq('lead_id',b.lead_id);
    const {error}=await db.from('zarn_channels').delete().eq('id',ch.id);

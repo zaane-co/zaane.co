@@ -1,6 +1,7 @@
 import {notFound,redirect} from 'next/navigation';
 import {zarnMember} from '@/lib/zarn-server';
 import {canManageTeams,canSeeInvoices,clientAccess} from '@/lib/zarn-clients';
+import {lagosToday} from '@/lib/zarn-care';
 import ClientSpace,{type SpaceData} from '@/components/zarn/ClientSpace';
 export const dynamic='force-dynamic';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -10,7 +11,7 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
  const me=await zarnMember();if(!me)redirect('/zarn/login');
  const {db,channel,allowed}=await clientAccess(me,id);
  if(!channel||!allowed)notFound();
- const [{data:lead},{data:stages},{data:team},{data:tasks},{data:materials},{data:activities},invoices,{data:staff},{data:files}]=await Promise.all([
+ const [{data:lead},{data:stages},{data:team},{data:tasks},{data:materials},{data:activities},invoices,{data:staff},{data:files},{data:reminders},{data:deliverables}]=await Promise.all([
   db.from('leads').select('id,name,company,email,phone,website,service_interested,brief_html,budget_range,message,project_description,status,deal_value,currency,categories,owner_id,created_at,last_activity_at').eq('id',id).single(),
   db.from('pipeline_stages').select('key,label,color,kind,position'),
   db.from('zarn_channel_members').select('user_id').eq('channel_id',channel.id),
@@ -27,9 +28,12 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
   canSeeInvoices(me)?db.from('invoices').select('id,number,status,total,amount_paid,currency,due_date').eq('lead_id',id).order('created_at',{ascending:false}):Promise.resolve({data:null}),
   db.from('users').select('id,name,email'),
   db.from('lead_files').select('id,name,size,type,uploaded_by,created_at').eq('lead_id',id).order('created_at',{ascending:false}),
+  // What's coming up, for the Overview card and the tab badges. "Only me" reminders are only counted for their owner.
+  db.from('zarn_client_reminders').select('id,title,next_on,audience,created_by').eq('lead_id',id).not('next_on','is',null).order('next_on').limit(50),
+  db.from('zarn_client_deliverables').select('id,title,next_on').eq('lead_id',id).not('next_on','is',null).order('next_on').limit(50),
  ]);
  if(!lead)notFound();
- const data:SpaceData={files:files??[],me:me.user_id,lead,channelId:channel.id,stages:(stages??[]).sort((a,b)=>(a.kind==='lost'?1:0)-(b.kind==='lost'?1:0)||a.position-b.position),team:(team??[]).map(t=>t.user_id),tasks:tasks??[],materials:materials??[],activities:activities??[],invoices:invoices.data,names:Object.fromEntries((staff??[]).map(u=>[u.id,u.name||u.email])),archived:!!channel.archived_at,canDelete:me.staffRole==='super_admin'||me.staffRole==='admin',canManage:canManageTeams(me),canStudio:me.staffRole==='super_admin'||me.staffRole==='admin'||me.staffRole==='sales'};
+ const data:SpaceData={care:{reminders:(reminders??[]).filter(r=>r.audience==='team'||r.created_by===me.user_id).map(({id,title,next_on})=>({id,title,next_on})),deliverables:deliverables??[],today:lagosToday()},files:files??[],me:me.user_id,lead,channelId:channel.id,stages:(stages??[]).sort((a,b)=>(a.kind==='lost'?1:0)-(b.kind==='lost'?1:0)||a.position-b.position),team:(team??[]).map(t=>t.user_id),tasks:tasks??[],materials:materials??[],activities:activities??[],invoices:invoices.data,names:Object.fromEntries((staff??[]).map(u=>[u.id,u.name||u.email])),archived:!!channel.archived_at,canDelete:me.staffRole==='super_admin'||me.staffRole==='admin',canManage:canManageTeams(me),canStudio:me.staffRole==='super_admin'||me.staffRole==='admin'||me.staffRole==='sales'};
  // Amounts are for admins only: blank them out before they reach the browser.
  if(me.staffRole!=='super_admin'&&me.staffRole!=='admin'){data.lead={...data.lead,deal_value:null};if(data.invoices)data.invoices=data.invoices.map(i=>({...i,total:0,amount_paid:0}));}
  return <ClientSpace key={id} data={data}/>;
