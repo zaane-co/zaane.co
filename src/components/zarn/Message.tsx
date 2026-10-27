@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Bookmark,Phone,Check,CheckCheck,ChevronLeft,ChevronRight,Clock3,Download,FileText,MessageSquareText,Pencil,Pin,SmilePlus,Trash2,TrendingUp,Receipt,UserPlus,X} from 'lucide-react';
+import {Bookmark,ListPlus,Phone,Check,CheckCheck,ChevronLeft,ChevronRight,Clock3,Download,FileText,MessageSquareText,Pencil,Pin,SmilePlus,Trash2,TrendingUp,Receipt,UserPlus,X} from 'lucide-react';
 import {quickReactions,zarnApi,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {money} from '@/lib/crm';
 import {useZarn} from './ZarnProvider';
@@ -9,6 +9,7 @@ import {useShell} from './nav';
 import DocViewer,{docKind} from './DocViewer';
 import {useCall} from './CallProvider';
 import VoicePlayer from './VoicePlayer';
+import AddToTask from './AddToTask';
 import LinkPreview,{firstLink} from './LinkPreview';
 import {Avatar,StatusMark,renderBody,timeOf,tokensToText,textToTokens} from './format';
 
@@ -17,7 +18,7 @@ export type Receipt={pending:boolean;seen:{id:string;at:string}[];unseen:string[
 export default function Message({m,reactions,compact,inThread,onThread,receipt}:{m:ZMessage;reactions:ZReaction[];compact:boolean;inThread?:boolean;onThread?:(m:ZMessage)=>void;receipt?:Receipt}){
  const {me,people,members,db,membership,channels,emit,saved,toggleSaved}=useZarn(),{profile}=useShell(),call=useCall();
  const [viewer,setViewer]=useState<number|null>(null),[doc,setDoc]=useState<number|null>(null),[seenOpen,setSeenOpen]=useState(false);
- const [tapped,setTapped]=useState(false),[picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[confirm,setConfirm]=useState(false);
+ const [tapped,setTapped]=useState(false),[picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[confirm,setConfirm]=useState(false),[tasking,setTasking]=useState(false);
  const author=m.user_id?people[m.user_id]:undefined,mine=m.user_id===me.user_id,canAct=!!membership[m.channel_id];
  const groups=reactions.reduce<Record<string,string[]>>((g,r)=>{(g[r.emoji]??=[]).push(r.user_id);return g;},{});
  async function toggle(emoji:string){
@@ -83,6 +84,7 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
    <button type="button" aria-label="More reactions" data-tip="React" onClick={()=>setPicker(v=>!v)}><SmilePlus size={15}/></button>
    {!inThread&&<button type="button" aria-label="Reply in thread" data-tip="Reply in thread" onClick={()=>onThread?.(m)}><MessageSquareText size={15}/></button>}
    <button type="button" aria-label={saved[m.id]?'Remove from saved':'Save for later'} data-tip={saved[m.id]?'Saved. Click to remove':'Save for later'} onClick={()=>void toggleSaved(m)} className={saved[m.id]?'is-on':''}><Bookmark size={15} fill={saved[m.id]?'currentColor':'none'}/></button>
+   {me.account_type==='member'&&m.kind==='user'&&<button type="button" aria-label="Add to task" data-tip="Add to task" onClick={()=>setTasking(true)}><ListPlus size={15}/></button>}
    {!inThread&&<button type="button" aria-label={m.pinned_at?'Unpin':'Pin'} data-tip={m.pinned_at?'Unpin':'Pin to channel'} onClick={pin}><Pin size={15}/></button>}
    {mine&&<button type="button" aria-label="Edit" data-tip="Edit" onClick={()=>{setDraft(tokensToText(m.body,people));setEditing(true);}}><Pencil size={15}/></button>}
    {mine&&<button type="button" aria-label="Delete" data-tip="Delete" className="is-danger" onClick={()=>setConfirm(true)}><Trash2 size={15}/></button>}
@@ -91,6 +93,7 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
   {picker&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setPicker(false)}/><div className="zn-picker">{quickReactions.concat(['😮','😢','💯','🚀','👏','🤝','💡','⏳']).map(e=><button key={e} type="button" onClick={()=>void toggle(e)}>{e}</button>)}</div></>}
   {doc!==null&&m.attachments[doc]&&<DocViewer messageId={m.id} index={doc} att={m.attachments[doc]!} onClose={()=>setDoc(null)}/>}
   {viewer!==null&&<Viewer m={m} index={viewer} onIndex={setViewer} onClose={()=>setViewer(null)}/>}
+  {tasking&&<AddToTask m={m} onClose={()=>setTasking(false)}/>}
   {confirm&&<div className="zn-confirm"><span>Delete this message?</span><button type="button" onClick={()=>setConfirm(false)}>Cancel</button><button type="button" className="is-danger" onClick={()=>void remove()}>Delete</button></div>}
  </div>;
 }

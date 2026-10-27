@@ -1354,3 +1354,12 @@ html[data-kb] .zn-prompt{display:none}
 .zc-alert-list .zn-btn{height:30px;padding:0 10px;font-size:12px}
 .zc-alert-more{grid-column:1/-1;margin:2px 0 0;font-size:12px;color:var(--z-faint)}
 @media (max-width:640px){.zc-two,.zc-totals{grid-template-columns:1fr}.zc-history time{width:78px}}
+
+/* Add to task (from a chat message) */
+.zn-status-pick{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.zn-status-pick button{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--z-border);background:var(--z-panel);color:var(--z-fg);font-size:13px;font-weight:600}
+.zn-status-pick button i{width:8px;height:8px;border-radius:50%}
+.zn-status-pick button.is-on{color:#fff}
+.zn-status-pick button.is-on i{background:#fff!important}
+.zn-task-done{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--z-fg)}
+.zn-task-done svg{color:#16a34a;flex:none}
