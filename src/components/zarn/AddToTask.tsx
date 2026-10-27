@@ -19,9 +19,11 @@ export default function AddToTask({m,onClose}:{m:ZMessage;onClose:()=>void}){
  const ch=channels.find(c=>c.id===m.channel_id);
  const fixedProject=ch?.kind==='project'?ch.project_id??null:null,leadId=ch?.kind==='client'?ch.lead_id:null;
  const text=plain(m.body,people).trim(),author=m.user_id?people[m.user_id]?.display_name??m.author_name??'Someone':m.author_name??'Someone';
- const firstLine=text.split('\n').find(l=>l.trim())?.trim()??'';
+ // Voice notes, files and CRM cards have no text to name the task after, so describe what was sent.
+ const att=m.attachments[0],what=m.kind==='crm'?'CRM update':att?att.type.startsWith('audio/')?'voice note':att.name:'message';
+ const firstLine=text.split('\n').find(l=>l.trim())?.trim()||`Follow up on ${what} from ${author}`;
  const [name,setName]=useState(firstLine.length>120?`${firstLine.slice(0,117)}…`:firstLine);
- const [description,setDescription]=useState(`${text}\n\nFrom ${author} in ${ch?channelName(ch):'chat'}, ${new Date(m.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})} ${timeOf(m.created_at)}`.trim());
+ const [description,setDescription]=useState(`${text||(att?m.attachments.map(a=>a.name).join(', '):'')}\n\nFrom ${author} in ${ch?channelName(ch):'chat'}, ${new Date(m.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'})} ${timeOf(m.created_at)}`.trim());
  const [status,setStatus]=useState('todo'),[priority,setPriority]=useState<Priority>('medium'),[due,setDue]=useState('');
  const [projectId,setProjectId]=useState(fixedProject??''),[assignees,setAssignees]=useState<string[]>([me.user_id]);
  const [scoped,setScoped]=useState<{key:string;ids:string[]}|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState(false);

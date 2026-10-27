@@ -84,12 +84,12 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
    <button type="button" aria-label="More reactions" data-tip="React" onClick={()=>setPicker(v=>!v)}><SmilePlus size={15}/></button>
    {!inThread&&<button type="button" aria-label="Reply in thread" data-tip="Reply in thread" onClick={()=>onThread?.(m)}><MessageSquareText size={15}/></button>}
    <button type="button" aria-label={saved[m.id]?'Remove from saved':'Save for later'} data-tip={saved[m.id]?'Saved. Click to remove':'Save for later'} onClick={()=>void toggleSaved(m)} className={saved[m.id]?'is-on':''}><Bookmark size={15} fill={saved[m.id]?'currentColor':'none'}/></button>
-   {me.account_type==='member'&&m.kind==='user'&&<button type="button" aria-label="Add to task" data-tip="Add to task" onClick={()=>setTasking(true)}><ListPlus size={15}/></button>}
+   {me.account_type==='member'&&<button type="button" aria-label="Add to task" data-tip="Add to task" onClick={()=>setTasking(true)}><ListPlus size={15}/></button>}
    {!inThread&&<button type="button" aria-label={m.pinned_at?'Unpin':'Pin'} data-tip={m.pinned_at?'Unpin':'Pin to channel'} onClick={pin}><Pin size={15}/></button>}
    {mine&&<button type="button" aria-label="Edit" data-tip="Edit" onClick={()=>{setDraft(tokensToText(m.body,people));setEditing(true);}}><Pencil size={15}/></button>}
    {mine&&<button type="button" aria-label="Delete" data-tip="Delete" className="is-danger" onClick={()=>setConfirm(true)}><Trash2 size={15}/></button>}
   </div>}
-  {canAct&&m.kind==='crm'&&<div className="zn-actions">{quickReactions.slice(0,3).map(e=><button key={e} type="button" aria-label={`React ${e}`} onClick={()=>void toggle(e)}>{e}</button>)}{!inThread&&<button type="button" aria-label="Reply in thread" onClick={()=>onThread?.(m)}><MessageSquareText size={15}/></button>}</div>}
+  {canAct&&m.kind==='crm'&&<div className="zn-actions">{quickReactions.slice(0,3).map(e=><button key={e} type="button" aria-label={`React ${e}`} onClick={()=>void toggle(e)}>{e}</button>)}{!inThread&&<button type="button" aria-label="Reply in thread" onClick={()=>onThread?.(m)}><MessageSquareText size={15}/></button>}{me.account_type==='member'&&<button type="button" aria-label="Add to task" data-tip="Add to task" onClick={()=>setTasking(true)}><ListPlus size={15}/></button>}</div>}
   {picker&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setPicker(false)}/><div className="zn-picker">{quickReactions.concat(['😮','😢','💯','🚀','👏','🤝','💡','⏳']).map(e=><button key={e} type="button" onClick={()=>void toggle(e)}>{e}</button>)}</div></>}
   {doc!==null&&m.attachments[doc]&&<DocViewer messageId={m.id} index={doc} att={m.attachments[doc]!} onClose={()=>setDoc(null)}/>}
   {viewer!==null&&<Viewer m={m} index={viewer} onIndex={setViewer} onClose={()=>setViewer(null)}/>}
