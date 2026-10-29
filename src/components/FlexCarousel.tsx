@@ -400,14 +400,21 @@ const FlexCarousel = ({
     const container = containerRef.current;
     if (!container) return undefined;
 
-    const renderer = new Renderer({
-      dpr: Math.min(window.devicePixelRatio || 1, 2),
-      alpha: true,
-      premultipliedAlpha: true,
-      antialias: false,
-      depth: false,
-    });
+    // OGL throws when the browser can't create a WebGL context (GPU off or blocklisted)
+    let renderer: Renderer;
+    try {
+      renderer = new Renderer({
+        dpr: Math.min(window.devicePixelRatio || 1, 2),
+        alpha: true,
+        premultipliedAlpha: true,
+        antialias: false,
+        depth: false,
+      });
+    } catch {
+      return undefined;
+    }
     const gl = renderer.gl;
+    if (!gl) return undefined;
     if (!renderer.isWebgl2) {
       gl.getExtension("WEBGL_lose_context")?.loseContext();
       return undefined;
