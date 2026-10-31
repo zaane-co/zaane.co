@@ -2,13 +2,14 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,List,ListChecks,ListFilter,MessageSquare,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
+import {FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,LayoutTemplate,List,ListChecks,ListFilter,MessageSquare,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
 import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal,PeoplePicker} from './Dialogs';
 import AddStatusDialog from './AddStatusDialog';
 import ProjectBrief from './ProjectBrief';
 import AssigneePicker from './AssigneePicker';
 import {NewProject} from './Projects';
+import TemplateDialog from './Templates';
 import {Avatar,dayOf,timeOf} from './format';
 import SavedMessages from './SavedMessages';
 import ChannelView from './ChannelView';
@@ -52,7 +53,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  const [project,setProject]=useState<ZProject|null|undefined>(multi?null:undefined),[members,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
  const [view,setView]=useState<View>(id?'chat':'list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
- const [formMembers,setFormMembers]=useState<string[]|null>(null);
+ const [formMembers,setFormMembers]=useState<string[]|null>(null),[templates,setTemplates]=useState<{save?:boolean}|null>(null);
 
  useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!multi&&(v==='brief'||v==='chat')))setView(v);},[mine,multi]);
  const pick=(v:View)=>{setView(v);window.history.replaceState(null,'',`?view=${v}`);};
@@ -225,7 +226,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
    {!mine&&<div className="zp-head-right">
     <button type="button" className="zp-members" aria-label="Project members" data-tip="Members" onClick={()=>setShowMembers(true)}><Stack ids={members} max={4}/></button>
     <button type="button" className="zp-btn" onClick={()=>setInviting(true)}><UserPlus size={15}/>Invite</button>
-    {canManage&&<div className="zp-menu"><button type="button" className="zp-icon-btn" aria-label="Project menu" onClick={()=>setMenu(v=>!v)}><Ellipsis size={17}/></button>{menu&&<div className="zp-menu-pop"><button type="button" onClick={()=>{setMenu(false);void deleteProject();}}><Trash2 size={14}/>Delete project</button></div>}</div>}
+    {canManage&&<div className="zp-menu"><button type="button" className="zp-icon-btn" aria-label="Project menu" onClick={()=>setMenu(v=>!v)}><Ellipsis size={17}/></button>{menu&&<div className="zp-menu-pop"><button type="button" disabled={!tasks.length} onClick={()=>{setMenu(false);setTemplates({save:true});}}><LayoutTemplate size={14}/>Save as template</button><button type="button" onClick={()=>{setMenu(false);void deleteProject();}}><Trash2 size={14}/>Delete project</button></div>}</div>}
    </div>}
   </header>}
   <div className="zp-bar">
@@ -234,6 +235,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
     <label className="zp-search"><Search size={14}/><input placeholder="Search" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search tasks"/></label>
     <Dropdown variant="toolbar" label="Priority" icon={<ListFilter size={14}/>} value={prio} onChange={v=>setPrio(v as 'all'|Priority)} options={[{value:'all',label:'All priorities'},...priorities.map(p=>({value:p.key,label:p.label}))]}/>
     <Dropdown variant="toolbar" label="Assignee" value={who} onChange={setWho} options={[{value:'all',label:'Everyone'},{value:'me',label:'Assigned to me'},...filterPeople.map(m=>({value:m,label:people[m]?.display_name??'Member'}))]}/>
+    <button type="button" className="zp-btn" onClick={()=>setTemplates({})}><LayoutTemplate size={15}/>Templates</button>
     <button type="button" className="zp-btn is-dark" onClick={()=>add()}><Plus size={15}/>New Task</button>
    </div>}
   </div>
@@ -260,6 +262,8 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   {openTask&&<TaskDrawer key={openTask.id} task={openTask} assignees={assign[openTask.id]??[]} typeOptions={typeOptions} projectLabel={openTask.project_id?projectName(openTask.project_id):'Personal'}
    loadMembers={()=>chipMembersFor(openTask.project_id)} onClose={()=>setOpen(null)} onPatch={v=>patch(openTask.id,v)} onToggle={u=>toggleAssignee(openTask,u)} onAddStatus={then=>setAddingStatus({then})} onDelete={()=>void remove(openTask.id)}/>}
   {showMembers&&<Modal title={`Members · ${members.length}`} onClose={()=>setShowMembers(false)}><ul className="zn-list zn-list-scroll zn-member-list">{members.map(u=>{const owner=project?.created_by===u,self=u===me.user_id;return <li key={u}><div className="zn-person"><Avatar m={people[u]} size={32}/><span><b>{people[u]?.display_name??'Member'}{self&&' (you)'}</b><small>{owner?'Owner':people[u]?.title||people[u]?.email||''}</small></span>{!owner&&(canManage||self)&&<button type="button" className="zn-remove" onClick={()=>void removeMember(u)}>{self?'Leave':'Remove'}</button>}</div></li>;})}</ul><div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={()=>{setShowMembers(false);setInviting(true);}}><UserPlus size={14}/>Invite</button><button type="button" className="zn-btn is-primary" onClick={()=>setShowMembers(false)}>Done</button></div></Modal>}
+  {templates&&<TemplateDialog target={{projectId:id??null,leadId:leadId??null}} candidates={id?members:leadId?clientTeam:everyone} onClose={()=>setTemplates(null)} onApplied={()=>{void load();void refreshDue();}}
+   start={templates.save?{name:`${project?.name??'Project'} template`,items:[...tasks].sort((a,b)=>a.position-b.position).map(t=>({title:t.title,...(t.type?{phase:t.type}:{}),...(t.description?{description:t.description.slice(0,1000)}:{}),...(t.priority==='high'?{priority:'high' as const}:{})}))}:undefined}/>}
   {addingStatus&&<AddStatusDialog onClose={()=>setAddingStatus(null)} onAdded={k=>addingStatus.then?.(k)}/>}
   {newProject&&<NewProject clientId={leadId} onClose={()=>setNewProject(null)} onCreated={pid=>newProject.then?.(pid)}/>}
   {inviting&&<PeoplePicker title="Invite to project" confirm="Invite" exclude={members} onClose={()=>setInviting(false)} onPick={invite}/>}
