@@ -3,9 +3,13 @@ import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
 import {aiConfigured,execute,turn} from '@/lib/zarn-ai';
 export const maxDuration=60;
+// Pasted documents can be long. The model gets the whole text for the turn; the saved chat keeps a shorter copy
+// (the column holds 8000 characters), and older long messages are trimmed when they are replayed as history.
+const MAX_MESSAGE=60000,STORED=7500,REPLAYED=3000;
+const clip=(t:string,n:number)=>t.length>n?`${t.slice(0,n)}\n[…${(t.length-n).toLocaleString('en-GB')} more characters not kept in this chat]`:t;
 const fail=(error:string,status=400)=>Response.json({error},{status});
 const body=z.discriminatedUnion('action',[
- z.object({action:z.literal('chat'),conversation_id:z.uuid().optional(),message:z.string().trim().min(1).max(2000)}),
+ z.object({action:z.literal('chat'),conversation_id:z.uuid().optional(),message:z.string().trim().min(1).max(MAX_MESSAGE)}),
  z.object({action:z.literal('confirm'),message_id:z.uuid()}),
  z.object({action:z.literal('cancel'),message_id:z.uuid()}),
 ]);
@@ -49,16 +53,18 @@ export async function POST(request:Request){
   if(error||!data)return fail('Could not start a conversation.',503);
   conversation=data.id as string;
  }
- const {data:userRow}=await me.db.from('zarn_ai_messages').insert({conversation_id:conversation,user_id:me.user_id,role:'user',content:b.message}).select('id').single();
+ const {data:userRow}=await me.db.from('zarn_ai_messages').insert({conversation_id:conversation,user_id:me.user_id,role:'user',content:clip(b.message,STORED)}).select('id').single();
  const [{data:past},{data:mem}]=await Promise.all([
   me.db.from('zarn_ai_messages').select('role,content').eq('conversation_id',conversation).order('created_at',{ascending:false}).limit(16),
   me.db.from('zarn_ai_memories').select('fact').order('created_at').limit(30),
  ]);
- const history=((past??[]) as {role:'user'|'assistant';content:string}[]).reverse().filter(m=>m.content);
+ const history=((past??[]) as {role:'user'|'assistant';content:string}[]).reverse().filter(m=>m.content).map(m=>({...m,content:clip(m.content,REPLAYED)}));
+ // The message just sent goes to the model in full.
+ if(history.length&&history[history.length-1].role==='user')history[history.length-1].content=b.message;
  try{
   const out=await turn(me,history,((mem??[]) as {fact:string}[]).map(m=>m.fact));
   const {data:saved}=await me.db.from('zarn_ai_messages').insert({conversation_id:conversation,user_id:me.user_id,role:'assistant',content:out.reply,proposal:out.proposal??null,state:out.proposal?'pending':null}).select('id').single();
   await me.db.from('zarn_ai_conversations').update({updated_at:new Date().toISOString()}).eq('id',conversation);
   return Response.json({conversation_id:conversation,user_message_id:userRow?.id,message_id:saved?.id,reply:out.reply,proposal:out.proposal});
- }catch(e){console.error('ZARN assistant failed:',e);return fail('The assistant couldn’t answer just now. Try again in a moment.',502);}
+ }catch(e){console.error('ZARN assistant failed:',e);return fail(e instanceof Error&&e.name==='TimeoutError'?'That was a lot to read and took too long. Try sending it in smaller parts.':'The assistant couldn’t answer just now. Try again in a moment.',502);}
 }
