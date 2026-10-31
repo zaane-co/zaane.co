@@ -3,7 +3,7 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState} from 're
 import {useRouter} from 'next/navigation';
 import {useCall} from './CallProvider';
 import {useConfirm} from './ConfirmProvider';
-import {Bell,BellOff,Briefcase,FolderKanban,Hash,Info,Lock,Phone,Pin,Star,Trash2,UserPlus,Video,X} from 'lucide-react';
+import {Bell,BellOff,Briefcase,FolderKanban,Hash,Info,Lock,Phone,Pin,Star,Trash2,UserPlus,UserRound,Video,X} from 'lucide-react';
 import {zarnApi,type ZChannel,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {useZarn,type ZEvent} from './ZarnProvider';
 import Message from './Message';
@@ -111,10 +111,11 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  const typersIn=(thread:string|null)=>Object.entries(typing).filter(([,v])=>v.thread===thread).map(([u])=>people[u]?.display_name).filter(Boolean) as string[];
  const typers=typersIn(null);
  const pinned=messages.filter(m=>m.pinned_at&&!m.deleted_at);
+ const dmIds=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[],dmPeer=dmIds.length===1?dmIds[0]:undefined;
  return <div className={`zn-channel${thread?' has-thread':''}`}>
   <div className="zn-chan-main">
    {!embedded&&<header className="zn-chan-head">
-    <button type="button" className="zn-chan-title" onClick={()=>{const other=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];if(other.length===1)profile(other[0]!);else setDetails(true);}}>{channel.kind==='dm'?null:channel.kind==='private'?<Lock size={16}/>:<Hash size={17}/>}<h1>{title(channel)}</h1></button>
+    <button type="button" className="zn-chan-title" onClick={()=>{const other=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];if(other.length===1)profile(other[0]!);else setDetails(true);}}>{channel.kind==='dm'?(dmPeer&&people[dmPeer]?<Avatar m={people[dmPeer]} size={28} online={z.online.has(dmPeer)}/>:null):channel.kind==='private'?<Lock size={16}/>:<Hash size={17}/>}<h1>{title(channel)}</h1></button>
     {(()=>{
      const dmOther=channel.kind==='dm'?(channel.dm_key??'').split(',').find(u=>u!==me.user_id):undefined;
      if(typers.length)return <p className="zn-topic is-typing">{channel.kind==='dm'?'typing':`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></p>;
@@ -147,14 +148,20 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
 }
 
 function ChannelIntro({c}:{c:ZChannel}){
- const {title}=useZarn();
+ const {title,people,me,online}=useZarn(),{profile}=useShell();
+ const ids=c.kind==='dm'?(c.dm_key??'').split(',').filter(u=>u!==me.user_id):[],peer=ids.length===1?people[ids[0]!]:undefined;
+ if(peer)return <div className="zn-intro is-person"><button type="button" className="zn-intro-avatar" aria-label={`${peer.display_name}’s profile`} onClick={()=>profile(peer.user_id)}><Avatar m={peer} size={72} online={online.has(peer.user_id)}/></button>
+  <h2><button type="button" className="zn-author-name" onClick={()=>profile(peer.user_id)}>{peer.display_name}</button></h2>
+  {(peer.title||peer.username)&&<p>{peer.title}{peer.title&&peer.username?' · ':''}{peer.username&&`@${peer.username}`}</p>}
+  <p>This is the start of your direct conversation with {peer.display_name.split(' ')[0]}.</p>
+  <button type="button" className="zn-btn" onClick={()=>profile(peer.user_id)}><UserRound size={14}/>View profile</button></div>;
  return <div className="zn-intro"><span className="zn-intro-icon">{c.kind==='dm'?'@':c.kind==='client'?<Briefcase size={22}/>:c.kind==='project'?<FolderKanban size={22}/>:c.kind==='private'?<Lock size={22}/>:<Hash size={24}/>}</span>
   <h2>{c.kind==='dm'?title(c):c.kind==='client'?`${title(c)} team chat`:c.kind==='project'?`${c.name} team chat`:`Welcome to #${c.name}`}</h2>
   <p>{c.kind==='client'?'Private to this client’s team and admins. Nobody else on ZARN can see it.':c.kind==='project'?'Everyone on this project is here. Add people to the project and they join the chat too.':c.kind==='dm'?'This is the start of your direct conversation.':c.crm_feed?`CRM updates (${c.crm_feed==='leads'?'new leads and stage changes':'invoices sent and paid'}) are posted here automatically.`:c.topic||'This is the very beginning of the channel.'}</p></div>;
 }
 
 function Thread({parent,typers,onTyping,onClose}:{parent:ZMessage;typers:string[];onTyping:()=>void;onClose:()=>void}){
- const {db,subscribe,me,people}=useZarn();
+ const {db,subscribe,me,people}=useZarn(),{profile:profileOf}=useShell();
  const [replies,setReplies]=useState<ZMessage[]>([]),[reactions,setReactions]=useState<ZReaction[]>([]);
  const end=useRef<HTMLDivElement>(null);
  const loadReplies=useCallback(async()=>{
@@ -179,7 +186,7 @@ function Thread({parent,typers,onTyping,onClose}:{parent:ZMessage;typers:string[
  }),[subscribe,parent.id]);
  useEffect(()=>{end.current?.scrollIntoView({block:'end'});},[replies.length]);
  return <aside className="zn-thread">
-  <header><div><h2>Thread</h2><small>{parent.kind==='crm'?'CRM update':people[parent.user_id??'']?.display_name??''}</small></div><button type="button" aria-label="Close thread" onClick={onClose}><X size={18}/></button></header>
+  <header><div><h2>Thread</h2><small>{parent.kind==='crm'?'CRM update':parent.user_id&&people[parent.user_id]?<button type="button" className="zn-thread-author" onClick={()=>profileOf(parent.user_id!)}>{people[parent.user_id]!.display_name}</button>:''}</small></div><button type="button" aria-label="Close thread" onClick={onClose}><X size={18}/></button></header>
   <div className="zn-thread-body" data-lenis-prevent>
    <Message m={parent} reactions={reactions.filter(r=>r.message_id===parent.id)} compact={false} inThread/>
    <div className="zn-thread-count"><span>{replies.length} repl{replies.length===1?'y':'ies'}</span></div>

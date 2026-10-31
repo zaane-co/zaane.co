@@ -927,12 +927,19 @@ textarea.zp-input{height:auto;padding:9px 10px;line-height:1.55;resize:vertical;
 .zai-msg.is-error p{background:#dc2626;color:#fff}
 .zai-proposal{display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--z-border);background:var(--z-bg);font-size:13.5px;line-height:1.5}
 .zai-proposal>div{display:flex;gap:8px}
+.zai-proposal>span{white-space:pre-line;max-height:320px;overflow-y:auto;word-break:break-word}
 .zai-proposal.is-done{border-color:#16a34a}.zai-proposal.is-cancelled{opacity:.55}
 .zai-proposal small{font-weight:700;color:var(--z-muted)}
 .zai-typing{display:inline-flex;align-items:center;gap:8px;color:var(--z-muted)}
 .zai-spin{animation:zai-spin 1s linear infinite}@keyframes zai-spin{to{transform:rotate(360deg)}}
-.zai-form{display:flex;gap:8px;padding:12px 18px 16px;border-top:1px solid var(--z-border)}
-.zai-form input{flex:1;height:40px;padding:0 14px;border-radius:12px;border:1px solid var(--z-border);background:var(--z-input);color:var(--z-fg);font:inherit;font-size:14px;outline:0}
+.zai-form{display:flex;flex-direction:column;gap:8px;padding:12px 18px 16px;border-top:1px solid var(--z-border)}
+.zai-row{display:flex;align-items:flex-end;gap:8px}
+.zai-form textarea{flex:1;min-height:40px;max-height:160px;padding:9px 14px;border-radius:12px;border:1px solid var(--z-border);background:var(--z-input);color:var(--z-fg);font:inherit;font-size:14px;line-height:1.5;outline:0;resize:none}
+.zai-attached{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.zai-file{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 10px;border-radius:999px;border:1px solid var(--z-border);background:var(--z-panel);font-size:12.5px}
+.zai-file button{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;color:var(--z-muted)}
+.zai-attached small{color:#dc2626;font-weight:600}
+.zai-more{display:block;margin-top:6px;font:inherit;font-size:12.5px;font-weight:700;text-decoration:underline;color:inherit;opacity:.85}
 /* Voice calls */
 .zn-call-scrim{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:16px;background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
 .zn-call{position:relative;box-sizing:border-box;width:100%;max-width:300px;display:flex;flex-direction:column;align-items:center;gap:18px;padding:32px 22px 24px;border-radius:24px;background:var(--z-panel-2);color:var(--z-fg);border:1px solid var(--z-muted);box-shadow:0 30px 80px rgba(0,0,0,.6);text-align:center}
@@ -1363,3 +1370,40 @@ html[data-kb] .zn-prompt{display:none}
 .zn-status-pick button.is-on i{background:#fff!important}
 .zn-task-done{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--z-fg)}
 .zn-task-done svg{color:#16a34a;flex:none}
+
+/* Task templates */
+.zt-scroll{display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;flex:1;padding:2px}
+.zt-form{display:flex;flex-direction:column;gap:12px;min-height:0;flex:1}
+.zt-list{display:flex;flex-direction:column;gap:8px}
+.zt-list button{display:flex;align-items:flex-start;gap:12px;width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--z-border);background:var(--z-bg);text-align:left}
+.zt-list button:hover{background:var(--z-hover)}
+.zt-icon{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:10px;background:var(--z-accent);color:#fff}
+.zt-main{display:flex;flex-direction:column;gap:3px;min-width:0}
+.zt-main small{color:var(--z-muted);font-size:13px;line-height:1.45}
+.zt-main em{font-style:normal;font-size:12px;font-weight:700;color:var(--z-muted)}
+.zt-back{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;font-size:13px;font-weight:700;color:var(--z-muted)}
+.zt-phase{border:1px solid var(--z-border);border-radius:12px;overflow:hidden}
+.zt-phase-head{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--z-panel-2);cursor:pointer}
+.zt-phase-head .zp-count{margin-left:auto}
+.zt-phase ul{display:flex;flex-direction:column}
+.zt-phase li label{display:flex;align-items:flex-start;gap:10px;padding:9px 14px;border-top:1px solid var(--z-border);cursor:pointer;font-size:13.5px;line-height:1.45}
+.zt-phase li span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.zt-phase li small{color:var(--z-muted);font-size:12.5px}
+.zt-phase input[type=checkbox]{flex:none;margin-top:3px;accent-color:var(--z-accent)}
+.zt-high{margin-left:8px;padding:1px 7px;border-radius:999px;background:#dc2626;color:#fff;font-style:normal;font-size:11px;font-weight:700}
+.zt-outline{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.55;resize:vertical}
+.zt-help{font-size:12.5px;line-height:1.5}.zt-help code{padding:1px 5px;border-radius:5px;background:var(--z-panel-2);font-size:12px}
+.zt-count{font-size:13px;font-weight:700}
+
+/* Dragging a file over ZARN: show where it will land */
+.zarn.is-file-drag .zn-composer{border-color:var(--z-accent);box-shadow:0 0 0 3px var(--z-accent)}
+.zarn.is-file-drag .zn-composer::after{content:'Drop to attach';position:absolute;inset:0;display:grid;place-items:center;border-radius:12px;background:var(--z-panel);color:var(--z-fg);font-weight:700;font-size:14px;pointer-events:none}
+
+/* Opening profiles from DMs */
+.zn-mention[data-uid]{cursor:pointer}.zn-mention[data-uid]:hover{text-decoration:underline}
+.zn-chan-title .zn-avatar{flex:none}
+.zn-intro.is-person{display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.zn-intro.is-person .zn-intro-avatar{border-radius:20px;margin-bottom:8px}
+.zn-intro.is-person .zn-author-name{font-size:22px;letter-spacing:-.02em}
+.zn-intro.is-person .zn-btn{margin-top:10px}
+.zn-thread-author{padding:0;font:inherit;color:inherit}.zn-thread-author:hover{text-decoration:underline}

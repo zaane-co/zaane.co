@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
 import {FileText,Bookmark,FolderKanban,Sparkles,Hash,AtSign,BarChart3,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
@@ -41,8 +42,26 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const routeArea=areaOf(pathname);
  const [area,setArea]=useState<Area>(routeArea);
  // Follow the route's area whenever the route changes.
- const [seenPath,setSeenPath]=useState(pathname);
+ const [seenPath,setSeenPath]=useState(pathname),[fileDrag,setFileDrag]=useState(false);
  if(seenPath!==pathname){setSeenPath(pathname);setArea(routeArea);setMenu(false);setQuick(false);}
+ // A file dropped outside a drop area would make the browser open it and leave ZARN. Stop that everywhere and hand the
+ // file to the open message box. Drop areas that handle it themselves (the message box, Files, the assistant) never reach here.
+ useEffect(()=>{
+  let depth=0;
+  const enter=(e:DragEvent)=>{if(isFileDrag(e)){depth++;setFileDrag(true);}};
+  const over=(e:DragEvent)=>{if(isFileDrag(e))e.preventDefault();};
+  const leave=(e:DragEvent)=>{if(isFileDrag(e)){depth=Math.max(0,depth-1);if(!depth)setFileDrag(false);}};
+  // Capture phase, so the highlight clears even when a drop area stops the event from bubbling up.
+  const done=()=>{depth=0;setFileDrag(false);};
+  const drop=(e:DragEvent)=>{
+   if(!isFileDrag(e)||e.defaultPrevented)return;
+   e.preventDefault();
+   if(e.dataTransfer?.files.length)deliverDrop(e.dataTransfer.files);
+  };
+  window.addEventListener('dragenter',enter);window.addEventListener('dragover',over);window.addEventListener('dragleave',leave);window.addEventListener('drop',drop);
+  window.addEventListener('drop',done,true);window.addEventListener('dragend',done,true);
+  return()=>{window.removeEventListener('dragenter',enter);window.removeEventListener('dragover',over);window.removeEventListener('dragleave',leave);window.removeEventListener('drop',drop);window.removeEventListener('drop',done,true);window.removeEventListener('dragend',done,true);};
+ },[]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setDialog('search');}if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='j'&&me.account_type!=='guest'){e.preventDefault();setDialog(d=>d==='assistant'?null:'assistant');}};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[]);
 
  const shownClients=clients.filter(c=>z.title(c).toLowerCase().includes(clientQ.toLowerCase()));
@@ -66,7 +85,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
  return <ConfirmProvider><CallProvider><ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
- <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}`} data-lenis-prevent>
+ <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}${fileDrag&&hasDropTarget()?' is-file-drag':''}`} data-lenis-prevent>
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
     <button type="button" className="zn-rail-logo" aria-label="Workspace menu" onClick={()=>setMenu(v=>!v)}><img src="/zarnlogo.png" alt="ZARN"/></button>

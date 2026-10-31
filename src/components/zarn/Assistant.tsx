@@ -1,8 +1,9 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {Brain,Check,ChevronLeft,History,Loader2,MessageSquarePlus,Plus,Send,Sparkles,Trash2,X} from 'lucide-react';
+import {Brain,Check,ChevronLeft,History,Loader2,MessageSquarePlus,Paperclip,Plus,Send,Sparkles,Trash2,X} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {dayOf} from './format';
+import {isFileDrag} from './drop';
 
 type Proposal={tool:string;args:unknown;summary:string};
 type Item={id:string;role:'user'|'assistant';content:string;error?:boolean;proposal?:Proposal|null;state?:'pending'|'done'|'cancelled'|null};
@@ -12,6 +13,8 @@ type Row={id:string;role:'user'|'assistant';content:string;proposal:Proposal|nul
 const KEY='zarn:assistant:conversation';
 const suggestions=['What did I miss?','What’s overdue for me?','Find my chat with Isaac about the pricing page','Send Isaac a message asking if the homepage is ready'];
 const uid=()=>Math.random().toString(36).slice(2);
+const MAX_CHARS=60000;
+const ATTACH_TYPES='.txt,.md,.markdown,.csv,.json,.html,.log,text/plain';
 
 // Slide-over chat. Conversations and notes are saved, reads happen straight away, and any change shows a confirm card first.
 export default function Assistant({onClose}:{onClose:()=>void}){
@@ -19,7 +22,7 @@ export default function Assistant({onClose}:{onClose:()=>void}){
  const [view,setView]=useState<'chat'|'history'|'memory'>('chat');
  const [conversation,setConversation]=useState<string|null>(()=>{try{return sessionStorage.getItem(KEY);}catch{return null;}});
  const [items,setItems]=useState<Item[]>([]),[convos,setConvos]=useState<Convo[]|null>(null),[memories,setMemories]=useState<Memory[]|null>(null);
- const [text,setText]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(!!conversation),end=useRef<HTMLDivElement>(null);
+ const [text,setText]=useState(''),[file,setFile]=useState<{name:string;text:string}|null>(null),[fileError,setFileError]=useState(''),fileInput=useRef<HTMLInputElement>(null),box=useRef<HTMLTextAreaElement>(null),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(!!conversation),end=useRef<HTMLDivElement>(null);
 
  const open=useCallback(async(id:string|null)=>{
   setConversation(id);setView('chat');
@@ -44,14 +47,24 @@ export default function Assistant({onClose}:{onClose:()=>void}){
   return out as {conversation_id?:string;message_id?:string;reply?:string;proposal?:Proposal;posted?:string};
  }
  async function send(q:string){
-  const content=q.trim();if(!content||busy)return;
-  setItems(n=>[...n,{id:uid(),role:'user',content}]);setText('');setBusy(true);
+  const typed=q.trim(),content=file?`${typed||'Turn this document into tasks.'}\n\n--- ${file.name} ---\n${file.text}`:typed;
+  if(!content||busy)return;
+  if(content.length>MAX_CHARS){setFileError(`That is ${content.length.toLocaleString('en-GB')} characters. The limit is ${MAX_CHARS.toLocaleString('en-GB')}, so send it in parts.`);return;}
+  setItems(n=>[...n,{id:uid(),role:'user',content}]);setText('');setFile(null);setFileError('');setBusy(true);
   try{
    const out=await call({action:'chat',conversation_id:conversation??undefined,message:content});
    if(out.conversation_id&&out.conversation_id!==conversation){setConversation(out.conversation_id);try{sessionStorage.setItem(KEY,out.conversation_id);}catch{/* private mode */}}
    setItems(n=>[...n,{id:out.message_id??uid(),role:'assistant',content:out.reply??'',proposal:out.proposal??null,state:out.proposal?'pending':null}]);
   }catch(e){setItems(n=>[...n,{id:uid(),role:'assistant',content:e instanceof Error?e.message:'Something went wrong.',error:true}]);}
   finally{setBusy(false);}
+ }
+ async function attach(e:React.ChangeEvent<HTMLInputElement>){const f=e.target.files?.[0];e.target.value='';if(f)await readFile(f);}
+ async function readFile(f:File){
+  if(f.size>MAX_CHARS*4){setFileError('That file is too big. Paste the part you need instead.');return;}
+  const t=(await f.text().catch(()=>'')).replace(/\0/g,'').trim();
+  if(!t){setFileError('I could only read plain text files (.txt, .md, .csv). For a PDF or Word file, copy the text and paste it.');return;}
+  if(t.length>MAX_CHARS){setFileError(`That file is ${t.length.toLocaleString('en-GB')} characters. The limit is ${MAX_CHARS.toLocaleString('en-GB')}, so send it in parts.`);return;}
+  setFile({name:f.name,text:t});setFileError('');box.current?.focus();
  }
  async function confirm(item:Item){
   setBusy(true);
@@ -74,7 +87,7 @@ export default function Assistant({onClose}:{onClose:()=>void}){
  async function removeMemory(id:string){setMemories(m=>(m??[]).filter(x=>x.id!==id));await db.from('zarn_ai_memories').delete().eq('id',id);}
 
  return <><button type="button" className="zp-scrim" aria-label="Close assistant" onClick={onClose}/>
-  <aside className="zp-drawer zai" role="dialog" aria-label="Assistant">
+  <aside className="zp-drawer zai" role="dialog" aria-label="Assistant" onDragOver={e=>{if(isFileDrag(e))e.preventDefault();}} onDrop={e=>{if(!isFileDrag(e))return;e.preventDefault();e.stopPropagation();const f=e.dataTransfer.files[0];if(f)void readFile(f);}}>
    <header>{view==='chat'?<b className="zai-title"><Sparkles size={16}/>Assistant</b>:<button type="button" className="zai-back" onClick={()=>setView('chat')}><ChevronLeft size={16}/>{view==='history'?'History':'Memory'}</button>}
     <div className="zp-drawer-actions">
      <button type="button" className="zp-icon-btn" aria-label="New chat" data-tip="New chat" onClick={()=>void open(null)}><MessageSquarePlus size={16}/></button>
@@ -101,7 +114,7 @@ export default function Assistant({onClose}:{onClose:()=>void}){
     {!loading&&!items.length&&<div className="zai-empty"><Sparkles size={26}/><h2>How can I help?</h2><p>Ask what you missed, find an old chat, message someone, or have me create and assign work. I always ask before changing or sending anything.</p>
      <div className="zai-chips">{suggestions.map(s=><button key={s} type="button" onClick={()=>void send(s)}>{s}</button>)}</div></div>}
     {items.map(i=><div key={i.id} className={`zai-msg is-${i.role}${i.error?' is-error':''}`}>
-     {i.role==='assistant'?<AiText text={i.content}/>:<p>{i.content}</p>}
+     {i.role==='assistant'?<AiText text={i.content}/>:<UserText text={i.content}/>}
      {i.proposal&&<div className={`zai-proposal is-${i.state}`}>
       <span>{i.proposal.summary}</span>
       {i.state==='pending'?<div><button type="button" className="zn-btn is-primary" disabled={busy} onClick={()=>void confirm(i)}><Check size={14}/>Confirm</button><button type="button" className="zn-btn" disabled={busy} onClick={()=>void cancel(i)}>Cancel</button></div>
@@ -112,10 +125,24 @@ export default function Assistant({onClose}:{onClose:()=>void}){
     <div ref={end}/>
    </div>
    <form className="zai-form" onSubmit={e=>{e.preventDefault();void send(text);}}>
-    <input value={text} maxLength={2000} placeholder="Ask or tell me what to do…" onChange={e=>setText(e.target.value)} aria-label="Message the assistant" autoFocus/>
-    <button type="submit" className="zn-btn is-primary" disabled={busy||!text.trim()} aria-label="Send"><Send size={15}/></button>
+    {(file||fileError)&&<div className="zai-attached">{file&&<span className="zai-file"><Paperclip size={13}/>{file.name} · {file.text.length.toLocaleString('en-GB')} characters<button type="button" aria-label="Remove file" onClick={()=>setFile(null)}><X size={13}/></button></span>}{fileError&&<small role="alert">{fileError}</small>}</div>}
+    <div className="zai-row">
+     <input ref={fileInput} type="file" accept={ATTACH_TYPES} hidden onChange={e=>void attach(e)}/>
+     <button type="button" className="zp-icon-btn" aria-label="Attach a text file" data-tip="Attach a document" disabled={busy} onClick={()=>fileInput.current?.click()}><Paperclip size={16}/></button>
+     <textarea ref={box} rows={1} value={text} maxLength={MAX_CHARS} placeholder={file?'What should I do with it? (or just send)':'Ask, or paste a document to turn into tasks…'} aria-label="Message the assistant" autoFocus
+      onChange={e=>{setText(e.target.value);setFileError('');e.target.style.height='auto';e.target.style.height=`${Math.min(e.target.scrollHeight,160)}px`;}}
+      onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send(text);}}}/>
+     <button type="submit" className="zn-btn is-primary" disabled={busy||(!text.trim()&&!file)} aria-label="Send"><Send size={15}/></button>
+    </div>
    </form></>}
   </aside></>;
+}
+
+// A pasted document would fill the whole chat, so long messages show the start and open on tap.
+function UserText({text}:{text:string}){
+ const [open,setOpen]=useState(false),LIMIT=500;
+ if(text.length<=LIMIT)return <p>{text}</p>;
+ return <p>{open?text:`${text.slice(0,LIMIT).trimEnd()}…`}<button type="button" className="zai-more" onClick={()=>setOpen(o=>!o)}>{open?'Show less':`Show all ${text.length.toLocaleString('en-GB')} characters`}</button></p>;
 }
 
 // Replies come back with light markdown (bold and bullet lists). Show that as formatting instead of stars.

@@ -47,13 +47,13 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
  if(m.deleted_at)return <div className={`zn-msg${compact?' is-compact':''}`}><div className="zn-gutter">{!compact&&<Avatar m={author} name={m.author_name}/>}</div><div className="zn-msg-main"><p className="zn-deleted">This message was deleted.</p></div></div>;
 
  // Touch screens have no hover: tapping a message (not a link or button) shows its action bar.
- const onTap=(e:React.MouseEvent)=>{if(!window.matchMedia('(hover: none)').matches)return;if((e.target as HTMLElement).closest('a,button,textarea,input'))return;setTapped(v=>!v);};
+ const onTap=(e:React.MouseEvent)=>{if(!window.matchMedia('(hover: none)').matches)return;if((e.target as HTMLElement).closest('a,button,textarea,input,[data-uid]'))return;setTapped(v=>!v);};
  return <div className={`zn-msg${compact?' is-compact':''}${m.pinned_at?' is-pinned':''}${m.pending?' is-pending':''}${tapped?' is-tapped':''}`} id={`m-${m.id}`} onClick={onTap}>
   <div className="zn-gutter">{compact?<time className="zn-hover-time">{timeOf(m.created_at)}</time>:m.kind==='crm'?<span className="zn-crm-ico"><TrendingUp size={14}/></span>:<button type="button" className="zn-author-btn" aria-label={`${author?.display_name??'Member'}’s profile`} onClick={()=>m.user_id&&profile(m.user_id)}><Avatar m={author} name={m.author_name}/></button>}</div>
   <div className="zn-msg-main">
    {!compact&&<p className={`zn-msg-head${m.kind==='crm'?' is-crm':''}`}>{m.kind==='crm'?<b>CRM</b>:<button type="button" className="zn-author-name" onClick={()=>m.user_id&&profile(m.user_id)}>{author?.display_name??m.author_name??'Former member'}</button>}{m.kind!=='crm'&&<StatusMark m={author}/>}{m.kind==='crm'&&<span className="zn-app-tag">APP</span>}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time>{m.pinned_at&&<span className="zn-pin-tag"><Pin size={11}/>Pinned</span>}</p>}
    {editing?<div className="zn-edit"><textarea autoFocus value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void saveEdit();}if(e.key==='Escape')setEditing(false);}}/><div><button type="button" onClick={()=>setEditing(false)}>Cancel</button><button type="button" className="is-primary" onClick={()=>void saveEdit()}>Save</button></div></div>
-    :m.body&&<div className="zn-body">{renderBody(m.body,people,me.user_id)}{m.edited_at&&<span className="zn-edited"> (edited)</span>}</div>}
+    :m.body&&<div className="zn-body" onClick={e=>{const u=(e.target as HTMLElement).closest<HTMLElement>('[data-uid]')?.dataset.uid;if(u)profile(u);}}>{renderBody(m.body,people,me.user_id)}{m.edited_at&&<span className="zn-edited"> (edited)</span>}</div>}
    {m.body&&!m.deleted_at&&!editing&&m.kind==='user'&&(()=>{const u=firstLink(m.body);return u?<LinkPreview url={u}/>:null;})()}
    {m.kind==='crm'&&<CrmEvent m={m}/>}
    {m.kind!=='crm'&&m.lead_id&&<LeadCard id={m.lead_id}/>}

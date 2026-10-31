@@ -5,6 +5,7 @@ import {optimizeImage} from '@/components/admin/blog/shared';
 import type {ZAttachment,ZLead,ZMember} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,textToTokens} from './format';
+import {registerDrop} from './drop';
 
 type Upload=ZAttachment&{uploading?:boolean;error?:string;tmp:string};
 // Message box: @mentions with autocomplete, file attachments, a CRM lead card, Enter to send.
@@ -114,6 +115,9 @@ function micDown(e:React.PointerEvent){
    }catch(e){setFiles(f=>f.map(x=>x.tmp===tmp?{...x,uploading:false,error:e instanceof Error?e.message:'Upload failed.'}:x));}
   }
  }
+ // Accept files dropped anywhere in ZARN while this box is the newest one open.
+ const addRef=useRef(addFiles);addRef.current=addFiles;
+ useEffect(()=>disabled?undefined:registerDrop(f=>void addRef.current(f)),[disabled]);
  async function send(){
   const body=isDm?text.trim():textToTokens(text.trim(),members),ready=files.filter(f=>f.key&&!f.uploading&&!f.error);
   if((!body&&!ready.length&&!leadId)||sending)return;
@@ -153,7 +157,7 @@ function micDown(e:React.PointerEvent){
  if(disabled)return <div className="zn-composer is-disabled">{disabled}</div>;
  const l=leadId?lead(leadId):undefined;
  const hasContent=!!text.trim()||files.length>0||!!leadId;
- return <div className="zn-composer" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();void addFiles(e.dataTransfer.files);}}>
+ return <div className="zn-composer" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();e.stopPropagation();void addFiles(e.dataTransfer.files);}}>
   {mention&&options.length>0&&<ul className="zn-suggest" role="listbox">{options.map((o,i)=><li key={o.id} role="option" aria-selected={i===pick} className={i===pick?'is-on':''} onMouseDown={e=>{e.preventDefault();choose(o);}}>{o.m?<Avatar m={o.m} size={22}/>:<AtSign size={16}/>}<b>{o.label}</b>{o.m&&<small>{o.m.username?`@${o.m.username}`:''}{o.m.username&&o.m.title?' · ':''}{o.m.title}</small>}{!o.m&&<small>Notify everyone in this channel</small>}</li>)}</ul>}
   {outsiders.length>0&&<div className="zn-outsiders" role="status"><span>{outsiders.map(u=>people[u]?.display_name??'Someone').join(', ')} {outsiders.length>1?'aren’t':'isn’t'} in this private channel, so {outsiders.length>1?'they':'they'} won’t see your message.</span><button type="button" className="zn-btn is-primary" onClick={()=>void inviteOutsiders()}>Invite</button><button type="button" className="zn-btn" onClick={()=>setOutsiders([])}>Dismiss</button></div>}
   {note&&<div className="zn-outsiders is-ok" role="status">{note}</div>}

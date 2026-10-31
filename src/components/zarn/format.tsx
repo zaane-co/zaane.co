@@ -13,7 +13,7 @@ function inlineNodes(text:string,people:Record<string,ZMember>,me:string,key:str
   if(part.startsWith('~')&&part.endsWith('~')&&part.length>2)return <s key={k}>{part.slice(1,-1)}</s>;
   if(/^https?:\/\//.test(part))return <a key={k} href={part} target="_blank" rel="noopener noreferrer">{part}</a>;
   const m=part.match(/^<@([0-9a-f-]{36})>$/);
-  if(m)return <span key={k} className={`zn-mention${m[1]===me?' is-me':''}`}>@{people[m[1]!]?.display_name??'former member'}</span>;
+  if(m)return <span key={k} className={`zn-mention${m[1]===me?' is-me':''}`} data-uid={people[m[1]!]?m[1]:undefined}>@{people[m[1]!]?.display_name??'former member'}</span>;
   if(part==='<!channel>')return <span key={k} className="zn-mention is-me">@channel</span>;
   return <Fragment key={k}>{part}</Fragment>;
  });

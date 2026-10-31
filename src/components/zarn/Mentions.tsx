@@ -4,11 +4,12 @@ import Link from 'next/link';
 import {AtSign} from 'lucide-react';
 import {channelHref,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
+import {useShell} from './nav';
 import {Avatar,dayOf,renderBody,timeOf} from './format';
 
 // Everywhere you were @mentioned, newest first.
 export default function Mentions(){
- const {db,me,people,channels,title}=useZarn();
+ const {db,me,people,channels,title}=useZarn(),{profile}=useShell();
  const [rows,setRows]=useState<(ZMessage&{read_at:string|null})[]>([]),[loading,setLoading]=useState(true);
  useEffect(()=>{void (async()=>{
   const {data:m}=await db.from('zarn_mentions').select('message_id,read_at').eq('user_id',me.user_id).order('created_at',{ascending:false}).limit(100);
@@ -23,7 +24,7 @@ export default function Mentions(){
   <div className="zn-crm-list" data-lenis-prevent>
    {loading?<p className="zn-loading">Loading…</p>:rows.length?rows.map(m=>{const c=channels.find(x=>x.id===m.channel_id);return <Link key={m.id} href={channelHref(c,m.channel_id)} className={`zn-mention-row${m.read_at?'':' is-unread'}`}>
     <Avatar m={people[m.user_id??'']} size={34}/><div><p className="zn-msg-head"><b>{people[m.user_id??'']?.display_name??'Someone'}</b><span className="zn-in">in {c?(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`):'a channel'}</span><time>{dayOf(m.created_at)} {timeOf(m.created_at)}</time></p>
-    <div className="zn-body">{m.deleted_at?<em>Deleted message</em>:renderBody(m.body,people,me.user_id)}</div></div></Link>;})
+    <div className="zn-body" onClick={e=>{const u=(e.target as HTMLElement).closest<HTMLElement>('[data-uid]')?.dataset.uid;if(u){e.preventDefault();e.stopPropagation();profile(u);}}}>{m.deleted_at?<em>Deleted message</em>:renderBody(m.body,people,me.user_id)}</div></div></Link>;})
    :<div className="zn-empty-state"><h2>No mentions yet</h2><p>When someone @mentions you, it shows up here.</p></div>}
   </div>
  </div>;
