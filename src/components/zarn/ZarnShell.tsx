@@ -33,7 +33,7 @@ const tabs=['/zarn/home','/zarn/dms','/zarn/clients','/zarn/activity','/zarn/you
 
 // ZARN layout. Computers: a rail switches between Chat, Business and Clients, with that area's sidebar.
 // Phones: Slack-style bottom tabs (Home, DMs, Clients, Activity, You), full-screen lists, back arrows in conversations.
-export default function ZarnShell({children}:{children:React.ReactNode}){
+export default function ZarnShell({children,workspace='ZARN'}:{children:React.ReactNode;workspace?:string}){
  const z=useZarn(),{me,channels}=z,pathname=usePathname(),{light}=useAdminTheme();
  const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,archivedClients,badges}=nav;
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({archivedclients:true});
@@ -107,6 +107,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
      <div className="zn-me-sep"/>
      <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setProfileId(me.user_id);}}>Profile</button>
      <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setPrefs('availability');}}>Preferences</button>
+     {me.zarnAdmin&&<Link role="menuitem" href="/zarn/admin" onClick={()=>setMeMenu(false)}>ZARN admin</Link>}
      <Link role="menuitem" href="/zarn/password" onClick={()=>setMeMenu(false)}>Account settings<em><ExternalLink size={15}/></em></Link>
      <div className="zn-me-sep"/>
      <button type="button" role="menuitem" onClick={()=>void signOut()}>Sign out of ZARN</button>
@@ -114,7 +115,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
    </nav>
    <aside className="zn-sidebar">
     <div className="zn-workspace">
-     <button type="button" className="zn-ws-btn" onClick={()=>setMenu(v=>!v)} aria-expanded={menu}><b>{area==='chat'?'ZARN':area==='business'?'Business':area==='projects'?'Projects':'Clients'}</b>{guest&&<span className="zn-guest-tag">Guest</span>}<ChevronDown size={14}/></button>
+     <button type="button" className="zn-ws-btn" onClick={()=>setMenu(v=>!v)} aria-expanded={menu}><b>{area==='chat'?workspace:area==='business'?'Business':area==='projects'?'Projects':'Clients'}</b>{guest&&<span className="zn-guest-tag">Guest</span>}<ChevronDown size={14}/></button>
      {area==='chat'&&<button type="button" className="zn-icon" aria-label="New message" data-tip="New message" onClick={()=>setDialog('dm')}><MessageSquarePlus size={17}/></button>}
      {area==='clients'&&canAddClient&&<button type="button" className="zn-icon" aria-label="Add client" data-tip="Add client" onClick={()=>setDialog('client')}><Plus size={18}/></button>}
      {menu&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setMenu(false)}/><div className="zn-menu">

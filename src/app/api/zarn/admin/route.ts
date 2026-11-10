@@ -12,6 +12,7 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('invite'),name:z.string().trim().min(1,'Enter their name.').max(80),email:z.email('Enter a valid email.').max(254),title:z.string().trim().max(80).default(''),is_admin:z.boolean().optional(),...access.shape}),
  z.object({action:z.literal('update_access'),user_id:id,is_admin:z.boolean().optional(),...access.shape}),
  z.object({action:z.literal('send_password'),user_id:id}),
+ z.object({action:z.literal('workspace_name'),name:z.string().trim().min(1,'Enter a workspace name.').max(60)}),
  z.object({action:z.literal('resend'),user_id:id}),
  z.object({action:z.literal('deactivate'),user_id:id}),
  z.object({action:z.literal('reactivate'),user_id:id}),
@@ -97,6 +98,10 @@ export async function POST(request:Request){
    if(b.channels)await setChannels(b.user_id,b.channels,b.account_type,true);
    await setZarnAdmin(b.user_id,b.is_admin);
    return Response.json({ok:true});
+  }
+  case 'workspace_name':{
+   const {error}=await db.from('settings').upsert({key:'zarn_workspace_name',value:b.name},{onConflict:'key'});
+   return error?fail('Could not save the name.'):Response.json({ok:true});
   }
   case 'send_password':{
    // Admins can reset anyone except a super admin; super admins can reset anyone.

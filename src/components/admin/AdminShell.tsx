@@ -4,7 +4,7 @@ import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import TipLayer from '@/components/admin/TipLayer';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {Hash,MessagesSquare,Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Images,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Receipt,Search,Send,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
+import {ArrowLeft,Building2,Hash,MessagesSquare,Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Images,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Receipt,Search,Send,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
 
 type User={name:string;email:string;role:string};
 type Item={label:string;href:string;icon:LucideIcon;key?:string;children?:{label:string;href:string;key:string}[]};
@@ -35,10 +35,10 @@ const groups:{label:string;items:Item[]}[]=[
 
 // ZARN admin (behind the Studio/ZARN switcher).
 const zarnGroups:{label:string;items:Item[]}[]=[
- {label:'Overview',items:[{label:'Members',href:'/admin/zarn',icon:Users},{label:'Channels',href:'/admin/zarn/channels',icon:Hash}]},
+ {label:'ZARN',items:[{label:'Members',href:'/zarn/admin',icon:Users},{label:'Channels',href:'/zarn/admin/channels',icon:Hash},{label:'Workspace',href:'/zarn/admin/workspace',icon:Building2}]},
 ];
 
-async function signOut(){try{await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});}finally{window.location.assign('/admin/login');}}
+async function signOut(){const to=window.location.pathname.startsWith('/zarn')?'/zarn/login':'/admin/login';try{await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});}finally{window.location.assign(to);}}
 
 function useOutside<T extends HTMLElement>(open:boolean,close:()=>void){
  const ref=useRef<T>(null);
@@ -46,7 +46,8 @@ function useOutside<T extends HTMLElement>(open:boolean,close:()=>void){
  return ref;
 }
 
-export default function AdminShell({user,allowedKeys,newLeads,children}:{user:User;allowedKeys:string[];newLeads:number;children:React.ReactNode}){
+// mode 'zarn' is the ZARN admin at /zarn/admin: same shell, ZARN nav and branding.
+export default function AdminShell({user,allowedKeys,newLeads,children,mode='studio'}:{user:User;allowedKeys:string[];newLeads:number;children:React.ReactNode;mode?:'studio'|'zarn'}){
  const pathname=usePathname();
  const {light}=useAdminTheme();
  const [collapsed,setCollapsed]=useState(false);
@@ -62,9 +63,9 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
  const toggleTheme=()=>writeTheme(!light);
 
  const can=(key?:string)=>!key||allowedKeys.includes(key);
- const zarnMode=false;
+ const zarnMode=mode==='zarn';
  const visible=(zarnMode?zarnGroups:groups).map(g=>({...g,items:g.items.map(i=>({...i,children:i.children?.filter(c=>can(c.key))})).filter(i=>i.children?i.children.length>0:can(i.key))})).filter(g=>g.items.length);
- const isActive=(href:string)=>href==='/admin'||href==='/admin/zarn'||href==='/admin/subscribers'?pathname===href:href==='/admin/newsletter'?pathname===href||(pathname.startsWith(href+'/')&&!pathname.startsWith('/admin/newsletter/templates')):pathname===href||pathname.startsWith(href+'/');
+ const isActive=(href:string)=>href==='/admin'||href==='/zarn/admin'||href==='/admin/subscribers'?pathname===href:href==='/admin/newsletter'?pathname===href||(pathname.startsWith(href+'/')&&!pathname.startsWith('/admin/newsletter/templates')):pathname===href||pathname.startsWith(href+'/');
  const subActive=(href:string)=>pathname===href||(href==='/admin/blog'&&/^\/admin\/blog\/[0-9a-f-]{36}$/.test(pathname));
  const groupActive=(i:Item)=>i.children?i.children.some(c=>isActive(c.href)):isActive(i.href);
  const [expanded,setExpanded]=useState<string|null>(()=>visible.flatMap(g=>g.items).find(i=>i.children&&groupActive(i))?.label??null);
@@ -80,10 +81,13 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
   {mobileOpen&&<button className="za-scrim" aria-label="Close menu" onClick={()=>setMobileOpen(false)}/>}
   <aside className={`za-sidebar${mobileOpen?' is-open':''}`} onClick={e=>{if((e.target as HTMLElement).closest('a'))setMobileOpen(false);}}>
    <div className="za-sidebar-top">
-    <Link href="/admin" className="za-brand" title="Zaane admin">
+    {zarnMode?<Link href="/zarn/admin" className="za-brand" title="ZARN admin">
+     <img src="/zarn%20logo2.png" alt="" className="za-brand-mark za-brand-zarn"/>
+     <span className="za-brand-text">ZARN <small>Admin</small></span>
+    </Link>:<Link href="/admin" className="za-brand" title="Zaane admin">
      <img src="/zaane-mark.svg" alt="" className="za-brand-mark"/>
      <span className="za-brand-text">Zaane <small>Studio</small></span>
-    </Link>
+    </Link>}
     <button className="za-icon-btn za-collapse" onClick={()=>setCollapsed(v=>!v)} aria-label={collapsed?'Expand sidebar':'Collapse sidebar'}>{collapsed?<ChevronsRight size={16}/>:<ChevronsLeft size={16}/>}</button>
     <button className="za-icon-btn za-mobile-close" onClick={()=>setMobileOpen(false)} aria-label="Close menu"><X size={16}/></button>
    </div>
@@ -107,7 +111,8 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
     </div>)}
    </nav>
    <div className="za-sidebar-foot" ref={userRef}>
-    <Link href="/zarn" target="_blank" className="za-nav-item za-nav-muted" title="Open ZARN"><MessagesSquare size={16} strokeWidth={1.8}/><span className="za-nav-text">Open ZARN</span></Link>
+    {zarnMode?<a href="/zarn" className="za-nav-item za-nav-muted" title="Back to ZARN"><ArrowLeft size={16} strokeWidth={1.8}/><span className="za-nav-text">Back to ZARN</span></a>
+     :<Link href="/zarn" target="_blank" className="za-nav-item za-nav-muted" title="Open ZARN"><MessagesSquare size={16} strokeWidth={1.8}/><span className="za-nav-text">Open ZARN</span></Link>}
     <Link href="/" target="_blank" className="za-nav-item za-nav-muted" title="View website"><ExternalLink size={16} strokeWidth={1.8}/><span className="za-nav-text">View website</span></Link>
     <button className="za-user" onClick={()=>setUserOpen(v=>!v)}>
      <span className="za-avatar">{initial}</span>
