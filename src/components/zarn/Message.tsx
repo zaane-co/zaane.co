@@ -1,7 +1,8 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Bookmark,ListPlus,Phone,Check,CheckCheck,ChevronLeft,ChevronRight,Clock3,Download,FileText,MessageSquareText,Pencil,Pin,SmilePlus,Trash2,TrendingUp,Receipt,UserPlus,X} from 'lucide-react';
+import {useRouter} from 'next/navigation';
+import {Bookmark,Hash,ListPlus,Phone,Check,CheckCheck,ChevronLeft,ChevronRight,Clock3,Download,FileText,MessageSquareText,Pencil,Pin,SmilePlus,Trash2,TrendingUp,Receipt,UserPlus,X} from 'lucide-react';
 import {quickReactions,zarnApi,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {money} from '@/lib/crm';
 import {useZarn} from './ZarnProvider';
@@ -42,6 +43,7 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
   const missed=m.meta.event==='call'&&(m.meta.status==='missed'||m.meta.status==='declined');
   const ch=channels.find(c=>c.id===m.channel_id),by=String(m.meta.by??'');
   const peer=by===me.user_id?(ch?.dm_key??'').split(',').find(u=>u!==me.user_id):by;
+  if(m.meta.event==='channel_invite')return <InviteNote m={m}/>;
   return <div className="zn-system">{systemText(m,people)}{missed&&peer&&ch?.kind==='dm'&&<button type="button" className="zn-callback" disabled={call.busy} onClick={()=>void call.start(m.channel_id,peer)}><Phone size={12}/>{by===me.user_id?'Call again':'Call back'}</button>}</div>;
  }
  if(m.deleted_at)return <div className={`zn-msg${compact?' is-compact':''}`}><div className="zn-gutter">{!compact&&<Avatar m={author} name={m.author_name}/>}</div><div className="zn-msg-main"><p className="zn-deleted">This message was deleted.</p></div></div>;
@@ -96,6 +98,17 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
   {tasking&&<AddToTask m={m} onClose={()=>setTasking(false)}/>}
   {confirm&&<div className="zn-confirm"><span>Delete this message?</span><button type="button" onClick={()=>setConfirm(false)}>Cancel</button><button type="button" className="is-danger" onClick={()=>void remove()}>Delete</button></div>}
  </div>;
+}
+
+// A channel invitation posted in the DM: the invited person can accept or decline right here.
+function InviteNote({m}:{m:ZMessage}){
+ const {me,people,invites,reloadInvites,reload,membership}=useZarn(),router=useRouter(),[busy,setBusy]=useState(false);
+ const ch=String(m.meta.channel??''),name=String(m.meta.name??'a channel'),by=people[String(m.meta.by??'')]?.display_name??'Someone',toMe=m.meta.to===me.user_id;
+ const pending=toMe&&invites.some(i=>i.channel_id===ch),joined=!!membership[ch];
+ async function respond(accept:boolean){setBusy(true);try{const r=await fetch('/api/zarn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:accept?'invite_accept':'invite_decline',channel_id:ch})});await reloadInvites();if(r.ok&&accept){await reload();router.push(`/zarn/c/${ch}`);}}finally{setBusy(false);}}
+ return <div className="zn-invite-note"><Hash size={15}/><span>{toMe?<><b>{by}</b> invited you to <b>#{name}</b></>:<>You invited <b>{people[String(m.meta.to??'')]?.display_name??'them'}</b> to <b>#{name}</b></>}</span>
+  {pending?<span className="zn-invite-note-act"><button type="button" className="zn-btn is-primary" disabled={busy} onClick={()=>void respond(true)}>Accept</button><button type="button" className="zn-btn" disabled={busy} onClick={()=>void respond(false)}>Decline</button></span>
+  :toMe&&<small>{joined?'Joined':'No longer open'}</small>}</div>;
 }
 
 function systemText(m:ZMessage,people:Record<string,{display_name:string}>){

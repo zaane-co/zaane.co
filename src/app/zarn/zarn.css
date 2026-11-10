@@ -1720,3 +1720,10 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-head-faces>span>.zn-avatar{border-radius:6px;box-shadow:0 0 0 2px var(--z-bg)}
 .zn-head-faces>span>.zn-avatar+.zn-avatar{margin-left:-6px}
 .zn-head-faces b{font-size:13px;font-weight:600;color:var(--z-fg)}
+/* Channel invitation in a DM */
+.zn-invite-note{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:6px 0;padding:12px 14px;border:1px solid var(--z-border);border-radius:12px;background:var(--z-panel);font-size:14px;max-width:560px}
+.zn-invite-note>svg{color:var(--z-accent);flex:none}
+.zn-invite-note>span:first-of-type{flex:1;min-width:0}
+.zn-invite-note-act{display:flex;gap:6px}
+.zn-invite-note small{font-size:12px;color:var(--z-muted)}
+.zn-outsiders b{font-weight:600}

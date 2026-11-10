@@ -34,6 +34,8 @@ export async function POST(request:Request){
   const ids=userIds.filter(u=>!skip.has(u)&&u!==me.user_id);if(!ids.length)return 0;
   await admin.from('zarn_channel_invites').upsert(ids.map(user_id=>({channel_id:channelId,user_id,invited_by:me.user_id})),{onConflict:'channel_id,user_id',ignoreDuplicates:true});
   await admin.from('zarn_messages').insert({channel_id:channelId,kind:'system',meta:{event:'members_invited',by:me.user_id,users:ids.join(',')}});
+  // The invitation also lands in each person's DM with the inviter, with Accept and Decline right there.
+  for(const u of ids){const {data:dm}=await me.db.rpc('zarn_open_dm',{others:[u]});if(dm)await admin.from('zarn_messages').insert({channel_id:dm,kind:'system',meta:{event:'channel_invite',by:me.user_id,to:u,channel:channelId,name:name??''}});}
   await pushTo(ids,{title:`${me.display_name} invited you`,body:`#${name??'private channel'} · tap to accept`,tag:`invite-${channelId}`,url:'/zarn'});
   return ids.length;
  };
@@ -56,7 +58,8 @@ export async function POST(request:Request){
    // Client teams are managed from the client space (admins and sales only), DMs are fixed.
    if(!ch||(ch.kind!=='public'&&ch.kind!=='private')||ch.archived_at)return fail('You can’t add people here.');
    const {data:active}=await admin.from('zarn_members').select('user_id').in('user_id',b.members).is('deactivated_at',null);
-   if(active?.length&&ch.kind==='private'){await invite(b.id,ch.name,active.map(m=>m.user_id));return Response.json({ok:true,invited:true});}
+   // The super admin adds people straight in; everyone else sends an invitation they accept or decline.
+   if(active?.length&&me.staffRole!=='super_admin'){const n=await invite(b.id,ch.name,active.map(m=>m.user_id));return Response.json({ok:true,invited:n>0});}
    if(active?.length){
     await admin.from('zarn_channel_members').upsert(active.map(m=>({channel_id:b.id,user_id:m.user_id})),{onConflict:'channel_id,user_id',ignoreDuplicates:true});
     await admin.from('zarn_messages').insert({channel_id:b.id,kind:'system',meta:{event:'members_added',by:me.user_id,users:active.map(m=>m.user_id).join(',')}});
