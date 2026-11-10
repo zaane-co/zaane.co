@@ -1590,3 +1590,4 @@ html[data-kb] .zn-prompt{display:none}
 .zn-prof-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
 @media(max-width:640px){.zn-sheet.zn-prof{grid-template-columns:1fr;overflow-y:auto}.zn-prof-side{border-right:0;border-bottom:1px solid var(--z-border)}.zn-prof-photo{width:160px;margin:0 auto}.zn-edit-grid{grid-template-columns:1fr}}
 .zn-prof-head-btns{display:flex;gap:4px}
+.zn-prof-head-btns .zn-prof-edit-btn{width:auto;padding:0 12px;gap:6px;display:inline-flex;align-items:center;font-size:13px;font-weight:600;border:1px solid var(--z-border);color:var(--z-fg)}
