@@ -4,7 +4,7 @@ import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import TipLayer from '@/components/admin/TipLayer';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {ArrowLeft,Building2,Hash,MessagesSquare,Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Images,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Receipt,Search,Send,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
+import {ArrowLeft,Building2,Settings2,Hash,MessagesSquare,Bell,BookOpen,Briefcase,ChevronDown,ChevronsLeft,ChevronsRight,ExternalLink,FileText,FolderDown,Images,Inbox,LayoutDashboard,LogOut,Mail,Menu,Moon,PanelsTopLeft,Quote,Receipt,Search,Send,Settings,ShieldCheck,Sun,UserRound,Users,X,type LucideIcon} from 'lucide-react';
 
 type User={name:string;email:string;role:string};
 type Item={label:string;href:string;icon:LucideIcon;key?:string;children?:{label:string;href:string;key:string}[]};
@@ -30,6 +30,11 @@ const groups:{label:string;items:Item[]}[]=[
  {label:'Admin',items:[
   {label:'Users & roles',href:'/admin/users',key:'users',icon:ShieldCheck},
   {label:'Settings',href:'/admin/settings',key:'settings',icon:Settings},
+ ]},
+ // Shown only to people who are on ZARN / are ZARN admins (the layout adds these keys).
+ {label:'ZARN',items:[
+  {label:'Open ZARN chat',href:'/zarn',key:'zarn_chat',icon:MessagesSquare},
+  {label:'ZARN admin',href:'/zarn/admin',key:'zarn_admin',icon:Settings2},
  ]},
 ];
 
@@ -64,6 +69,11 @@ export default function AdminShell({user,allowedKeys,newLeads,children,mode='stu
 
  const can=(key?:string)=>!key||allowedKeys.includes(key);
  const zarnMode=mode==='zarn';
+ // Sidebar sections (Inbox, Content, Admin, ZARN) fold away; remembered on this device.
+ const [closed,setClosed]=useState<string[]>([]);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- device preference is read after hydration to avoid a mismatch
+ useEffect(()=>{try{setClosed(JSON.parse(localStorage.getItem('za-nav-closed')||'[]'));}catch{}},[]);
+ const toggleGroup=(l:string)=>setClosed(c=>{const n=c.includes(l)?c.filter(x=>x!==l):[...c,l];try{localStorage.setItem('za-nav-closed',JSON.stringify(n));}catch{}return n;});
  const visible=(zarnMode?zarnGroups:groups).map(g=>({...g,items:g.items.map(i=>({...i,children:i.children?.filter(c=>can(c.key))})).filter(i=>i.children?i.children.length>0:can(i.key))})).filter(g=>g.items.length);
  const isActive=(href:string)=>href==='/admin'||href==='/zarn/admin'||href==='/admin/subscribers'?pathname===href:href==='/admin/newsletter'?pathname===href||(pathname.startsWith(href+'/')&&!pathname.startsWith('/admin/newsletter/templates')):pathname===href||pathname.startsWith(href+'/');
  const subActive=(href:string)=>pathname===href||(href==='/admin/blog'&&/^\/admin\/blog\/[0-9a-f-]{36}$/.test(pathname));
@@ -99,8 +109,8 @@ export default function AdminShell({user,allowedKeys,newLeads,children,mode='stu
     </div>
     {results?(results.length?results.map(i=><NavLink key={i.href+i.label} href={i.href} label={i.label} Icon={i.icon} active={isActive(i.href)}/>):<p className="za-nav-empty">No results</p>):
     visible.map((g,gi)=><div key={g.label} className="za-nav-group">
-     {gi>0&&<p className="za-nav-label">{g.label}</p>}
-     {g.items.map(i=>i.children?<div key={i.label}>
+     {gi>0&&<button type="button" className="za-nav-label" aria-expanded={!closed.includes(g.label)} onClick={()=>toggleGroup(g.label)}>{g.label}<ChevronDown size={12} className={`za-nav-label-chev${closed.includes(g.label)?' is-closed':''}`}/></button>}
+     {(gi===0||collapsed||!closed.includes(g.label))&&g.items.map(i=>i.children?<div key={i.label}>
       <button className={`za-nav-item${groupActive(i)?' is-active':''}`} title={i.label} onClick={()=>{if(collapsed){setCollapsed(false);setExpanded(i.label);}else setExpanded(e=>e===i.label?null:i.label);}}>
        <i.icon size={17} strokeWidth={1.8}/><span className="za-nav-text">{i.label}</span>
        <ChevronDown size={13} className={`za-nav-chev${expanded===i.label?' is-open':''}`}/>
@@ -111,8 +121,7 @@ export default function AdminShell({user,allowedKeys,newLeads,children,mode='stu
     </div>)}
    </nav>
    <div className="za-sidebar-foot" ref={userRef}>
-    {zarnMode?<a href="/zarn" className="za-nav-item za-nav-muted" title="Back to ZARN"><ArrowLeft size={16} strokeWidth={1.8}/><span className="za-nav-text">Back to ZARN</span></a>
-     :<Link href="/zarn" target="_blank" className="za-nav-item za-nav-muted" title="Open ZARN"><MessagesSquare size={16} strokeWidth={1.8}/><span className="za-nav-text">Open ZARN</span></Link>}
+    {zarnMode&&<a href="/zarn" className="za-nav-item za-nav-muted" title="Back to ZARN"><ArrowLeft size={16} strokeWidth={1.8}/><span className="za-nav-text">Back to ZARN</span></a>}
     <Link href="/" target="_blank" className="za-nav-item za-nav-muted" title="View website"><ExternalLink size={16} strokeWidth={1.8}/><span className="za-nav-text">View website</span></Link>
     <button className="za-user" onClick={()=>setUserOpen(v=>!v)}>
      <span className="za-avatar">{initial}</span>
