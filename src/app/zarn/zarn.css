@@ -1615,3 +1615,4 @@ html[data-kb] .zn-prompt{display:none}
 .zn-snd-vol{display:flex;align-items:center;gap:10px;color:var(--z-muted)}
 .zn-snd-vol .zn-seg{flex:1}
 @media(max-width:480px){.zn-snd-grid{grid-template-columns:repeat(2,1fr)}}
+.zn-snd-credit{font-size:11.5px;color:var(--z-faint)}.zn-snd-credit a{text-decoration:underline}

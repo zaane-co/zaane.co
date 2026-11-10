@@ -6,14 +6,14 @@ export type Tone=string;
 export type Volume='low'|'medium'|'high'|'max';
 export type Scope='direct'|'all';
 export type SoundSettings={on:boolean;tone:Tone;volume:Volume;scope:Scope};
-// Message sounds: short recorded clips from Mixkit (free for commercial use, no attribution), served from /zarn-sounds.
+// Message sounds: short recorded clips from Notify Sound (notifysound.com, CC BY 4.0, credited in settings), served from /zarn-sounds.
 export const tones:{id:Tone;label:string;loud?:boolean}[]=[
- {id:'message-pop',label:'Message pop'},{id:'bubble',label:'Bubble'},{id:'soft-pop',label:'Soft pop'},{id:'bell',label:'Bell'},{id:'happy-bells',label:'Happy bells'},
- {id:'positive',label:'Positive'},{id:'announce',label:'Announce'},{id:'hint',label:'Hint'},{id:'marimba',label:'Marimba'},{id:'digital',label:'Digital'},
- {id:'doorbell',label:'Doorbell'},{id:'guitar',label:'Guitar'},{id:'urgent',label:'Urgent',loud:true},{id:'alarm',label:'Alarm',loud:true}];
+ {id:'quick-reply',label:'Quick reply'},{id:'soft-ping',label:'Soft ping'},{id:'ding',label:'Ding'},{id:'chime',label:'Chime'},{id:'tri-tone',label:'Tri-tone'},
+ {id:'bubble-up',label:'Bubble up'},{id:'blip-up',label:'Blip up'},{id:'popcorn',label:'Popcorn'},{id:'marimba',label:'Marimba'},{id:'bell',label:'Bell'},
+ {id:'coin',label:'Coin'},{id:'ka-ching',label:'Ka-ching'},{id:'whoosh',label:'Whoosh'},{id:'beep',label:'Beep',loud:true},{id:'doorbell',label:'Doorbell',loud:true}];
 const KEY='zarn-sound-v2',OLD='zarn-sound';
 const gains:Record<Volume,number>={low:.12,medium:.32,high:.65,max:1};
-const defaults:SoundSettings={on:true,tone:'message-pop',volume:'medium',scope:'direct'};
+const defaults:SoundSettings={on:true,tone:'quick-reply',volume:'medium',scope:'direct'};
 let ctx:AudioContext|null=null;
 const listeners=new Set<()=>void>();
 function unlock(){

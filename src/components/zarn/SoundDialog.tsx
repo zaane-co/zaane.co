@@ -24,6 +24,7 @@ export function SoundSettings(){
    <div className="zn-snd-vol"><Volume1 size={16}/>{seg<Volume>(s.volume,volumes,v=>{updateSound({volume:v});playChime(true,{volume:v});},'Volume')}<Volume2 size={16}/></div>
    <p className="zn-snd-label">Play for</p>
    {seg<Scope>(s.scope,[['direct','DMs and mentions'],['all','Every message']],v=>updateSound({scope:v}),'Play for')}
+   <p className="zn-snd-credit">Sounds by <a href="https://notifysound.com" target="_blank" rel="noopener noreferrer">Notify Sound</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>.</p>
   </div>
  </div>;
 }
