@@ -82,7 +82,7 @@ export function CallsPage(){
    {intro&&<section className="zn-calls-hero">
     <div className="zn-calls-hero-text"><h2>Talk it out, instantly</h2><p>Jump on a voice or video call with anyone at Zaane. Calls ring on their phone too, and every call is logged here and in your chat.</p>
      <div className="zn-calls-hero-act"><button type="button" className="zn-btn is-primary" disabled={call.busy} onClick={()=>setPicking(true)}><Phone size={15}/>Start a call</button>
-      {rows&&rows.length>0&&<span>{rows.length} {rows.length===1?'call':'calls'}{talked?` · ${Math.round(talked/60)} min talked`:''}</span>}</div></div>
+      {rows&&rows.length>0&&<span>{rows.length} {rows.length===1?'call':'calls'}{talked?` · ${talked<60?`${talked} sec`:talked<3600?`${Math.floor(talked/60)} min`:`${Math.floor(talked/3600)} hr ${Math.floor(talked%3600/60)} min`} talked`:''}</span>}</div></div>
     <div className="zn-calls-art" aria-hidden><div className="zn-calls-win"><div className="zn-calls-win-top"><i/><i/><i/></div>
      <div className="zn-calls-win-faces">{members.filter(m=>m.user_id!==me.user_id&&!m.deactivated_at).slice(0,3).map(m=><Avatar key={m.user_id} m={m} size={52}/>)}</div>
      <div className="zn-calls-win-bar"><span><Mic size={14}/></span><span><Video size={14}/></span><b><Phone size={14} className="zn-hangup"/></b></div></div></div>
