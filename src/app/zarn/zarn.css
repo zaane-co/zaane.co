@@ -1714,3 +1714,9 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-act-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--z-accent)}
 @media(max-width:600px){.zn-act{padding:4px 12px 24px}.zn-act-day{margin:0 -12px;padding:14px 12px 8px}.zn-act-tabs{padding:0 12px}}
 .zn-act-text .zn-in{font-size:inherit;font-weight:400}
+/* Channel header: member faces, like Slack */
+.zn-head-actions .zn-head-faces{gap:6px;padding:0 8px 0 4px;margin-right:4px;border:1px solid var(--z-border);border-radius:9px}
+.zn-head-faces>span{display:flex}
+.zn-head-faces>span>.zn-avatar{border-radius:6px;box-shadow:0 0 0 2px var(--z-bg)}
+.zn-head-faces>span>.zn-avatar+.zn-avatar{margin-left:-6px}
+.zn-head-faces b{font-size:13px;font-weight:600;color:var(--z-fg)}

@@ -37,6 +37,9 @@ const tabs=['/zarn/home','/zarn/dms','/zarn/clients','/zarn/activity','/zarn/you
 export default function ZarnShell({children,workspace='ZARN'}:{children:React.ReactNode;workspace?:string}){
  const z=useZarn(),{me,channels}=z,pathname=usePathname(),{light}=useAdminTheme();
  const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,archivedClients,badges}=nav;
+ // Everyone on the team appears under Direct messages, even before you have talked; clicking starts the DM.
+ const dmWith=new Set(dms.flatMap(c=>(c.dm_key??"").split(",")));
+ const newPeople=guest?[]:Object.values(z.people).filter(p=>p.user_id!==z.me.user_id&&!p.deactivated_at&&!dmWith.has(p.user_id)).sort((a,b)=>a.display_name.localeCompare(b.display_name));
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({archivedclients:true});
  const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false),[meMenu,setMeMenu]=useState(false),[prefs,setPrefs]=useState<null|'availability'|'notifications'|'appearance'>(null);
  const router=useRouter();
@@ -139,22 +142,23 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
     <div className="zn-nav" data-lenis-prevent>
      {area==='chat'&&<>
       <button type="button" className="zn-nav-item zn-search-btn" onClick={()=>setDialog('search')}><Search size={15}/><span>Search</span><kbd>⌘K</kbd></button>
-      {link('/zarn/activity',<Bell size={18} strokeWidth={1.75}/>,'Activity')}
-      {link('/zarn/mentions',<AtSign size={18} strokeWidth={1.75}/>,'Mentions',badges.activity)}
-      {link('/zarn/threads',<MessageSquareText size={18} strokeWidth={1.75}/>,'Threads')}
-      {link('/zarn/calls',<Phone size={18} strokeWidth={1.75}/>,'Calls')}
-      {link('/zarn/drafts',<PencilLine size={18} strokeWidth={1.75}/>,'Drafts')}
-      {link('/zarn/people',<BookUser size={18} strokeWidth={1.75}/>,'Directories')}
+      {section('inbox','Inbox',<>
+       {link('/zarn/activity',<Bell size={18} strokeWidth={1.75}/>,'Activity')}
+       {link('/zarn/mentions',<AtSign size={18} strokeWidth={1.75}/>,'Mentions',badges.activity)}
+       {link('/zarn/threads',<MessageSquareText size={18} strokeWidth={1.75}/>,'Threads')}
+       {link('/zarn/calls',<Phone size={18} strokeWidth={1.75}/>,'Calls')}
+       {link('/zarn/drafts',<PencilLine size={18} strokeWidth={1.75}/>,'Drafts')}</>)}
       {section('library','Library',<>
        {link('/zarn/docs',<FileText size={18} strokeWidth={1.75}/>,'Docs',undefined,false)}
        {link('/zarn/files',<Files size={18} strokeWidth={1.75}/>,'Files')}
-       {link('/zarn/saved',<Bookmark size={18} strokeWidth={1.75}/>,'Saved')}</>)}
+       {link('/zarn/saved',<Bookmark size={18} strokeWidth={1.75}/>,'Saved')}
+ {link('/zarn/people',<BookUser size={18} strokeWidth={1.75}/>,'Directories')}</>)}
       {section('tasks','Tasks',<>
        {link('/zarn/todos',<ListChecks size={18} strokeWidth={1.75}/>,'To-dos',z.dueTasks)}</>)}
       {starred.length>0&&section('starred','Starred',starred.map(c=><ChannelRow key={c.id} c={c}/>))}
       <Invites/>
       {section('channels','Channels',<>{rooms.map(c=><ChannelRow key={c.id} c={c}/>)}{!guest&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('browse')}><Plus size={15}/><span>Browse channels</span></button>}</>,canCreate?()=>setDialog('channel'):undefined)}
-      {section('dms','Direct messages',<>{dms.map(c=><ChannelRow key={c.id} c={c}/>)}{staffAdmin&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('invite')}><UserPlus size={15}/><span>Invite people</span></button>}</>,()=>setDialog('dm'))}
+      {section('dms','Direct messages',<>{dms.map(c=><ChannelRow key={c.id} c={c}/>)}{newPeople.map(p=><button key={p.user_id} type="button" className="zn-nav-item" onClick={()=>void z.openDm([p.user_id])}><Avatar m={p} size={20} online={z.online.has(p.user_id)}/><span>{p.display_name}</span></button>)}{staffAdmin&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('invite')}><UserPlus size={15}/><span>Invite people</span></button>}</>,()=>setDialog('dm'))}
      </>}
      {area==='business'&&<>
       {link('/zarn/business',<TrendingUp size={15}/>,'Overview')}
