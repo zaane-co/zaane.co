@@ -1491,3 +1491,4 @@ html[data-kb] .zn-prompt{display:none}
 .zbot-intro li:hover{background:var(--z-hover)}
 .zbot-intro ul{gap:6px}
 @media(max-width:860px){.zai.is-wide{width:100vw}.zai-expand{display:none}.zbot-chips{grid-template-columns:1fr}.zbot-hello h2{font-size:22px}.zbot-intro{padding:32px 20px 24px}.zbot-intro h2{font-size:23px}}
+.zn-rail-zbot .zbot-mark{border-radius:7px}

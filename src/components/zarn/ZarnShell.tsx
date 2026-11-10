@@ -9,6 +9,7 @@ import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
 import {NewProject} from './Projects';
 import Assistant from './Assistant';
+import ZBotMark from './ZBotMark';
 import {Browse,Invite,NewChannel,NewDm,Profile,SearchDialog} from './Dialogs';
 import AddClient from './AddClient';
 import {useInstall} from './ZarnPwa';
@@ -90,10 +91,11 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
     <button type="button" className="zn-rail-logo" aria-label="Workspace menu" onClick={()=>setMenu(v=>!v)}><img src="/zarn%20logo2.png" alt="ZARN"/></button>
-    {railBtn('chat',<MessageSquare size={20}/>,'Chat',badges.home+badges.dms)}
+    {railBtn('chat',<MessageSquare size={20}/>,'Home',badges.home+badges.dms)}
+    {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',badges.projects)}
     {canBusiness&&railBtn('business',<BarChart3 size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
-    {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',badges.projects)}
+    {!guest&&<button type="button" className={`zn-rail-btn${dialog==='assistant'?' is-on':''}`} aria-pressed={dialog==='assistant'} onClick={()=>setDialog('assistant')}><span className="zn-rail-icon zn-rail-zbot"><ZBotMark size={22}/></span><small>Z-BOT</small></button>}
     <div className="zn-rail-foot">
      <button type="button" className="zn-rail-round" aria-label="New message" data-tip="New message" onClick={()=>setDialog('dm')}><Plus size={20}/></button>
      <button type="button" className="zn-rail-round" aria-label={light?'Dark mode':'Light mode'} data-tip={light?'Dark mode':'Light mode'} onClick={()=>writeTheme(!light)}>{light?<Moon size={18}/>:<Sun size={18}/>}</button>
