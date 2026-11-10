@@ -127,7 +127,7 @@ function AccessForm({mode,row,channels,isMe,onClose,onDone}:{mode:'invite'|'edit
    <div className="za-role-pick za-role-pick-2">{(['member','guest'] as const).map(t=><button key={t} type="button" role="radio" aria-checked={a.account_type===t} disabled={(isMe||row?.protected)&&t==='guest'} className={a.account_type===t?'is-on':''} onClick={()=>setType(t)}>
     <span className="za-col-dot" style={{background:t==='member'?'#2563eb':'#f59e0b'}}/><span><strong>{t==='member'?'Member':'Guest'}</strong><small>{t==='member'?'All public channels and the directory.':'Only picked channels, optional end date.'}</small></span></button>)}</div>
    <p className="za-access-label">Permissions</p>
-   <Toggle on={admin||lockAdmin&&!!row?.is_admin} disabled={guest||lockAdmin} onChange={setAdmin} label="ZARN admin" hint={guest?'Guests can’t be ZARN admins.':lockAdmin?'Can’t be changed for this account.':'Invite, edit and remove members, and manage channels.'}/>
+   <Toggle on={admin||lockAdmin&&!!row?.is_admin} disabled={guest||lockAdmin} onChange={v=>{setAdmin(v);if(v)setA(x=>({...x,can_view_crm:true,can_create_channels:true,channels:channels.map(c=>c.id)}));}} label="ZARN admin" hint={guest?'Guests can’t be ZARN admins.':lockAdmin?'Can’t be changed for this account.':'Invite, edit and remove members, and manage channels.'}/>
    <Toggle on={a.can_view_crm} onChange={v=>setA({...a,can_view_crm:v})} label="CRM access" hint="See the pipeline, lead cards and CRM posts (read-only)."/>
    <Toggle on={!guest&&a.can_create_channels} disabled={guest} onChange={v=>setA({...a,can_create_channels:v})} label="Create channels" hint={guest?'Guests can’t create channels.':'Start new public or private channels.'}/>
    </div>
