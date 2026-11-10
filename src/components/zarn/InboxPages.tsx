@@ -1,7 +1,8 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {MessagesSquare,Phone,PhoneIncoming,PhoneMissed,PhoneOutgoing,PencilLine,Trash2,Video} from 'lucide-react';
+import {ChevronDown,MessageSquare,MessagesSquare,Mic,MoreVertical,Phone,PhoneCall,PhoneIncoming,PhoneMissed,PhoneOff,PhoneOutgoing,PencilLine,Plus,Search,Trash2,Video,X} from 'lucide-react';
+import {useCall} from './CallProvider';
 import {channelHref,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
@@ -38,20 +39,80 @@ export function ThreadsPage(){
 }
 
 type Call={id:string;channel_id:string;caller_id:string;callee_id:string;status:string;created_at:string;answered_at:string|null;ended_at:string|null;video:boolean};
-const dur=(c:Call)=>{if(!c.answered_at||!c.ended_at)return '';const s=Math.max(0,Math.round((+new Date(c.ended_at)-+new Date(c.answered_at))/1000));return s<60?`${s}s`:`${Math.floor(s/60)}m ${s%60}s`;};
-// Your call history: voice and video calls you made or received.
-export function HuddlesPage(){
- const {db,me,people,channels}=useZarn();
- const [rows,setRows]=useState<Call[]|null>(null);
- useEffect(()=>{let live=true;void db.from('zarn_calls').select('*').or(`caller_id.eq.${me.user_id},callee_id.eq.${me.user_id}`).order('created_at',{ascending:false}).limit(80).then(({data}:{data:Call[]|null})=>{if(live)setRows(data??[]);});return()=>{live=false;};},[db,me.user_id]);
- return <Page icon={<Phone size={20}/>} title="Calls" sub="Voice and video calls you made or received.">
-  {rows===null?<p className="zn-loading">Loading…</p>:!rows.length?<Empty title="No calls yet" text="Start a call from the phone or video button in any DM."/>:
-  <div className="zp-saved">{rows.map(c=>{const out=c.caller_id===me.user_id,other=people[out?c.callee_id:c.caller_id],missed=c.status==='missed'||c.status==='declined',ch=channels.find(x=>x.id===c.channel_id);
-   const Icon=missed?PhoneMissed:out?PhoneOutgoing:PhoneIncoming;
-   return <div key={c.id} className="zp-saved-row zn-call-row"><Link href={channelHref(ch,c.channel_id)}>
-    <span className="zn-todo-who"><Avatar m={other} size={34}/><span className="zn-call-txt"><b>{other?.display_name??'Someone'}</b><small className={missed?'is-missed':''}><Icon size={13}/>{missed?(out?'No answer':'Missed'):out?'Outgoing':'Incoming'} {c.video?'video':'voice'} call{dur(c)&&` · ${dur(c)}`}</small></span><time>{dayOf(c.created_at)} {timeOf(c.created_at)}</time>{c.video?<Video size={16}/>:<Phone size={16}/>}</span>
-   </Link></div>;})}</div>}
- </Page>;
+const secs=(c:Call)=>c.answered_at&&c.ended_at?Math.max(0,Math.round((+new Date(c.ended_at)-+new Date(c.answered_at))/1000)):0;
+const dur=(c:Call)=>{const s=secs(c);if(!s)return '';const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h}h ${m}m`:m?`${m} min`:`${s}s`;};
+const ago=(iso:string)=>{const d=(Date.now()-+new Date(iso))/1000;if(d<60)return 'Just now';if(d<3600)return `${Math.floor(d/60)}m ago`;if(d<86400)return `${Math.floor(d/3600)}h ago`;if(d<7*86400)return `${Math.floor(d/86400)}d ago`;return dayOf(iso);};
+const HIDE_INTRO='zarn-calls-intro-hidden';
+type CallFilter='all'|'missed'|'incoming'|'outgoing';
+
+// Calls: start a voice or video call with anyone, and your call history with filters.
+export function CallsPage(){
+ const {db,me,people,channels,members,online}=useZarn(),call=useCall();
+ const [rows,setRows]=useState<Call[]|null>(null),[filter,setFilter]=useState<CallFilter>('all'),[withId,setWithId]=useState(''),[picking,setPicking]=useState(false),[menu,setMenu]=useState<string|null>(null);
+ const [intro,setIntro]=useState(true);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- reading a per-device preference
+ useEffect(()=>{try{if(localStorage.getItem(HIDE_INTRO))setIntro(false);}catch{}},[]);
+ useEffect(()=>{let live=true;void db.from('zarn_calls').select('*').or(`caller_id.eq.${me.user_id},callee_id.eq.${me.user_id}`).order('created_at',{ascending:false}).limit(200).then(({data}:{data:Call[]|null})=>{if(live)setRows(data??[]);});return()=>{live=false;};},[db,me.user_id]);
+ const peer=(c:Call)=>c.caller_id===me.user_id?c.callee_id:c.caller_id;
+ const missed=(c:Call)=>c.status==='missed'||c.status==='declined';
+ const match:Record<CallFilter,(c:Call)=>boolean>={all:()=>true,missed:c=>missed(c)&&c.callee_id===me.user_id,incoming:c=>c.callee_id===me.user_id,outgoing:c=>c.caller_id===me.user_id};
+ const list=(rows??[]).filter(c=>match[filter](c)&&(!withId||peer(c)===withId));
+ const partners=[...new Set((rows??[]).map(peer))].filter(id=>people[id]).sort((a,b)=>people[a]!.display_name.localeCompare(people[b]!.display_name));
+ const talked=(rows??[]).reduce((t,c)=>t+secs(c),0);
+ async function ring(userId:string,video:boolean){
+  setPicking(false);setMenu(null);
+  const {data}=await db.rpc('zarn_open_dm',{others:[userId]});if(data)await call.start(String(data),userId,{video});
+ }
+ const hideIntro=()=>{setIntro(false);try{localStorage.setItem(HIDE_INTRO,'1');}catch{}};
+ const tabs:[CallFilter,string][]=[['all','All calls'],['missed','Missed'],['incoming','Incoming'],['outgoing','Outgoing']];
+ const live=(id:string)=>!!people[id]&&!people[id]!.deactivated_at;
+ return <div className="zn-page">
+  <header className="zn-page-head"><div><h1><Phone size={20}/>Calls</h1><p>Voice and video calls with anyone on the team.</p></div>
+   <button type="button" className="zn-btn is-primary" disabled={call.busy} onClick={()=>setPicking(true)}><Plus size={15}/>New call</button></header>
+  <div className="zn-calls" data-lenis-prevent>
+   {intro&&<section className="zn-calls-hero">
+    <div className="zn-calls-hero-text"><h2>Talk it out, instantly</h2><p>Jump on a voice or video call with anyone at Zaane. Calls ring on their phone too, and every call is logged here and in your chat.</p>
+     <div className="zn-calls-hero-act"><button type="button" className="zn-btn is-primary" disabled={call.busy} onClick={()=>setPicking(true)}><Phone size={15}/>Start a call</button>
+      {rows&&rows.length>0&&<span>{rows.length} {rows.length===1?'call':'calls'}{talked?` · ${Math.round(talked/60)} min talked`:''}</span>}</div></div>
+    <div className="zn-calls-art" aria-hidden><div className="zn-calls-win"><div className="zn-calls-win-top"><i/><i/><i/></div>
+     <div className="zn-calls-win-faces">{members.filter(m=>m.user_id!==me.user_id&&!m.deactivated_at).slice(0,3).map(m=><Avatar key={m.user_id} m={m} size={52}/>)}</div>
+     <div className="zn-calls-win-bar"><span><Mic size={14}/></span><span><Video size={14}/></span><b><PhoneOff size={14}/></b></div></div></div>
+    <button type="button" className="zn-calls-hero-x" aria-label="Hide" onClick={hideIntro}><X size={16}/></button>
+   </section>}
+   <section className="zn-calls-recent">
+    <div className="zn-calls-bar"><h2>Recent calls</h2>
+     <div className="zn-calls-filters">
+      <div className="zn-seg">{tabs.map(([k,l])=><button key={k} type="button" className={`zn-seg-btn${filter===k?' is-on':''}`} onClick={()=>setFilter(k)}>{l}</button>)}</div>
+      {partners.length>0&&<label className="zn-calls-with"><span>With</span><select value={withId} onChange={e=>setWithId(e.target.value)}><option value="">Anyone</option>{partners.map(id=><option key={id} value={id}>{people[id]!.display_name}</option>)}</select><ChevronDown size={14}/></label>}
+     </div></div>
+    {rows===null?<p className="zn-loading">Loading…</p>:!list.length?<div className="zn-calls-empty"><span><PhoneCall size={22}/></span><h3>{rows.length?'No calls match':'No calls yet'}</h3><p>{rows.length?'Try another filter.':'Start one with the button above, or from the phone or video button in any DM.'}</p></div>:
+    <div className="zn-calls-list">{list.map(c=>{const id=peer(c),p=people[id],out=c.caller_id===me.user_id,miss=missed(c),ch=channels.find(x=>x.id===c.channel_id);
+     const Icon=miss?PhoneMissed:out?PhoneOutgoing:PhoneIncoming;
+     return <div key={c.id} className="zn-calls-row">
+      <span className={`zn-calls-ico${miss?' is-missed':''}`}>{c.video?<Video size={17}/>:<Icon size={17}/>}</span>
+      <Link href={channelHref(ch,c.channel_id)} className="zn-calls-main"><b>{p?.display_name??'Former member'}</b>
+       <small className={miss?'is-missed':''}>{miss?(out?'No answer':'Missed'):out?'Outgoing':'Incoming'} {c.video?'video':'voice'} call · {ago(c.created_at)}{dur(c)&&` · ${dur(c)}`}</small></Link>
+      <Avatar m={p} size={30} online={online.has(id)}/>
+      {live(id)&&<span className="zn-calls-quick"><button type="button" aria-label="Voice call" data-tip="Voice call" disabled={call.busy} onClick={()=>void ring(id,false)}><Phone size={15}/></button><button type="button" aria-label="Video call" data-tip="Video call" disabled={call.busy} onClick={()=>void ring(id,true)}><Video size={15}/></button></span>}
+      <span className="zn-calls-more"><button type="button" aria-label="More" onClick={()=>setMenu(menu===c.id?null:c.id)}><MoreVertical size={16}/></button>
+       {menu===c.id&&<><div className="zn-menu-scrim" onClick={()=>setMenu(null)}/><div className="zn-calls-menu" role="menu"><Link href={channelHref(ch,c.channel_id)} role="menuitem"><MessageSquare size={14}/>Open chat</Link>{live(id)&&<button type="button" role="menuitem" onClick={()=>void ring(id,false)}><Phone size={14}/>Call back</button>}{live(id)&&<button type="button" role="menuitem" onClick={()=>void ring(id,true)}><Video size={14}/>Video call</button>}</div></>}</span>
+     </div>;})}</div>}
+   </section>
+  </div>
+  {picking&&<CallPicker onClose={()=>setPicking(false)} onRing={ring}/>}
+ </div>;
+}
+
+function CallPicker({onClose,onRing}:{onClose:()=>void;onRing:(id:string,video:boolean)=>void}){
+ const {members,me,online}=useZarn(),[q,setQ]=useState('');
+ const list=members.filter(m=>m.user_id!==me.user_id&&!m.deactivated_at&&m.joined_at&&`${m.display_name} ${m.title} ${m.username??''}`.toLowerCase().includes(q.toLowerCase())).sort((a,b)=>Number(online.has(b.user_id))-Number(online.has(a.user_id))||a.display_name.localeCompare(b.display_name));
+ return <div className="zn-modal-scrim" onClick={onClose}><div className="zn-modal zn-call-pick" role="dialog" aria-label="New call" onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Escape')onClose();}}>
+  <div className="zn-modal-head"><h2>New call</h2><button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>
+  <label className="zn-call-pick-search"><Search size={15}/><input autoFocus placeholder="Search people" value={q} onChange={e=>setQ(e.target.value)}/></label>
+  <ul className="zn-call-pick-list" data-lenis-prevent>{list.map(m=><li key={m.user_id}><Avatar m={m} size={34} online={online.has(m.user_id)}/><span><b>{m.display_name}</b><small>{online.has(m.user_id)?'Online':m.title||'Offline'}</small></span>
+   <button type="button" aria-label={`Voice call ${m.display_name}`} data-tip="Voice" onClick={()=>onRing(m.user_id,false)}><Phone size={15}/></button><button type="button" aria-label={`Video call ${m.display_name}`} data-tip="Video" onClick={()=>onRing(m.user_id,true)}><Video size={15}/></button></li>)}
+   {!list.length&&<li className="zn-empty-row">Nobody matches.</li>}</ul>
+ </div></div>;
 }
 
 // Unsent drafts, saved as you type and synced across your devices.
