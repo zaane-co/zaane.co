@@ -218,9 +218,9 @@
 
 /* Pages (CRM, Mentions) */
 .zn-page{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
-.zn-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:0 24px;border-bottom:1px solid var(--z-border)}
-.zn-page-head h1{display:flex;align-items:center;gap:8px;font-size:19px;font-weight:800}
-.zn-page-head p{margin-top:2px;font-size:13px;color:var(--z-muted)}
+.zn-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:9px 24px;flex-shrink:0;border-bottom:1px solid var(--z-border)}
+.zn-page-head h1{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:700;line-height:1.25}
+.zn-page-head p{margin-top:3px;line-height:1.25;font-size:12.5px;color:var(--z-muted)}
 .zn-crm-stats{display:flex;gap:12px;padding:16px 24px 0;flex-wrap:wrap}
 .zn-crm-stats div{flex:1;min-width:150px;padding:12px 14px;border-radius:12px;background:var(--z-panel);border:1px solid var(--z-border);display:flex;flex-direction:column}
 .zn-crm-stats small{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--z-faint)}
@@ -1685,3 +1685,4 @@ html[data-kb] .zn-prompt{display:none}
 .zn-call-txt{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
 .zn-call-txt b{font-size:14.5px}
 .zn-call-txt small{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--z-muted)}.zn-call-txt small.is-missed{color:var(--z-accent)}
+.zn-page-head h1>svg{width:18px;height:18px;flex-shrink:0}
