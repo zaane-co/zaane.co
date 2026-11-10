@@ -33,7 +33,9 @@ export async function POST(request:Request){
   const {data:existing}=await db.from('zarn_channels').select('id').eq('kind','client').eq('lead_id',leadId).maybeSingle();
   const channelId=existing?.id??(await db.from('zarn_channels').insert({kind:'client',lead_id:leadId,created_by:me.user_id}).select('id').single()).data?.id;
   if(!channelId)throw new Error('Could not open the client space.');
-  const people=[...new Set([me.user_id,...await teamable(team)])];
+  // A new client space starts with every ZARN admin on the team; an admin can remove them later and they stay removed.
+  const admins=existing?[]:((await db.from('zarn_members').select('user_id').eq('is_admin',true).is('deactivated_at',null)).data??[]).map(m=>m.user_id);
+  const people=[...new Set([me.user_id,...admins,...await teamable(team)])];
   await db.from('zarn_channel_members').upsert(people.map(user_id=>({channel_id:channelId,user_id})),{onConflict:'channel_id,user_id',ignoreDuplicates:true});
   if(!existing)await db.from('zarn_messages').insert({channel_id:channelId,kind:'system',meta:{event:'client_opened',by:me.user_id}});
   return channelId;

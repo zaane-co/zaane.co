@@ -44,7 +44,10 @@ export async function POST(request:Request){
  // ZARN admin: members only, and nobody takes it away from themselves.
  if((b.action==='invite'||b.action==='update_access')&&b.is_admin&&b.account_type==='guest')return fail('Guests can’t be ZARN admins. Make them a Member first.');
  if(b.action==='update_access'&&b.user_id===me.id&&b.is_admin===false)return fail('You can’t remove your own ZARN admin. Ask another ZARN admin.');
- const setZarnAdmin=async(userId:string,v:boolean|undefined)=>{if(v!==undefined)await db.from('zarn_members').update({is_admin:v}).eq('user_id',userId);};
+ // Making someone a ZARN admin also puts them on every open client's team.
+ const setZarnAdmin=async(userId:string,v:boolean|undefined)=>{if(v===undefined)return;await db.from('zarn_members').update({is_admin:v}).eq('user_id',userId);
+  if(!v)return;const {data:cl}=await db.from('zarn_channels').select('id').eq('kind','client').is('archived_at',null);
+  if(cl?.length)await db.from('zarn_channel_members').upsert(cl.map(c=>({channel_id:c.id,user_id:userId})),{onConflict:'channel_id,user_id',ignoreDuplicates:true});};
  // The protected owner account stays a full member and super admin; it can't be deactivated or removed.
  if(b.action==='update_access'||b.action==='deactivate'||b.action==='remove'){const {data:t}=await db.from('users').select('protected').eq('id',b.user_id).maybeSingle();
   if(t?.protected&&(b.action!=='update_access'||b.account_type==='guest'||b.is_admin===false))return fail('This is the protected owner account. It stays a super admin and full member, and can’t be deactivated or removed.');}
