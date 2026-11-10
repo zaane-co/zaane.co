@@ -14,7 +14,7 @@ import {Browse,Invite,NewChannel,NewDm,Profile,SearchDialog} from './Dialogs';
 import AddClient from './AddClient';
 import {useInstall} from './ZarnPwa';
 import ProfileSheet from './ProfileSheet';
-import {useSound} from '@/lib/zarn-sound';
+import {tones,useSound,useSoundSettings} from '@/lib/zarn-sound';
 import SoundDialog from './SoundDialog';
 import Preferences from './Preferences';
 import Invites from './Invites';
@@ -40,7 +40,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({archivedclients:true});
  const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false),[meMenu,setMeMenu]=useState(false),[prefs,setPrefs]=useState<null|'availability'|'notifications'|'appearance'>(null);
  const router=useRouter();
- const {mode:installMode,install}=useInstall(),sound=useSound(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false),[installDone,setInstallDone]=useState(false);
+ const {mode:installMode,install}=useInstall(),sound=useSound(),soundCfg=useSoundSettings(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false),[installDone,setInstallDone]=useState(false);
  const routeArea=areaOf(pathname);
  const [area,setArea]=useState<Area>(routeArea);
  // Follow the route's area whenever the route changes.
@@ -124,8 +124,8 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
       <div className="zn-menu-me"><Avatar m={me} size={36} online/><span><b>{me.display_name}</b><small>{me.status_text||me.title||me.email}</small></span></div>
       <button type="button" onClick={()=>{setMenu(false);setDialog('profile');}}><UserRound size={15}/>Profile and status</button>
       <button type="button" role="switch" aria-checked={light} className="zn-theme-toggle" onClick={()=>writeTheme(!light)}><Sun size={15}/>Light mode<i className={light?'is-on':''}/></button>
-      <button type="button" onClick={()=>{setMenu(false);setSoundOpen(true);}}>{sound?<Volume2 size={15}/>:<VolumeX size={15}/>}{sound?'Message sounds: on':'Message sounds: off'}</button>
-      <button type="button" onClick={()=>{z.enableNotify();if(push.state!=='error')setMenu(false);}}><Bell size={15}/>{push.state==='on'?'Notifications: on':push.state==='error'?'Notifications: fix':'Turn on notifications'}</button>
+      <button type="button" onClick={()=>{setMenu(false);setSoundOpen(true);}}>{sound?<Volume2 size={15}/>:<VolumeX size={15}/>}Message sounds<em>{sound?(tones.find(t=>t.id===soundCfg.tone)?.label??'On'):'Off'}<ChevronRight size={14}/></em></button>
+      <button type="button" onClick={()=>{setMenu(false);setPrefs('notifications');}}><Bell size={15}/>Notifications<em>{push.state==='on'?'On':push.state==='error'?'Fix':'Off'}<ChevronRight size={14}/></em></button>
       {push.state==='error'&&<p className="zn-menu-note">{push.reason}</p>}
       {installMode&&<button type="button" onClick={()=>{setMenu(false);if(installMode==='prompt')void install();else setDialog('install');}}><Download size={15}/>Install ZARN on this device</button>}
       {staffAdmin&&<><div className="zn-menu-sep"/><p className="zn-menu-label">Admin</p>

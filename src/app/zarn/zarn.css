@@ -39,14 +39,16 @@
 .zn-me:hover{background:var(--z-hover)}
 .zn-me span{display:flex;flex-direction:column;min-width:0}
 .zn-me b{font-size:13px}.zn-me small{font-size:11.5px;color:var(--z-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.zn-menu{position:absolute;top:54px;left:10px;z-index:60;width:270px;padding:6px;border-radius:14px;background:var(--z-panel);border:1px solid var(--z-border);box-shadow:0 16px 40px rgba(0,0,0,.35)}
-.zn-menu>button,.zn-menu>a{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:8px;font-size:13.5px;color:var(--z-muted);text-align:left}
+.zn-menu{position:absolute;top:54px;left:10px;z-index:60;width:264px;padding:6px;border-radius:14px;background:var(--z-panel);border:1px solid var(--z-border);box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.zn-menu>button,.zn-menu>a{display:flex;align-items:center;gap:10px;width:100%;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--z-fg);text-align:left}
+.zn-menu>button svg,.zn-menu>a svg{color:var(--z-muted);flex-shrink:0}
+.zn-menu>button em{margin-left:auto;display:inline-flex;align-items:center;gap:2px;font-style:normal;font-size:12px;color:var(--z-faint)}
 .zn-menu>button:hover,.zn-menu>a:hover{background:var(--z-hover);color:var(--z-fg)}
 .zn-menu .is-danger{color:var(--z-accent)}
 .zn-menu-me{display:flex;align-items:center;gap:10px;padding:8px 10px 12px}
 .zn-menu-me span{display:flex;flex-direction:column;min-width:0}.zn-menu-me small{color:var(--z-faint);font-size:12px}
 .zn-menu-sep{height:1px;background:var(--z-border);margin:4px 6px}
-.zn-menu-label{padding:6px 10px 2px;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--z-faint)}
+.zn-menu-label{padding:6px 10px 2px;font-size:11.5px;font-weight:600;color:var(--z-faint)}
 .zn-scrim{position:fixed;inset:0;z-index:50;background:none}
 
 /* Avatars */
@@ -1616,3 +1618,7 @@ html[data-kb] .zn-prompt{display:none}
 .zn-snd-vol .zn-seg{flex:1}
 @media(max-width:480px){.zn-snd-grid{grid-template-columns:repeat(2,1fr)}}
 .zn-snd-credit{font-size:11.5px;color:var(--z-faint)}.zn-snd-credit a{text-decoration:underline}
+
+.zn-menu .zn-theme-toggle i{width:30px;height:18px}.zn-menu .zn-theme-toggle i::after{width:14px;height:14px}.zn-menu .zn-theme-toggle i.is-on::after{transform:translateX(12px)}
+.zn-menu-me{padding:6px 10px 10px}.zn-menu-me b{font-size:14px}
+.zn-menu>button.is-danger,.zn-menu>button.is-danger svg{color:var(--z-accent)}
