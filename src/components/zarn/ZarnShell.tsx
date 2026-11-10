@@ -103,7 +103,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
     </div>
     {meMenu&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setMeMenu(false)}/><div className="zn-me-menu" role="menu">
      <div className="zn-me-head"><Avatar m={me} size={44}/><span><b>{me.display_name}</b><small><i className={z.away?'is-away':''}/>{z.away?'Away':'Active'}</small></span></div>
-     <button type="button" className="zn-me-status" onClick={()=>{setMeMenu(false);setDialog('profile');}}><Smile size={18}/><span>{me.status_text?`${me.status_emoji??''} ${me.status_text}`.trim():'Update your status'}</span></button>
+     <button type="button" className="zn-me-status" onClick={()=>{setMeMenu(false);setDialog('status');}}><Smile size={18}/><span>{me.status_text?`${me.status_emoji??''} ${me.status_text}`.trim():'Update your status'}</span></button>
      <button type="button" role="menuitem" onClick={()=>{z.setAway(!z.away);setMeMenu(false);}}>Set yourself as <b>{z.away?'active':'away'}</b></button>
      <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setPrefs('notifications');}}>Notifications<em>{push.state==='on'?'On':push.state==='error'?'Fix':'Off'}<ChevronRight size={15}/></em></button>
      <div className="zn-me-sep"/>
@@ -123,7 +123,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
      {menu&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setMenu(false)}/><div className="zn-menu">
       <div className="zn-menu-me"><Avatar m={me} size={36} online/><span><b>{me.display_name}</b><small>{me.status_text||me.title||me.email}</small></span></div>
       <button type="button" onClick={()=>{setMenu(false);setDialog('profile');}}><UserRound size={15}/>Profile and status</button>
-      <button type="button" onClick={()=>writeTheme(!light)}>{light?<Moon size={15}/>:<Sun size={15}/>}{light?'Dark mode':'Light mode'}</button>
+      <button type="button" role="switch" aria-checked={light} className="zn-theme-toggle" onClick={()=>writeTheme(!light)}><Sun size={15}/>Light mode<i className={light?'is-on':''}/></button>
       <button type="button" onClick={()=>{setMenu(false);setSoundOpen(true);}}>{sound?<Volume2 size={15}/>:<VolumeX size={15}/>}{sound?'Message sounds: on':'Message sounds: off'}</button>
       <button type="button" onClick={()=>{z.enableNotify();if(push.state!=='error')setMenu(false);}}><Bell size={15}/>{push.state==='on'?'Notifications: on':push.state==='error'?'Notifications: fix':'Turn on notifications'}</button>
       {push.state==='error'&&<p className="zn-menu-note">{push.reason}</p>}
@@ -211,7 +211,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
   {dialog==='dm'&&<NewDm onClose={()=>setDialog(null)}/>}
   {dialog==='browse'&&<Browse onClose={()=>setDialog(null)}/>}
   {dialog==='search'&&<SearchDialog onClose={()=>setDialog(null)}/>}
-  {dialog==='profile'&&<Profile onClose={()=>setDialog(null)}/>}
+  {(dialog==='profile'||dialog==='status')&&<Profile initialTab={dialog==='status'?'status':'profile'} onClose={()=>setDialog(null)}/>}
   {dialog==='invite'&&<Invite onClose={()=>setDialog(null)}/>}
   {dialog==='client'&&<AddClient onClose={()=>setDialog(null)}/>}
   {dialog==='install'&&<div className="zn-modal-scrim" onClick={()=>setDialog(null)}><div className="zn-modal" role="dialog" aria-label="Install ZARN" onClick={e=>e.stopPropagation()}>

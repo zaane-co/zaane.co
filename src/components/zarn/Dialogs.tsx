@@ -2,7 +2,7 @@
 import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Check,FileText,Hash,Lock,Search as SearchIcon,X} from 'lucide-react';
+import {Check,FileText,Hash,HeartPulse,Lock,Phone,Search as SearchIcon,Smile,UserRound,X} from 'lucide-react';
 import {channelHref,channelSlug,clearAt,clearOptions,liveStatus,statusPresets,usernameOk,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
@@ -86,7 +86,7 @@ export function SearchDialog({onClose}:{onClose:()=>void}){
 }
 
 // Crop to a centred square and shrink to 512px WebP before upload.
-async function squareCrop(file:File):Promise<File>{
+export async function squareCrop(file:File):Promise<File>{
  const bmp=await createImageBitmap(file),side=Math.min(bmp.width,bmp.height),size=Math.min(512,side);
  const c=document.createElement('canvas');c.width=c.height=size;
  c.getContext('2d')!.drawImage(bmp,(bmp.width-side)/2,(bmp.height-side)/2,side,side,0,0,size,size);bmp.close();
@@ -94,8 +94,11 @@ async function squareCrop(file:File):Promise<File>{
  if(!blob)throw new Error('Could not read that image.');
  return new File([blob],'avatar.webp',{type:blob.type||'image/webp'});
 }
-export function Profile({onClose}:{onClose:()=>void}){
- const z=useZarn(),me=z.me;
+type ProfileTab='profile'|'status'|'contact'|'emergency';
+// Edit your profile: a centred window with sections on the left and one Save for everything.
+export function Profile({onClose,initialTab='profile'}:{onClose:()=>void;initialTab?:ProfileTab}){
+ const z=useZarn(),me=z.people[z.me.user_id]??z.me;
+ const [tab,setTab]=useState<ProfileTab>(initialTab),[bio,setBio]=useState(me.bio??'');
  const [v,setV]=useState({display_name:me.display_name,username:me.username??'',title:me.title,work_email:me.work_email||me.email,phone:me.phone});
  const live=liveStatus(me);
  const [st,setSt]=useState({emoji:live?.emoji??'',text:live?.text??'',clear:'',date:''});
@@ -121,43 +124,60 @@ export function Profile({onClose}:{onClose:()=>void}){
    status_emoji:hasStatus?st.emoji:'',status_text:hasStatus?st.text.trim():'',status_until:hasStatus?(st.clear?clearAt(st.clear,st.date):(live?.until??null)):null}).eq('user_id',me.user_id);
   if(error){setBusy(false);return setErr(error.code==='23505'?`@${v.username} is taken. Try another.`:'Could not save.');}
   const {error:e2}=await z.db.from('zarn_emergency').upsert({user_id:me.user_id,name:em.name.trim(),relation:em.relation.trim(),phone:em.phone.trim(),updated_at:new Date().toISOString()});
+  // About me is saved on its own so the rest still saves while the bio column rolls out.
+  if(bio.trim()!==(me.bio??'').trim())await z.db.from('zarn_members').update({bio:bio.trim()}).eq('user_id',me.user_id);
   setBusy(false);if(e2)return setErr('Saved your profile, but not the emergency contact. Try again.');
-  await z.reload();onClose();window.location.reload();
+  await z.reload();onClose();
  }
  const pick=(p:typeof statusPresets[number])=>setSt({emoji:p.emoji,text:p.text,clear:p.clear===null?'':String(p.clear),date:''});
- return <Modal title="Edit profile" onClose={onClose}><form className="zn-modal-body" onSubmit={save} data-lenis-prevent>
-  <div className="zn-photo-row">
-   <Avatar m={{...me,avatar_url:photo}} size={72}/>
-   <div><label className="zn-btn">{uploading?'Uploading…':photo?'Change photo':'Upload photo'}<input type="file" accept="image/jpeg,image/png,image/webp,image/heic" hidden disabled={uploading} onChange={e=>{void upload(e.target.files?.[0]);e.target.value='';}}/></label>
-    {photo&&<button type="button" className="zn-link-btn" onClick={()=>void removePhoto()}>Remove</button>}<small>Square photos look best. We crop it for you.</small></div>
+ const tabs:[ProfileTab,string,React.ReactNode][]=[['profile','Profile',<UserRound key="p" size={16}/>],['status','Status',<Smile key="s" size={16}/>],['contact','Contact',<Phone key="c" size={16}/>],['emergency','Emergency contact',<HeartPulse key="e" size={16}/>]];
+ return <div className="zn-modal-scrim zn-pe-scrim" onClick={onClose}><form className="zn-pe" role="dialog" aria-label="Edit your profile" onClick={e=>e.stopPropagation()} onSubmit={save}>
+  <header className="zn-pe-head"><div><h2>Edit your profile</h2><p>How you appear to the team across ZARN.</p></div><button type="button" aria-label="Close" onClick={onClose}><X size={20}/></button></header>
+  <div className="zn-pe-body">
+   <nav className="zn-pe-nav">{tabs.map(([k,l,i])=><button key={k} type="button" className={tab===k?'is-on':''} onClick={()=>setTab(k)}>{i}{l}</button>)}</nav>
+   <div className="zn-pe-pane" data-lenis-prevent>
+    {tab==='profile'&&<div className="zn-pe-split">
+     <div className="zn-pe-fields">
+      <label className="zn-label">Full name<input className="zn-input" maxLength={80} value={v.display_name} onChange={set('display_name')}/></label>
+      <label className="zn-label">Username<span className="zn-prefix zn-at"><AtSignIcon/><input className="zn-input" maxLength={30} value={v.username} onChange={set('username')}/></span><small className="zn-hint">How people @mention you.</small></label>
+      <label className="zn-label">Title<input className="zn-input" maxLength={80} placeholder="e.g. Product designer" value={v.title} onChange={set('title')}/><small className="zn-hint">Let people know what you do at Zaane.</small></label>
+      <label className="zn-label">About me<textarea className="zn-input zn-bio-in" rows={3} maxLength={600} placeholder="A few lines about you: what you work on, what you’re good at." value={bio} onChange={e=>setBio(e.target.value)}/><small className="zn-hint">{bio.length} / 600</small></label>
+     </div>
+     <div className="zn-pe-photo"><span className="zn-label">Profile photo</span>
+      <div className="zn-pe-photo-box">{photo?<img src={photo} alt=""/>:<Avatar m={{...me,avatar_url:null}} size={180}/>}</div>
+      <label className="zn-btn">{uploading?'Uploading…':photo?'Change photo':'Upload photo'}<input type="file" accept="image/jpeg,image/png,image/webp,image/heic" hidden disabled={uploading} onChange={e=>{void upload(e.target.files?.[0]);e.target.value='';}}/></label>
+      {photo&&<button type="button" className="zn-link-btn" disabled={uploading} onClick={()=>void removePhoto()}>Remove photo</button>}
+      <small className="zn-hint">Square photos look best. We crop it for you.</small>
+     </div>
+    </div>}
+    {tab==='status'&&<div className="zn-pe-fields">
+     <p className="zn-pe-intro">Let people know what you’re up to.</p>
+     <div className="zn-status-custom">
+      <input className="zn-input zn-emoji-in" aria-label="Status emoji" maxLength={4} placeholder="🙂" value={st.emoji} onChange={e=>setSt({...st,emoji:e.target.value})}/>
+      <input className="zn-input" aria-label="Status text" maxLength={100} placeholder="What’s your status?" value={st.text} onChange={e=>setSt({...st,text:e.target.value})}/>
+      {(st.emoji||st.text)&&<button type="button" className="zn-btn" onClick={()=>setSt({emoji:'',text:'',clear:'',date:''})}>Clear</button>}
+     </div>
+     <div className="zn-status-presets">{statusPresets.map(p=><button key={p.text} type="button" className={st.text===p.text?'is-on':''} onClick={()=>pick(p)}><span>{p.emoji}</span>{p.text}</button>)}</div>
+     {(st.emoji||st.text)&&<div className="zn-status-clear"><span>Clear after</span><Dropdown variant="inline" label="Clear after" value={st.clear} onChange={x=>setSt({...st,clear:x})} options={clearOptions.map(([k,l])=>({value:k,label:l}))}/>
+      {st.clear==='pick'&&<input className="zn-input" type="date" min={new Date().toISOString().slice(0,10)} value={st.date} onChange={e=>setSt({...st,date:e.target.value})} aria-label="Clear on"/>}</div>}
+    </div>}
+    {tab==='contact'&&<div className="zn-pe-fields">
+     <p className="zn-pe-intro">Shown on your profile so the team can reach you.</p>
+     <label className="zn-label">Email address<input className="zn-input" type="email" maxLength={254} value={v.work_email} onChange={set('work_email')}/><small className="zn-hint">You sign in with {me.email}.</small></label>
+     <label className="zn-label">Phone<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={v.phone} onChange={set('phone')}/></label>
+    </div>}
+    {tab==='emergency'&&<div className="zn-pe-fields">
+     <p className="zn-pe-intro">Someone we can call in an emergency. Visible to the team, never to guests.</p>
+     <label className="zn-label">Name<input className="zn-input" maxLength={80} placeholder="Full name" value={em.name} onChange={e=>setEm({...em,name:e.target.value})}/></label>
+     <div className="zn-grid-2">
+      <label className="zn-label">Relationship<input className="zn-input" maxLength={40} placeholder="e.g. Sister" value={em.relation} onChange={e=>setEm({...em,relation:e.target.value})}/></label>
+      <label className="zn-label">Phone<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={em.phone} onChange={e=>setEm({...em,phone:e.target.value})}/></label>
+     </div>
+    </div>}
+   </div>
   </div>
-  <div className="zn-grid-2">
-   <label className="zn-label">Full name<input className="zn-input" maxLength={80} value={v.display_name} onChange={set('display_name')}/></label>
-   <label className="zn-label">Username<span className="zn-prefix zn-at"><AtSignIcon/><input className="zn-input" maxLength={30} value={v.username} onChange={set('username')}/></span></label>
-  </div>
-  <label className="zn-label">Title<input className="zn-input" maxLength={80} placeholder="e.g. Product designer" value={v.title} onChange={set('title')}/></label>
-  <div className="zn-label">Status</div>
-  <div className="zn-status-presets">{statusPresets.map(p=><button key={p.text} type="button" className={st.text===p.text?'is-on':''} onClick={()=>pick(p)}><span>{p.emoji}</span>{p.text}</button>)}</div>
-  <div className="zn-status-custom">
-   <input className="zn-input zn-emoji-in" aria-label="Status emoji" maxLength={4} placeholder="🙂" value={st.emoji} onChange={e=>setSt({...st,emoji:e.target.value})}/>
-   <input className="zn-input" aria-label="Status text" maxLength={100} placeholder="What’s your status?" value={st.text} onChange={e=>setSt({...st,text:e.target.value})}/>
-   {(st.emoji||st.text)&&<button type="button" className="zn-btn" onClick={()=>setSt({emoji:'',text:'',clear:'',date:''})}>Clear</button>}
-  </div>
-  {(st.emoji||st.text)&&<div className="zn-status-clear"><span>Clear after</span><Dropdown variant="inline" label="Clear after" value={st.clear} onChange={x=>setSt({...st,clear:x})} options={clearOptions.map(([k,l])=>({value:k,label:l}))}/>
-   {st.clear==='pick'&&<input className="zn-input" type="date" min={new Date().toISOString().slice(0,10)} value={st.date} onChange={e=>setSt({...st,date:e.target.value})} aria-label="Clear on"/>}</div>}
-  <div className="zn-grid-2">
-   <label className="zn-label">Work email<input className="zn-input" type="email" maxLength={254} value={v.work_email} onChange={set('work_email')}/></label>
-   <label className="zn-label">Hotline<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={v.phone} onChange={set('phone')}/></label>
-  </div>
-  <p className="zn-label">Emergency contact <small>Visible to the team, never to guests.</small></p>
-  <div className="zn-grid-3">
-   <input className="zn-input" aria-label="Emergency contact name" maxLength={80} placeholder="Name" value={em.name} onChange={e=>setEm({...em,name:e.target.value})}/>
-   <input className="zn-input" aria-label="Relationship" maxLength={40} placeholder="Relationship" value={em.relation} onChange={e=>setEm({...em,relation:e.target.value})}/>
-   <input className="zn-input" aria-label="Emergency phone" type="tel" maxLength={40} placeholder="Phone" value={em.phone} onChange={e=>setEm({...em,phone:e.target.value})}/>
-  </div>
-  {err&&<p className="zn-error">{err}</p>}
-  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary" disabled={busy||uploading}>{busy?'Saving…':'Save'}</button></div>
- </form></Modal>;
+  <footer className="zn-pe-foot">{err?<p className="zn-error" role="alert">{err}</p>:<span/>}<div><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary" disabled={busy||uploading}>{busy?'Saving…':'Save changes'}</button></div></footer>
+ </form></div>;
 }
 const AtSignIcon=()=><span className="zn-at-sign">@</span>;
 
