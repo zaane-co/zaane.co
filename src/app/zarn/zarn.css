@@ -1840,3 +1840,4 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-call-me span{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);padding:2px 9px;border-radius:999px;background:#111;color:#fff;font-size:11px;font-weight:600}
 .zn-call-scrim .zn-call-avatar.is-ringing::before,.zn-call-scrim .zn-call-avatar.is-ringing::after{content:none;animation:none}
 .zn-calls>section{flex-shrink:0}
+.zn-call-actions button svg,.zn-call-mini button svg{overflow:visible}
