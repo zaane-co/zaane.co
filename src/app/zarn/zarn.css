@@ -1789,3 +1789,29 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-page-head>.zn-btn{flex:none}
 @media(max-width:760px){.zn-calls{padding:14px 12px 28px}.zn-calls-hero{grid-template-columns:1fr;padding:22px}.zn-calls-art{display:none}.zn-calls-quick{opacity:1}}
 .zn-menu-scrim{position:fixed;inset:0;z-index:25}
+/* Call v2: ringing screen (calling / incoming / connecting) */
+.zn-call-scrim{background:rgba(0,0,0,.72);backdrop-filter:blur(14px)}
+.zn-call-scrim>.zn-call{max-width:380px;min-height:520px;padding:22px 24px 26px;gap:14px;justify-content:flex-start;border:1px solid var(--z-border);border-radius:28px;background:var(--z-panel);overflow:hidden;isolation:isolate}
+.zn-call-bg{position:absolute;inset:-40px;z-index:-1;background:var(--z-panel-2) center/cover no-repeat;filter:blur(38px) saturate(1.2);opacity:.55;transform:scale(1.1)}
+.zn-call-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,14,.35),rgba(10,10,14,.92) 75%)}
+.zn-call-kind{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;border-radius:999px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:12px;font-weight:600;letter-spacing:.01em}
+.zn-call-scrim .zn-call-min{top:18px;right:18px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.14);color:#fff}
+.zn-call-scrim .zn-call-avatar{margin-top:44px;border-radius:50%}
+.zn-call-scrim .zn-call-avatar>.zn-avatar{border-radius:50%;box-shadow:0 0 0 4px rgba(255,255,255,.08),0 20px 50px rgba(0,0,0,.5)}
+.zn-call-scrim .zn-call-avatar.is-ringing::before,.zn-call-scrim .zn-call-avatar.is-ringing::after{inset:-10px;border-radius:50%;border-width:2px;animation:zn-ring2 2.4s cubic-bezier(.2,.6,.3,1) infinite}
+.zn-call-scrim .zn-call-avatar.is-ringing::after{animation-delay:1.2s}
+@keyframes zn-ring2{0%{transform:scale(.92);opacity:.8}100%{transform:scale(1.6);opacity:0}}
+.zn-call-scrim .zn-call-info{margin-top:22px;gap:6px;color:#fff}
+.zn-call-scrim .zn-call-info>b{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.zn-call-scrim .zn-call-info>em{font-style:normal;font-size:13.5px;color:rgba(255,255,255,.65)}
+.zn-call-scrim .zn-call-info>small{display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:13.5px;color:rgba(255,255,255,.75)}
+.zn-call-info>small .zn-dots{margin:0 4px 0 0}
+.zn-call-replies{display:flex;flex-direction:column;gap:6px;width:100%;margin-top:6px}
+.zn-call-replies button{height:36px;padding:0 14px;border-radius:12px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);color:#fff;font-size:13px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zn-call-replies button:hover{background:rgba(0,0,0,.6)}
+.zn-call-scrim .zn-call-actions{margin-top:auto;gap:44px;padding-top:18px}
+.zn-call-scrim .zn-call-actions button{color:rgba(255,255,255,.8)}
+.zn-call-scrim .zn-call-actions button svg{width:26px;height:26px;padding:20px;box-shadow:0 10px 24px rgba(0,0,0,.35)}
+.zn-call-scrim .zn-call-actions .is-accept svg{animation:zn-accept 1.4s ease-in-out infinite}
+@keyframes zn-accept{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@media(prefers-reduced-motion:reduce){.zn-call-scrim .zn-call-actions .is-accept svg,.zn-call-scrim .zn-call-avatar.is-ringing::before,.zn-call-scrim .zn-call-avatar.is-ringing::after{animation:none}}

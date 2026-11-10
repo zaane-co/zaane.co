@@ -215,6 +215,11 @@ export default function CallProvider({children}:{children:React.ReactNode}){
   onPointerUp:()=>{drag.current=null;},
  };
 
+ // How long it has been ringing, shown on the calling and incoming screens.
+ const [ringFor,setRingFor]=useState(0);
+ useEffect(()=>{if(phase!=='calling'&&phase!=='incoming')return;const t0=Date.now();const t=setInterval(()=>setRingFor(Math.floor((Date.now()-t0)/1000)),1000);return()=>{clearInterval(t);setRingFor(0);};},[phase]);
+ // Decline with a quick message posted to the DM.
+ async function replyDecline(text:string){const c=callRef.current;await finish('decline');if(c)await db.from('zarn_messages').insert({channel_id:c.channel,user_id:me.user_id,body:text});}
  const value=useMemo(()=>({start,busy:phase!=='idle'}),[start,phase]);
  const peer=call?people[call.peer]:undefined,name=peer?.display_name??'Someone',stage=phase==='active'&&(peerVideo||camOn||sharing);
  return <Ctx.Provider value={value}>{children}
@@ -239,12 +244,15 @@ export default function CallProvider({children}:{children:React.ReactNode}){
    {phase!=='incoming'&&<button type="button" className="zn-call-min" aria-label="Minimize call" data-tip="Minimize" onClick={()=>setMini(true)}><Minimize2 size={16}/></button>}
    {stage?<div className="zn-call-stage"><video ref={remoteEl} className="zn-call-remote" autoPlay playsInline muted style={{display:peerVideo?undefined:'none'}}/>{!peerVideo&&<div className="zn-call-avatar"><Avatar m={peer} size={96}/></div>}{(camOn||sharing)&&<video key={sharing?'screen':'cam'} ref={localEl} className={`zn-call-local${sharing?'':' is-mirror'}`} autoPlay playsInline muted/>}
     <div className="zn-call-tools">{canPip&&peerVideo&&<button type="button" aria-label="Picture in picture" data-tip="Keep watching in a small window" onClick={()=>void togglePip()}><PictureInPicture2 size={16}/></button>}{!fs&&<button type="button" aria-label={big?'Smaller window':'Larger window'} data-tip={big?'Smaller':'Larger'} onClick={()=>setBig(b=>!b)}>{big?<Shrink size={16}/>:<Expand size={16}/>}</button>}<button type="button" aria-label={fs?'Exit full screen':'Full screen'} data-tip={fs?'Exit full screen':'Full screen'} onClick={toggleFullscreen}>{fs?<Minimize2 size={16}/>:<Maximize2 size={16}/>}</button></div></div>
-    :<div className={`zn-call-avatar${phase==='incoming'||phase==='calling'?' is-ringing':''}`}><Avatar m={peer} size={96}/></div>}
-   <div className="zn-call-info"><b>{name}</b><small>{phase==='incoming'?(call.video?'Incoming video call':'Incoming voice call'):phase==='calling'?'Calling…':phase==='connecting'?'Connecting…':fmt(secs)}</small></div>
+    :<>{phase!=='active'&&<><div className="zn-call-bg" aria-hidden style={peer?.avatar_url?{backgroundImage:`url(${peer.avatar_url})`}:undefined}/>
+      <span className="zn-call-kind">{call.video?<Video size={13}/>:<Phone size={13}/>}{phase==='incoming'?(call.video?'Incoming video call':'Incoming voice call'):call.video?'Video call':'Voice call'}</span></>}
+     <div className={`zn-call-avatar${phase==='incoming'||phase==='calling'?' is-ringing':''}`}><Avatar m={peer} size={phase==='active'?96:120}/></div></>}
+   <div className="zn-call-info"><b>{name}</b>{phase!=='active'&&peer?.title&&<em>{peer.title}</em>}<small>{phase==='incoming'?<>Ringing <i className="zn-dots"><b/><b/><b/></i> {fmt(ringFor)}</>:phase==='calling'?<>Calling <i className="zn-dots"><b/><b/><b/></i> {fmt(ringFor)}</>:phase==='connecting'?<>Connecting <i className="zn-dots"><b/><b/><b/></i></>:fmt(secs)}</small></div>
+   {phase==='incoming'&&<div className="zn-call-replies">{['Can’t talk now, I’ll call you back.','In a meeting. Text me?','On my way, 5 minutes.'].map(t=><button key={t} type="button" onClick={()=>void replyDecline(t)}>{t}</button>)}</div>}
    <div className="zn-call-actions">
     {phase==='incoming'?<>
      <button type="button" className="is-decline" aria-label="Decline" onClick={()=>void finish('decline')}><PhoneOff size={22}/><span>Decline</span></button>
-     <button type="button" className="is-accept" aria-label="Accept" onClick={()=>void accept()}><Phone size={22}/><span>Accept</span></button>
+     <button type="button" className="is-accept" aria-label="Accept" onClick={()=>void accept()}>{call.video?<Video size={22}/>:<Phone size={22}/>}<span>Accept</span></button>
     </>:<>
      {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={22}/>:<Mic size={22}/>}<span>{muted?'Unmute':'Mute'}</span></button>}
      {phase==='active'&&<button type="button" className={camOn?'is-on':''} aria-label={camOn?'Turn camera off':'Turn camera on'} aria-pressed={camOn} onClick={()=>void toggleCamera()}>{camOn?<Video size={22}/>:<VideoOff size={22}/>}<span>{camOn?'Camera':'Camera off'}</span></button>}

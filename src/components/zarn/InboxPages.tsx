@@ -52,7 +52,9 @@ export function CallsPage(){
  const [intro,setIntro]=useState(true);
  // eslint-disable-next-line react-hooks/set-state-in-effect -- reading a per-device preference
  useEffect(()=>{try{if(localStorage.getItem(HIDE_INTRO))setIntro(false);}catch{}},[]);
- useEffect(()=>{let live=true;void db.from('zarn_calls').select('*').or(`caller_id.eq.${me.user_id},callee_id.eq.${me.user_id}`).order('created_at',{ascending:false}).limit(200).then(({data}:{data:Call[]|null})=>{if(live)setRows(data??[]);});return()=>{live=false;};},[db,me.user_id]);
+ // Reloads when a call starts or ends (busy flips) and when the window regains focus, so new calls show up straight away.
+ useEffect(()=>{let live=true;const load=()=>void db.from('zarn_calls').select('*').or(`caller_id.eq.${me.user_id},callee_id.eq.${me.user_id}`).order('created_at',{ascending:false}).limit(200).then(({data}:{data:Call[]|null})=>{if(live)setRows(data??[]);});
+  load();const later=setTimeout(load,1500);window.addEventListener('focus',load);return()=>{live=false;clearTimeout(later);window.removeEventListener('focus',load);};},[db,me.user_id,call.busy]);
  const peer=(c:Call)=>c.caller_id===me.user_id?c.callee_id:c.caller_id;
  const missed=(c:Call)=>c.status==='missed'||c.status==='declined';
  const match:Record<CallFilter,(c:Call)=>boolean>={all:()=>true,missed:c=>missed(c)&&c.callee_id===me.user_id,incoming:c=>c.callee_id===me.user_id,outgoing:c=>c.caller_id===me.user_id};
