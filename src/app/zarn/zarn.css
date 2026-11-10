@@ -1485,6 +1485,9 @@ html[data-kb] .zn-prompt{display:none}
 .zbot-intro li>svg{color:var(--z-muted);align-self:start;margin-top:2px}
 .zbot-intro li b{display:block;font-size:16px;margin-bottom:4px}
 .zbot-intro li span{font-size:14px;color:var(--z-muted);line-height:1.5}
-.zbot-intro li button{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--z-accent);color:#fff}
-.zbot-intro li button:hover{filter:brightness(1.1)}
+.zbot-intro li button{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--z-panel-2);border:1px solid var(--z-border);color:var(--z-fg);transition:background .15s,color .15s,border-color .15s,transform .15s}
+.zbot-intro li button:hover{background:var(--z-accent);border-color:var(--z-accent);color:#fff;transform:translateX(2px)}
+.zbot-intro li{padding:12px 14px;margin:0 -14px;border-radius:14px;transition:background .15s}
+.zbot-intro li:hover{background:var(--z-hover)}
+.zbot-intro ul{gap:6px}
 @media(max-width:860px){.zai.is-wide{width:100vw}.zai-expand{display:none}.zbot-chips{grid-template-columns:1fr}.zbot-hello h2{font-size:22px}.zbot-intro{padding:32px 20px 24px}.zbot-intro h2{font-size:23px}}
