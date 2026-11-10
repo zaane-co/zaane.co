@@ -205,6 +205,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
   <NotifyPrompt wait={!installDone} installMode={installMode} onInstall={()=>setDialog('install')}/>
   {prefs&&<Preferences initial={prefs} onClose={()=>setPrefs(null)} onStatus={()=>{setPrefs(null);setDialog('profile');}}/>}
   <Toast/>
+  <PrefsListener open={()=>setPrefs('availability')}/>
   {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {newProject&&<NewProject onClose={()=>setNewProject(false)}/>}
@@ -237,3 +238,6 @@ function Toast(){
  useEffect(()=>{let t:ReturnType<typeof setTimeout>;const h=(e:Event)=>{setMsg((e as CustomEvent<string>).detail);clearTimeout(t);t=setTimeout(()=>setMsg(''),2400);};window.addEventListener('zarn-toast',h);return()=>{window.removeEventListener('zarn-toast',h);clearTimeout(t);};},[]);
  return msg?<div className="zn-toast" role="status"><Check size={15}/>{msg}</div>:null;
 }
+
+// Lets other parts of ZARN (e.g. your profile's Settings button) open Preferences.
+function PrefsListener({open}:{open:()=>void}){useEffect(()=>{window.addEventListener('zarn-open-prefs',open);return()=>window.removeEventListener('zarn-open-prefs',open);},[open]);return null;}

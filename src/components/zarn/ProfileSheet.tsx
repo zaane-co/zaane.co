@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-import {Clock,HeartPulse,Mail,MessageSquare,Phone,Plus,Smile,X} from 'lucide-react';
+import {Clock,Settings,HeartPulse,Mail,MessageSquare,Phone,Plus,Smile,X} from 'lucide-react';
 import {liveStatus,usernameOk,waLink,type ZEmergency} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -21,7 +21,7 @@ export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onCl
  const st=liveStatus(p),phones=[p.phone,p.phone2,p.phone3].filter((n):n is string=>!!n),wa=waLink(p.whatsapp);
  return <>
   <div className="zn-sheet-scrim" onClick={onClose}><aside className="zn-sheet zn-prof" role="dialog" aria-label={`${p.display_name}’s profile`} onClick={e=>e.stopPropagation()}>
-   <header className="zn-prof-head"><b>Profile</b><button type="button" aria-label="Close" onClick={onClose}><X size={20}/></button></header>
+   <header className="zn-prof-head"><b>Profile</b><div className="zn-prof-head-btns">{isMe&&<button type="button" aria-label="Settings" data-tip="Settings" onClick={()=>{onClose();window.dispatchEvent(new Event('zarn-open-prefs'));}}><Settings size={19}/></button>}<button type="button" aria-label="Close" onClick={onClose}><X size={20}/></button></div></header>
    <div className="zn-prof-side">
    <div className="zn-prof-photo">{p.avatar_url?<img src={p.avatar_url} alt=""/>:<Avatar m={p} size={220}/>}</div>
    <div className="zn-prof-name"><h2>{p.display_name}{p.account_type==='guest'&&<span className="zn-guest-tag">Guest</span>}</h2>{isMe&&<button type="button" className="zn-prof-edit" onClick={()=>setEdit('profile')}>Edit</button>}</div>

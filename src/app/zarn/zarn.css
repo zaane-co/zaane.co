@@ -1589,3 +1589,4 @@ html[data-kb] .zn-prompt{display:none}
 .zn-bio-in{min-height:76px;resize:vertical;padding:10px 12px;line-height:1.5}
 .zn-prof-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
 @media(max-width:640px){.zn-sheet.zn-prof{grid-template-columns:1fr;overflow-y:auto}.zn-prof-side{border-right:0;border-bottom:1px solid var(--z-border)}.zn-prof-photo{width:160px;margin:0 auto}.zn-edit-grid{grid-template-columns:1fr}}
+.zn-prof-head-btns{display:flex;gap:4px}
