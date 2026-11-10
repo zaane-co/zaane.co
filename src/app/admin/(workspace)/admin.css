@@ -721,3 +721,22 @@
 .za-access .za-modal-foot{padding-top:16px;margin-top:8px;border-top:1px solid var(--a-border)}
 @media(max-width:820px){.za-access-body{grid-template-columns:1fr;gap:0}.za-access-side{position:static}}
 .za-access .za-modal-foot{justify-content:flex-end}.za-access .za-modal-foot .za-btn{flex:0 0 auto;min-width:140px}
+/* Access window, tighter */
+.za-modal.za-access{max-width:860px;padding:22px 24px 20px}
+.za-access .za-modal-head{margin-bottom:6px}
+.za-access-body{gap:32px}
+.za-access-label{margin:18px 0 8px}
+.za-access .za-role-pick-2{gap:8px}
+.za-access .za-role-pick-2 button{padding:11px 13px}
+.za-access .za-role-pick button small{font-size:12px}
+.za-access .za-toggle-row{padding:10px 0}
+.za-access-channels{max-height:400px;padding:4px}
+.za-access-channels .za-check-row{padding:6px 8px;gap:10px}
+.za-access-channels .za-check-row:has(input:checked){background:var(--a-panel)}
+.za-chan-ico{width:28px;height:28px;border-radius:7px}
+.za-access-channels .za-check-row b{font-size:13.5px}
+.za-access-channels .za-check-row small{font-size:11.5px}
+.za-access .za-modal-foot{padding-top:14px;margin-top:14px}
+.za-access .za-modal-foot .za-btn{min-width:120px}
+.za-access-who{color:var(--a-fg);font-weight:600}
+.za-access .za-modal-head{margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--a-border)}

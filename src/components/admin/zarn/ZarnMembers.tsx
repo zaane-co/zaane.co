@@ -115,7 +115,7 @@ function AccessForm({mode,row,channels,isMe,onClose,onDone}:{mode:'invite'|'edit
   }catch(err){setError(err instanceof Error?err.message:'Something went wrong.');setBusy(false);}
  }
  return <div className="za-modal-scrim" onClick={onClose}><form className="za-modal za-modal-wide za-access" role="dialog" aria-label={mode==='invite'?'Invite to ZARN':'Edit access'} onClick={e=>e.stopPropagation()} onSubmit={submit}>
-  <div className="za-modal-head"><span className="za-modal-icon za-modal-icon-brand">{mode==='invite'?<UserPlus size={18}/>:<Pencil size={18}/>}</span><div><strong>{mode==='invite'?'Invite to ZARN':`Edit access: ${row!.display_name}`}</strong><small>{mode==='invite'?'They get an email to set their password.':row!.email}</small></div><button type="button" className="za-icon-btn za-push" aria-label="Close" onClick={onClose}><X size={16}/></button></div>
+  <div className="za-modal-head"><span className="za-modal-icon za-modal-icon-brand">{mode==='invite'?<UserPlus size={18}/>:<Pencil size={18}/>}</span><div><strong>{mode==='invite'?'Invite to ZARN':'Edit access'}</strong><small>{mode==='invite'?'They get an email to set their password.':<><b className="za-access-who">{row!.display_name}</b> · {row!.email}</>}</small></div><button type="button" className="za-icon-btn za-push" aria-label="Close" onClick={onClose}><X size={16}/></button></div>
   <div className="za-access-body" data-lenis-prevent>
    <div className="za-access-col">
    {mode==='invite'&&<div className="za-form-grid">
