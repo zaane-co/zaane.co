@@ -2,13 +2,15 @@
 import {useSyncExternalStore} from 'react';
 // ZARN message sound, made with Web Audio (no file to download). Browsers only allow audio after the person has
 // interacted with the page, so the context is unlocked on the first tap/click. Settings live in this browser only.
-export type Tone='chime'|'pop'|'bell';
-export type Volume='low'|'medium'|'high';
+export type Tone='chime'|'pop'|'bell'|'ding'|'ping'|'droplet'|'marimba'|'knock'|'rise'|'triple'|'alarm'|'siren';
+export type Volume='low'|'medium'|'high'|'max';
 export type Scope='direct'|'all';
 export type SoundSettings={on:boolean;tone:Tone;volume:Volume;scope:Scope};
-export const tones:{id:Tone;label:string}[]=[{id:'chime',label:'Chime'},{id:'pop',label:'Pop'},{id:'bell',label:'Bell'}];
+export const tones:{id:Tone;label:string;loud?:boolean}[]=[
+ {id:'chime',label:'Chime'},{id:'pop',label:'Pop'},{id:'bell',label:'Bell'},{id:'ding',label:'Ding'},{id:'ping',label:'Ping'},{id:'droplet',label:'Droplet'},
+ {id:'marimba',label:'Marimba'},{id:'knock',label:'Knock'},{id:'rise',label:'Rise'},{id:'triple',label:'Triple'},{id:'alarm',label:'Alarm',loud:true},{id:'siren',label:'Siren',loud:true}];
 const KEY='zarn-sound-v2',OLD='zarn-sound';
-const gains:Record<Volume,number>={low:.12,medium:.32,high:.65};
+const gains:Record<Volume,number>={low:.12,medium:.32,high:.65,max:1};
 const defaults:SoundSettings={on:true,tone:'chime',volume:'medium',scope:'direct'};
 let ctx:AudioContext|null=null;
 const listeners=new Set<()=>void>();
@@ -30,11 +32,19 @@ export const setSound=(on:boolean)=>{updateSound({on});if(on)playChime(true);};
 export function useSoundSettings(){return useSyncExternalStore(cb=>{listeners.add(cb);return()=>{listeners.delete(cb);};},getSound,()=>defaults);}
 export const useSound=()=>useSoundSettings().on;
 let last=0;
+// Max volume runs through a compressor and boost so it is as loud as the speaker allows without crackling.
+let out:AudioNode|null=null,boosted=false;
+function dest(c:AudioContext,boost:boolean){
+ if(!boost)return c.destination;
+ if(!out||!boosted){const comp=c.createDynamicsCompressor();comp.threshold.value=-18;comp.knee.value=6;comp.ratio.value=8;const g=c.createGain();g.gain.value=2.4;comp.connect(g).connect(c.destination);out=comp;boosted=true;}
+ return out;
+}
+let target:AudioNode|null=null;
 function note(c:AudioContext,type:OscillatorType,from:number,to:number,at:number,len:number,peak:number){
  const t=c.currentTime+at,o=c.createOscillator(),g=c.createGain();
  o.type=type;o.frequency.setValueAtTime(from,t);if(to!==from)o.frequency.exponentialRampToValueAtTime(to,t+len*.6);
  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(peak,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+len);
- o.connect(g).connect(c.destination);o.start(t);o.stop(t+len+.03);
+ o.connect(g).connect(target??c.destination);o.start(t);o.stop(t+len+.03);
 }
 // force=true plays even if sounds are off or a chime just played (used by the settings preview).
 export function playChime(force=false,override?:Partial<SoundSettings>){
@@ -42,10 +52,23 @@ export function playChime(force=false,override?:Partial<SoundSettings>){
  if(!ctx||(!s.on&&!force))return;
  const now=Date.now();if(!force&&now-last<1200)return;last=now; // a burst of messages sounds once
  if(ctx.state==='suspended')void ctx.resume();
- const p=gains[s.volume];
- if(s.tone==='pop'){note(ctx,'triangle',700,300,0,.16,p*1.3);}
- else if(s.tone==='bell'){note(ctx,'sine',1046.5,1046.5,0,.9,p);note(ctx,'sine',2093,2093,0,.5,p*.4);note(ctx,'sine',1568,1568,.12,.8,p*.7);}
- else{note(ctx,'sine',880,880,0,.35,p);note(ctx,'sine',1318.5,1318.5,.11,.35,p);}
+ const p=gains[s.volume],c=ctx;target=dest(c,s.volume==='max');
+ const n=(type:OscillatorType,f:number,at:number,len:number,k=1,to=f)=>note(c,type,f,to,at,len,p*k);
+ switch(s.tone){
+  case 'pop':n('triangle',700,0,.16,1.3,300);break;
+  case 'bell':n('sine',1046.5,0,.9);n('sine',2093,0,.5,.4);n('sine',1568,.12,.8,.7);break;
+  case 'ding':n('sine',1318.5,0,.7);n('sine',2637,0,.3,.3);break;
+  case 'ping':n('sine',1760,0,.25,1.1);break;
+  case 'droplet':n('sine',600,0,.18,1.2,1400);n('sine',900,.12,.14,.6,1800);break;
+  case 'marimba':n('triangle',784,0,.3,1.2);n('triangle',988,.14,.3,1.1);n('triangle',1175,.28,.4,1);break;
+  case 'knock':n('square',180,0,.07,.9,120);n('square',180,.16,.07,.9,120);break;
+  case 'rise':n('sine',523,0,.18);n('sine',659,.14,.18);n('sine',784,.28,.18);n('sine',1047,.42,.35);break;
+  case 'triple':for(const t of [0,.18,.36])n('sine',1175,t,.14,1.1);break;
+  case 'alarm':for(const t of [0,.22,.44,.66])n('square',1000,t,.16,.9);break;
+  case 'siren':n('sawtooth',650,0,.55,.7,1300);n('sawtooth',1300,.55,.55,.7,650);break;
+  default:n('sine',880,0,.35);n('sine',1318.5,.11,.35);
+ }
+ target=null;
 }
 // Ringing for voice calls: repeats until the returned stop function is called. 'in' is the rapid double ring, 'out' the slower ringback.
 export function startRing(kind:'in'|'out'){
