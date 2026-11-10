@@ -1,9 +1,9 @@
 // ZARN service worker: makes ZARN installable and shows a friendly screen when offline.
 // Pages and data always come fresh from the network (chat must never show stale messages).
-const CACHE = 'zarn-v1';
+const CACHE = 'zarn-v2';
 const OFFLINE = '/zarn-offline.html';
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll([OFFLINE, '/zarn-icons/icon-192.png'])).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll([OFFLINE, '/zarn-icons/logo-192.png'])).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== 'zarn-nav').map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -22,7 +22,7 @@ self.addEventListener('push', e => {
     if (wins.some(w => w.visibilityState === 'visible')) return;
     if (self.navigator.setAppBadge && d.unread) { try { await self.navigator.setAppBadge(d.unread); } catch (_) {} }
     await self.registration.showNotification(d.title || 'ZARN', {
-      body: d.body || '', tag: d.tag, icon: '/zarn-icons/icon-192.png', badge: '/zarn-icons/icon-192.png',
+      body: d.body || '', tag: d.tag, icon: '/zarn-icons/logo-192.png', badge: '/zarn-icons/logo-192.png',
       data: { url: d.url || '/zarn', channel: d.channel }, renotify: true,
       requireInteraction: !!d.call, vibrate: d.call ? [300, 150, 300, 150, 300] : undefined,
     });

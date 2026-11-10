@@ -88,7 +88,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}${fileDrag&&hasDropTarget()?' is-file-drag':''}`} data-lenis-prevent>
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
-    <button type="button" className="zn-rail-logo" aria-label="Workspace menu" onClick={()=>setMenu(v=>!v)}><img src="/zarnlogo.png" alt="ZARN"/></button>
+    <button type="button" className="zn-rail-logo" aria-label="Workspace menu" onClick={()=>setMenu(v=>!v)}><img src="/zarn-logo.png" alt="ZARN"/></button>
     {railBtn('chat',<MessageSquare size={20}/>,'Chat',badges.home+badges.dms)}
     {canBusiness&&railBtn('business',<BarChart3 size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
