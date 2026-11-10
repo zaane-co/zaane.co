@@ -1538,3 +1538,6 @@ html[data-kb] .zn-prompt{display:none}
 .zn-pe-photo-box .zn-avatar{font-size:54px!important}
 .zn-pe-photo .zn-hint{white-space:normal}
 .zn-pe-foot{padding:12px 22px}
+.zn-wa-btn{background:#25d366!important;border-color:#25d366!important;color:#fff!important}
+.zn-wa-ico{color:#25d366!important}
+.zn-pe-add{align-self:flex-start;font-size:13px;font-weight:600;color:var(--z-accent)}

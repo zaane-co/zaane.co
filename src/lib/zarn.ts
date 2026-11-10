@@ -1,5 +1,5 @@
 // ZARN (team chat) shared types and helpers for the client and the API routes.
-export type ZMember={user_id:string;email:string;display_name:string;title:string;status_text:string;avatar_url:string|null;joined_at:string|null;deactivated_at:string|null;last_seen_at:string|null;created_at:string;account_type:'member'|'guest';can_view_crm:boolean;can_create_channels:boolean;expires_at:string|null;username:string|null;phone:string;work_email:string;status_emoji:string;status_until:string|null;bio?:string};
+export type ZMember={user_id:string;email:string;display_name:string;title:string;status_text:string;avatar_url:string|null;joined_at:string|null;deactivated_at:string|null;last_seen_at:string|null;created_at:string;account_type:'member'|'guest';can_view_crm:boolean;can_create_channels:boolean;expires_at:string|null;username:string|null;phone:string;work_email:string;status_emoji:string;status_until:string|null;bio?:string;phone2?:string;phone3?:string;whatsapp?:string};
 export type ZEmergency={user_id:string;name:string;relation:string;phone:string};
 export const usernameOk=(u:string)=>/^[a-z0-9][a-z0-9._]{1,29}$/.test(u);
 export type ZChannel={id:string;kind:'public'|'private'|'dm'|'client'|'project';lead_id:string|null;project_id?:string|null;name:string|null;topic:string;crm_feed:string|null;dm_key:string|null;is_default:boolean;archived_at:string|null;created_at:string;created_by?:string|null};
@@ -45,3 +45,5 @@ export function liveStatus(m?:Pick<ZMember,'status_emoji'|'status_text'|'status_
  if(m.status_until&&new Date(m.status_until)<=new Date())return null;
  return {emoji:m.status_emoji,text:m.status_text,until:m.status_until};
 }
+// wa.me link for a WhatsApp number. Local Nigerian numbers (0803…) become +234.
+export function waLink(n?:string|null){let d=(n??'').replace(/\D/g,'');if(!d)return '';if(d.startsWith('0'))d='234'+d.slice(1);return `https://wa.me/${d}`;}

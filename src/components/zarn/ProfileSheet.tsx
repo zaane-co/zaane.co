@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import {Clock,HeartPulse,Mail,MessageSquare,Phone,Plus,Smile,X} from 'lucide-react';
-import {liveStatus,usernameOk,type ZEmergency} from '@/lib/zarn';
+import {liveStatus,usernameOk,waLink,type ZEmergency} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
 import {Modal,squareCrop} from './Dialogs';
@@ -18,7 +18,7 @@ export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onCl
  const email=p.work_email||p.email,on=online.has(userId),bio=(p.bio??'').trim();
  const seen=p.last_seen_at?new Date(p.last_seen_at):null;
  const local=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Africa/Lagos'});
- const st=liveStatus(p);
+ const st=liveStatus(p),phones=[p.phone,p.phone2,p.phone3].filter((n):n is string=>!!n),wa=waLink(p.whatsapp);
  return <>
   <div className="zn-sheet-scrim" onClick={onClose}><aside className="zn-sheet zn-prof" role="dialog" aria-label={`${p.display_name}’s profile`} onClick={e=>e.stopPropagation()}>
    <header className="zn-prof-head"><b>Profile</b><button type="button" aria-label="Close" onClick={onClose}><X size={20}/></button></header>
@@ -34,13 +34,15 @@ export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onCl
      :<button type="button" className="zn-btn is-primary" disabled={busy} onClick={async()=>{setBusy(true);try{await openDm([userId]);onClose();}finally{setBusy(false);}}}><MessageSquare size={15}/>Message</button>}
     {email&&<a className="zn-btn" href={`mailto:${email}`}><Mail size={15}/>Email</a>}
     {p.phone&&<a className="zn-btn" href={`tel:${p.phone}`}><Phone size={15}/>Call</a>}
+    {wa&&<a className="zn-btn zn-wa-btn" href={wa} target="_blank" rel="noopener noreferrer"><WaIcon/>WhatsApp</a>}
    </div>
 
    <section className="zn-prof-sec">
     <div className="zn-prof-sec-head"><h3>Contact information</h3>{isMe&&<button type="button" className="zn-prof-edit" onClick={()=>setEdit('contact')}>Edit</button>}</div>
     {email&&<a className="zn-prof-contact" href={`mailto:${email}`}><span><Mail size={18}/></span><div><small>Email address</small><b>{email}</b></div></a>}
-    {p.phone?<a className="zn-prof-contact" href={`tel:${p.phone}`}><span><Phone size={18}/></span><div><small>Phone</small><b>{p.phone}</b></div></a>
-     :isMe?<button type="button" className="zn-prof-add" onClick={()=>setEdit('contact')}><Plus size={15}/>Add phone</button>:null}
+    {phones.map((n,i)=><a key={i} className="zn-prof-contact" href={`tel:${n}`}><span><Phone size={18}/></span><div><small>{phones.length>1?`Phone ${i+1}`:'Phone'}</small><b>{n}</b></div></a>)}
+    {wa&&<a className="zn-prof-contact" href={wa} target="_blank" rel="noopener noreferrer"><span className="zn-wa-ico"><WaIcon/></span><div><small>WhatsApp</small><b>{p.whatsapp}</b></div></a>}
+    {isMe&&(!phones.length||!wa)&&<button type="button" className="zn-prof-add" onClick={()=>setEdit('contact')}><Plus size={15}/>{!phones.length?'Add phone':'Add WhatsApp'}</button>}
    </section>
 
    <section className="zn-prof-sec">
@@ -107,13 +109,15 @@ function EditProfile({onClose}:{onClose:()=>void}){
 
 function EditContact({onClose}:{onClose:()=>void}){
  const z=useZarn(),me=z.people[z.me.user_id]??z.me;
- const [v,setV]=useState({work_email:me.work_email||me.email,phone:me.phone});
+ const [v,setV]=useState({work_email:me.work_email||me.email,phone:me.phone,phone2:me.phone2??'',phone3:me.phone3??'',whatsapp:me.whatsapp??''});
  const {busy,err,setErr,save}=useSave(onClose);
  return <Modal title="Edit contact information" onClose={onClose}><form className="zn-modal-body" onSubmit={e=>{e.preventDefault();
    if(v.work_email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.work_email))return setErr('Check the email address.');
-   void save({work_email:v.work_email.trim(),phone:v.phone.trim()});}}>
+   void save({work_email:v.work_email.trim(),phone:v.phone.trim(),phone2:v.phone2.trim(),phone3:v.phone3.trim(),whatsapp:v.whatsapp.trim()});}}>
   <label className="zn-label">Email address<input className="zn-input" type="email" maxLength={254} value={v.work_email} onChange={e=>setV({...v,work_email:e.target.value})}/><small className="zn-hint">Shown on your profile. You sign in with {me.email}.</small></label>
   <label className="zn-label">Phone<input className="zn-input" type="tel" maxLength={30} placeholder="+234 …" value={v.phone} onChange={e=>setV({...v,phone:e.target.value})}/><small className="zn-hint">Visible to the team so they can call you.</small></label>
+  <div className="zn-grid-2"><label className="zn-label">Phone 2<input className="zn-input" type="tel" maxLength={40} value={v.phone2} onChange={e=>setV({...v,phone2:e.target.value})}/></label><label className="zn-label">Phone 3<input className="zn-input" type="tel" maxLength={40} value={v.phone3} onChange={e=>setV({...v,phone3:e.target.value})}/></label></div>
+  <label className="zn-label">WhatsApp<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={v.whatsapp} onChange={e=>setV({...v,whatsapp:e.target.value})}/><small className="zn-hint">Adds a WhatsApp button to your profile.</small></label>
   {err&&<p className="zn-error" role="alert">{err}</p>}
   <Foot busy={busy} onClose={onClose}/>
  </form></Modal>;
@@ -129,3 +133,6 @@ function EditAbout({onClose}:{onClose:()=>void}){
   <Foot busy={busy} onClose={onClose}/>
  </form></Modal>;
 }
+
+// WhatsApp glyph (brand mark is plain speech bubble with handset).
+function WaIcon(){return <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.3 2.2 2.2 0 0 0 .2-1.3c-.1-.1-.2-.2-.5-.3Z"/></svg>;}

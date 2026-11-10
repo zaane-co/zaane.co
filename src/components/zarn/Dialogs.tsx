@@ -99,6 +99,7 @@ type ProfileTab='profile'|'status'|'contact'|'emergency';
 export function Profile({onClose,initialTab='profile'}:{onClose:()=>void;initialTab?:ProfileTab}){
  const z=useZarn(),me=z.people[z.me.user_id]??z.me;
  const [tab,setTab]=useState<ProfileTab>(initialTab),[bio,setBio]=useState(me.bio??'');
+ const [x,setX]=useState({phone2:me.phone2??'',phone3:me.phone3??'',whatsapp:me.whatsapp??''}),[more,setMore]=useState(me.phone3?2:me.phone2?1:0);
  const [v,setV]=useState({display_name:me.display_name,username:me.username??'',title:me.title,work_email:me.work_email||me.email,phone:me.phone});
  const live=liveStatus(me);
  const [st,setSt]=useState({emoji:live?.emoji??'',text:live?.text??'',clear:'',date:''});
@@ -125,7 +126,8 @@ export function Profile({onClose,initialTab='profile'}:{onClose:()=>void;initial
   if(error){setBusy(false);return setErr(error.code==='23505'?`@${v.username} is taken. Try another.`:'Could not save.');}
   const {error:e2}=await z.db.from('zarn_emergency').upsert({user_id:me.user_id,name:em.name.trim(),relation:em.relation.trim(),phone:em.phone.trim(),updated_at:new Date().toISOString()});
   // About me is saved on its own so the rest still saves while the bio column rolls out.
-  if(bio.trim()!==(me.bio??'').trim())await z.db.from('zarn_members').update({bio:bio.trim()}).eq('user_id',me.user_id);
+  const extra={bio:bio.trim(),phone2:x.phone2.trim(),phone3:x.phone3.trim(),whatsapp:x.whatsapp.trim()};
+  if(Object.entries(extra).some(([k,val])=>val!==((me as Record<string,unknown>)[k]??'')))await z.db.from('zarn_members').update(extra).eq('user_id',me.user_id);
   setBusy(false);if(e2)return setErr('Saved your profile, but not the emergency contact. Try again.');
   await z.reload();onClose();
  }
@@ -165,6 +167,10 @@ export function Profile({onClose,initialTab='profile'}:{onClose:()=>void;initial
      <p className="zn-pe-intro">Shown on your profile so the team can reach you.</p>
      <label className="zn-label">Email address<input className="zn-input" type="email" maxLength={254} value={v.work_email} onChange={set('work_email')}/><small className="zn-hint">You sign in with {me.email}.</small></label>
      <label className="zn-label">Phone<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={v.phone} onChange={set('phone')}/></label>
+     {more>=1&&<label className="zn-label">Phone 2<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={x.phone2} onChange={e=>setX({...x,phone2:e.target.value})}/></label>}
+     {more>=2&&<label className="zn-label">Phone 3<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={x.phone3} onChange={e=>setX({...x,phone3:e.target.value})}/></label>}
+     {more<2&&<button type="button" className="zn-link-btn zn-pe-add" onClick={()=>setMore(m=>m+1)}>+ Add another number</button>}
+     <label className="zn-label">WhatsApp<input className="zn-input" type="tel" maxLength={40} placeholder="+234 …" value={x.whatsapp} onChange={e=>setX({...x,whatsapp:e.target.value})}/><small className="zn-hint">Adds a WhatsApp button to your profile so people can text you in one tap.</small></label>
     </div>}
     {tab==='emergency'&&<div className="zn-pe-fields">
      <p className="zn-pe-intro">Someone we can call in an emergency. Visible to the team, never to guests.</p>
