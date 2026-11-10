@@ -1,6 +1,6 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {ArrowUp,Bell,Brain,Check,ChevronLeft,ChevronsLeft,ChevronsRight,Clock,CornerDownRight,FileText,History,ListChecks,Loader2,MessageSquarePlus,MessagesSquare,Paperclip,Plus,Send,Sparkles,Sun,Trash2,X} from 'lucide-react';
+import {ArrowRight,ArrowUp,Bell,Brain,Check,ChevronLeft,ChevronsLeft,ChevronsRight,Clock,FileText,History,ListChecks,Loader2,MessageSquarePlus,MessagesSquare,Paperclip,Plus,Send,Sparkles,Sun,Trash2,X} from 'lucide-react';
 import ZBotMark from './ZBotMark';
 import {useZarn} from './ZarnProvider';
 import {dayOf} from './format';
@@ -157,9 +157,9 @@ export default function Assistant({onClose}:{onClose:()=>void}){
    <h2>Meet Z-BOT, your AI assistant</h2>
    <p>Ask questions, catch up on conversations, and get a head start on your work.</p>
    <ul>
-    <li><Sun size={22}/><div><b>Catch up in seconds</b><span>A rundown of the messages, mentions and tasks that need you.</span></div><button type="button" aria-label="Try it" onClick={()=>{closeIntro();void send('What did I miss?');}}><CornerDownRight size={18}/></button></li>
-    <li><ListChecks size={22}/><div><b>Turn documents into tasks</b><span>Paste a brief or attach a file and Z-BOT breaks it into tasks for the team.</span></div><button type="button" aria-label="Try it" onClick={()=>{closeIntro();fileInput.current?.click();}}><CornerDownRight size={18}/></button></li>
-    <li><FileText size={22}/><div><b>Message and assign for you</b><span>Ask Z-BOT to message someone or create work. It always checks with you first.</span></div><button type="button" aria-label="Try it" onClick={()=>{closeIntro();setText('Send a message to ');box.current?.focus();}}><CornerDownRight size={18}/></button></li>
+    <li><Sun size={22}/><div><b>Catch up in seconds</b><span>A rundown of the messages, mentions and tasks that need you.</span></div><button type="button" aria-label="Try it" onClick={()=>{closeIntro();void send('What did I miss?');}}><ArrowRight size={18}/></button></li>
+    <li><ListChecks size={22}/><div><b>Turn documents into tasks</b><span>Paste a brief or attach a file and Z-BOT breaks it into tasks for the team.</span></div><button type="button" aria-label="Try it" onClick={()=>{closeIntro();fileInput.current?.click();}}><ArrowRight size={18}/></button></li>
+    <li><FileText size={22}/><div><b>Message and assign for you</b><span>Ask Z-BOT to message someone or create work. It always checks with you first.</span></div><button type="button" aria-label="Try it" onClick={()=>{closeIntro();setText('Send a message to ');box.current?.focus();}}><ArrowRight size={18}/></button></li>
    </ul>
   </div></div>}
  </>;
