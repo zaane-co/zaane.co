@@ -3,7 +3,7 @@ import ZarnPwa from '@/components/zarn/ZarnPwa';
 import './zarn.css';
 // Installable app (PWA): manifest scoped to /zarn, home-screen icons, full-screen on iPhone.
 export const metadata:Metadata={title:'ZARN',robots:{index:false,follow:false},manifest:'/zarn.webmanifest',
- icons:{icon:[{url:'/zarn-icons/logo-192.png',sizes:'192x192'},{url:'/zarn-logo.png'}],apple:'/zarn-icons/logo-180.png'},
+ icons:{icon:[{url:'/zarn-icons/logo-192.png',sizes:'192x192'},{url:'/zarn%20logo2.png'}],apple:'/zarn-icons/logo-180.png'},
  // 'black' (not translucent): iOS home-screen apps shorten the page by the status bar when it's translucent,
  // which leaves a gap under anything pinned to the bottom (the tab bar).
  appleWebApp:{capable:true,title:'ZARN',statusBarStyle:'black'}};

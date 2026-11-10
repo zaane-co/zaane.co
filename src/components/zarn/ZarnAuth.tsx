@@ -35,7 +35,7 @@ function Slides({onLogin,paused}:{onLogin:()=>void;paused:boolean}){
   </div>
   <div className="zn-slides-top">
    <div className="zn-slides-bars">{slides.map((s,i)=><button key={s.title} type="button" aria-label={`Go to slide ${i+1}`} onClick={()=>go(i)}><span className={i===active?'is-on':''}/></button>)}</div>
-   <span className="zn-slides-brand"><img src="/zarn-logo.png" alt=""/>ZARN</span>
+   <span className="zn-slides-brand"><img src="/zarn%20logo2.png" alt=""/>ZARN</span>
   </div>
   <div className="zn-slides-actions">
    <button type="button" className="zn-pill is-solid" onClick={onLogin}>Log in</button>
@@ -71,7 +71,7 @@ export default function ZarnAuth({initial,name='',title='',notice=''}:{initial:V
  return <main className={`zarn-auth${light?' is-light':''}${login?' has-slides':''}${sheet?' is-sheet':''}`}>
   {login&&<Slides onLogin={openSheet} paused={sheet}/>}
   {login&&<div className="zn-sheet-scrim" onClick={()=>setSheet(false)}/>}
-  <section className="zn-auth-brand"><span className="zn-auth-mark"><img src="/zarn-logo.png" alt="ZARN"/></span><h1>ZARN</h1><p>Channels, DMs and the studio pipeline, in one place. Invite-only for the Zaane team.</p></section>
+  <section className="zn-auth-brand"><span className="zn-auth-mark"><img src="/zarn%20logo2.png" alt="ZARN"/></span><h1>ZARN</h1><p>Channels, DMs and the studio pipeline, in one place. Invite-only for the Zaane team.</p></section>
   <section className="zn-auth-card" role={login?'dialog':undefined} aria-label={login?'Sign in':undefined}>
    {login&&<span className="zn-sheet-grab" aria-hidden/>}
    {login&&<button type="button" className="zn-sheet-close" aria-label="Close" onClick={()=>setSheet(false)}><X size={18}/></button>}
