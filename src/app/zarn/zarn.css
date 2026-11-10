@@ -1816,3 +1816,11 @@ a.zn-act-row:hover{background:var(--z-hover)}
 @keyframes zn-accept{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @media(prefers-reduced-motion:reduce){.zn-call-scrim .zn-call-actions .is-accept svg,.zn-call-scrim .zn-call-avatar.is-ringing::before,.zn-call-scrim .zn-call-avatar.is-ringing::after{animation:none}}
 .zn-hangup>*{transform:rotate(135deg);transform-box:view-box;transform-origin:center}
+/* Calls rows: outcome, duration, buttons always visible */
+.zn-calls-quick{opacity:1}
+.zn-calls-main small{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.zn-calls-out{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:11.5px;font-weight:600;color:#fff}
+.zn-calls-out.is-ok{background:#16a34a}.zn-calls-out.is-bad{background:#dc2626}.zn-calls-out.is-muted{background:#52525b}.zn-calls-out.is-live{background:#2563eb}
+.zn-calls-dur{flex:none;min-width:74px;text-align:right;font-size:13.5px;font-weight:600;color:var(--z-fg);font-variant-numeric:tabular-nums}
+.zn-calls-dur.is-none{color:var(--z-faint);font-weight:500}
+@media(max-width:760px){.zn-calls-dur{min-width:0}}

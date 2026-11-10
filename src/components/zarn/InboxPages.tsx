@@ -40,7 +40,14 @@ export function ThreadsPage(){
 
 type Call={id:string;channel_id:string;caller_id:string;callee_id:string;status:string;created_at:string;answered_at:string|null;ended_at:string|null;video:boolean};
 const secs=(c:Call)=>c.answered_at&&c.ended_at?Math.max(0,Math.round((+new Date(c.ended_at)-+new Date(c.answered_at))/1000)):0;
-const dur=(c:Call)=>{const s=secs(c);if(!s)return '';const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?`${h}h ${m}m`:m?`${m} min`:`${s}s`;};
+const dur=(c:Call)=>{const s=secs(c);if(!s)return '';const h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60;return h?`${h} hr ${m} min`:m?`${m} min${r?` ${r} sec`:''}`:`${r} sec`;};
+// What happened: picked up, declined, missed, cancelled or still going.
+const outcome=(c:Call,mine:boolean):{label:string;tone:'ok'|'bad'|'muted'|'live'}=>
+ c.status==='active'?{label:'In progress',tone:'live'}:c.status==='ringing'?{label:'Ringing',tone:'live'}
+ :c.answered_at?{label:'Answered',tone:'ok'}
+ :c.status==='declined'?{label:mine?'Declined by them':'You declined',tone:'bad'}
+ :c.status==='missed'?{label:mine?'No answer':'Missed',tone:'bad'}
+ :{label:mine?'Cancelled':'Missed',tone:mine?'muted':'bad'};
 const ago=(iso:string)=>{const d=(Date.now()-+new Date(iso))/1000;if(d<60)return 'Just now';if(d<3600)return `${Math.floor(d/60)}m ago`;if(d<86400)return `${Math.floor(d/3600)}h ago`;if(d<7*86400)return `${Math.floor(d/86400)}d ago`;return dayOf(iso);};
 const HIDE_INTRO='zarn-calls-intro-hidden';
 type CallFilter='all'|'missed'|'incoming'|'outgoing';
@@ -89,11 +96,12 @@ export function CallsPage(){
      </div></div>
     {rows===null?<p className="zn-loading">Loading…</p>:!list.length?<div className="zn-calls-empty"><span><PhoneCall size={22}/></span><h3>{rows.length?'No calls match':'No calls yet'}</h3><p>{rows.length?'Try another filter.':'Start one with the button above, or from the phone or video button in any DM.'}</p></div>:
     <div className="zn-calls-list">{list.map(c=>{const id=peer(c),p=people[id],out=c.caller_id===me.user_id,miss=missed(c),ch=channels.find(x=>x.id===c.channel_id);
-     const Icon=miss?PhoneMissed:out?PhoneOutgoing:PhoneIncoming;
+     const Icon=miss||(!c.answered_at&&!out)?PhoneMissed:out?PhoneOutgoing:PhoneIncoming;
      return <div key={c.id} className="zn-calls-row">
       <span className={`zn-calls-ico${miss?' is-missed':''}`}>{c.video?<Video size={17}/>:<Icon size={17}/>}</span>
       <Link href={channelHref(ch,c.channel_id)} className="zn-calls-main"><b>{p?.display_name??'Former member'}</b>
-       <small className={miss?'is-missed':''}>{miss?(out?'No answer':'Missed'):out?'Outgoing':'Incoming'} {c.video?'video':'voice'} call · {ago(c.created_at)}{dur(c)&&` · ${dur(c)}`}</small></Link>
+       <small>{(()=>{const o=outcome(c,out);return <span className={`zn-calls-out is-${o.tone}`}>{o.label}</span>;})()}<span>{out?'Outgoing':'Incoming'} {c.video?'video':'voice'} call · {ago(c.created_at)}</span></small></Link>
+      <span className={`zn-calls-dur${dur(c)?'':' is-none'}`}>{dur(c)||'0 sec'}</span>
       <Avatar m={p} size={30} online={online.has(id)}/>
       {live(id)&&<span className="zn-calls-quick"><button type="button" aria-label="Voice call" data-tip="Voice call" disabled={call.busy} onClick={()=>void ring(id,false)}><Phone size={15}/></button><button type="button" aria-label="Video call" data-tip="Video call" disabled={call.busy} onClick={()=>void ring(id,true)}><Video size={15}/></button></span>}
       <span className="zn-calls-more"><button type="button" aria-label="More" onClick={()=>setMenu(menu===c.id?null:c.id)}><MoreVertical size={16}/></button>
