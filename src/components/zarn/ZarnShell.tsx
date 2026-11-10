@@ -15,6 +15,7 @@ import {useInstall} from './ZarnPwa';
 import ProfileSheet from './ProfileSheet';
 import {useSound} from '@/lib/zarn-sound';
 import SoundDialog from './SoundDialog';
+import Preferences from './Preferences';
 import Invites from './Invites';
 import NotifyPrompt from './NotifyPrompt';
 import InstallPrompt from './InstallPrompt';
@@ -36,7 +37,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const z=useZarn(),{me,channels}=z,pathname=usePathname(),{light}=useAdminTheme();
  const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,archivedClients,badges}=nav;
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({archivedclients:true});
- const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false),[meMenu,setMeMenu]=useState(false);
+ const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false),[meMenu,setMeMenu]=useState(false),[prefs,setPrefs]=useState<null|'availability'|'notifications'|'appearance'>(null);
  const router=useRouter();
  const {mode:installMode,install}=useInstall(),sound=useSound(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false),[installDone,setInstallDone]=useState(false);
  const routeArea=areaOf(pathname);
@@ -102,10 +103,10 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
      <div className="zn-me-head"><Avatar m={me} size={44}/><span><b>{me.display_name}</b><small><i className={z.away?'is-away':''}/>{z.away?'Away':'Active'}</small></span></div>
      <button type="button" className="zn-me-status" onClick={()=>{setMeMenu(false);setDialog('profile');}}><Smile size={18}/><span>{me.status_text?`${me.status_emoji??''} ${me.status_text}`.trim():'Update your status'}</span></button>
      <button type="button" role="menuitem" onClick={()=>{z.setAway(!z.away);setMeMenu(false);}}>Set yourself as <b>{z.away?'active':'away'}</b></button>
-     <button type="button" role="menuitem" onClick={()=>{if(push.state==='on'){setMeMenu(false);setSoundOpen(true);}else z.enableNotify();}}>Notifications<em>{push.state==='on'?'On':push.state==='error'?'Fix':'Off'}<ChevronRight size={15}/></em></button>
+     <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setPrefs('notifications');}}>Notifications<em>{push.state==='on'?'On':push.state==='error'?'Fix':'Off'}<ChevronRight size={15}/></em></button>
      <div className="zn-me-sep"/>
      <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setProfileId(me.user_id);}}>Profile</button>
-     <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setSoundOpen(true);}}>Preferences</button>
+     <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setPrefs('availability');}}>Preferences</button>
      <Link role="menuitem" href="/zarn/password" onClick={()=>setMeMenu(false)}>Account settings<em><ExternalLink size={15}/></em></Link>
      <div className="zn-me-sep"/>
      <button type="button" role="menuitem" onClick={()=>void signOut()}>Sign out of ZARN</button>
@@ -199,6 +200,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
   <InstallPrompt onDone={()=>setInstallDone(true)} onHelp={()=>setDialog('install')}/>
   <CareAlerts/>
   <NotifyPrompt wait={!installDone} installMode={installMode} onInstall={()=>setDialog('install')}/>
+  {prefs&&<Preferences initial={prefs} onClose={()=>setPrefs(null)} onStatus={()=>{setPrefs(null);setDialog('profile');}}/>}
   {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {newProject&&<NewProject onClose={()=>setNewProject(false)}/>}

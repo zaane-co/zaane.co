@@ -1276,7 +1276,7 @@ html[data-kb] .zn-prompt{display:none}
 .zd-ico{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--z-panel-2);color:var(--z-muted);flex:none}
 
 /* Sign-in on phones: full-screen photo carousel + slide-up sign-in sheet (desktop keeps the split layout) */
-.zn-slides,.zn-sheet-scrim,.zn-sheet-grab,.zn-sheet-close{display:none}
+.zarn-auth .zn-slides,.zarn-auth .zn-sheet-scrim,.zarn-auth .zn-sheet-grab,.zarn-auth .zn-sheet-close{display:none}
 @media(max-width:860px){
  /* iOS doesn't shrink the page for the keyboard, so follow the visible area (set by ZarnPwa): the sheet then sits on top of the keyboard, not under it */
  .zarn-auth{inset:auto;left:0;right:0;top:var(--zvt,0px);height:var(--zvh,100dvh);min-height:0;overflow-y:auto;overscroll-behavior:contain}
@@ -1429,3 +1429,24 @@ html[data-kb] .zn-prompt{display:none}
 .zn-me-menu>button:hover em,.zn-me-menu>a:hover em{color:#fff}
 .zn-me-sep{height:1px;margin:6px 0;background:var(--z-border)}
 @media(max-width:860px){.zn-me-menu{left:12px;right:12px;width:auto}}
+/* Preferences window (Slack-style) */
+.zn-prefs{width:min(860px,calc(100vw - 32px));height:min(640px,calc(100dvh - 48px));display:flex;flex-direction:column;border-radius:16px;background:var(--z-panel);border:1px solid var(--z-border);box-shadow:0 24px 64px rgba(0,0,0,.5);color:var(--z-fg);overflow:hidden}
+.zn-prefs-head{display:flex;align-items:center;justify-content:space-between;padding:22px 28px;border-bottom:1px solid var(--z-border)}
+.zn-prefs-head h2{font-size:24px;font-weight:800;letter-spacing:-.02em}
+.zn-prefs-head button{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--z-muted)}
+.zn-prefs-head button:hover{background:var(--z-hover);color:var(--z-fg)}
+.zn-prefs-body{flex:1;display:flex;min-height:0}
+.zn-prefs-nav{width:230px;flex-shrink:0;padding:16px 14px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--z-border)}
+.zn-prefs-nav button{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;font-size:15px;color:var(--z-fg);text-align:left}
+.zn-prefs-nav button:hover{background:var(--z-hover)}
+.zn-prefs-nav button.is-on{background:var(--z-accent);color:#fff}
+.zn-prefs-pane{flex:1;overflow-y:auto;padding:24px 32px}
+.zn-prefs-pane h3{font-size:20px;font-weight:700;margin-bottom:18px}
+.zn-prefs-block{padding:18px 0;border-bottom:1px solid var(--z-border);display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.zn-prefs-block:last-child{border-bottom:0}
+.zn-prefs-block h4{font-size:15px;font-weight:700}
+.zn-prefs-block>p{font-size:14px;color:var(--z-muted);line-height:1.55;max-width:520px}
+.zn-prefs-block .zn-sound-row,.zn-prefs-block .zn-sound-opts{width:100%}
+.zn-prefs-ok{font-size:14px;color:#22c55e;font-weight:600}
+.zn-prefs-warn{font-size:13px;color:var(--z-accent)}
+@media(max-width:720px){.zn-prefs{height:calc(100dvh - 24px)}.zn-prefs-body{flex-direction:column}.zn-prefs-nav{width:auto;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--z-border);padding:10px 12px}.zn-prefs-nav button{white-space:nowrap}.zn-prefs-pane{padding:18px 16px}}
