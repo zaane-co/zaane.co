@@ -11,9 +11,10 @@ export const tones:{id:Tone;label:string;loud?:boolean}[]=[
  {id:'quick-reply',label:'Quick reply'},{id:'soft-ping',label:'Soft ping'},{id:'ding',label:'Ding'},{id:'chime',label:'Chime'},{id:'tri-tone',label:'Tri-tone'},
  {id:'bubble-up',label:'Bubble up'},{id:'blip-up',label:'Blip up'},{id:'popcorn',label:'Popcorn'},{id:'marimba',label:'Marimba'},{id:'bell',label:'Bell'},
  {id:'coin',label:'Coin'},{id:'ka-ching',label:'Ka-ching'},{id:'whoosh',label:'Whoosh'},{id:'beep',label:'Beep',loud:true},{id:'doorbell',label:'Doorbell',loud:true}];
-const KEY='zarn-sound-v2',OLD='zarn-sound';
+// v3: everyone starts on Marimba once; their on/off, volume and scope carry over from v2.
+const KEY='zarn-sound-v3',V2='zarn-sound-v2',OLD='zarn-sound';
 const gains:Record<Volume,number>={low:.12,medium:.32,high:.65,max:1};
-const defaults:SoundSettings={on:true,tone:'quick-reply',volume:'medium',scope:'direct'};
+const defaults:SoundSettings={on:true,tone:'marimba',volume:'medium',scope:'direct'};
 let ctx:AudioContext|null=null;
 const listeners=new Set<()=>void>();
 function unlock(){
@@ -23,7 +24,9 @@ function unlock(){
 if(typeof window!=='undefined'){for(const ev of ['pointerdown','keydown','touchstart'])window.addEventListener(ev,unlock,{once:false,passive:true});}
 let cache:{raw:string|null;value:SoundSettings}={raw:'\0',value:defaults};
 export function getSound():SoundSettings{
- let raw:string|null=null;try{raw=localStorage.getItem(KEY);if(raw===null&&localStorage.getItem(OLD)==='off')raw=JSON.stringify({...defaults,on:false});}catch{}
+ let raw:string|null=null;try{raw=localStorage.getItem(KEY);
+  if(raw===null){const v2=localStorage.getItem(V2);if(v2){try{const {on,volume,scope}=JSON.parse(v2) as Partial<SoundSettings>;raw=JSON.stringify({...defaults,...(on!==undefined&&{on}),...(volume&&{volume}),...(scope&&{scope}),tone:'marimba'});localStorage.setItem(KEY,raw);}catch{}}
+   else if(localStorage.getItem(OLD)==='off')raw=JSON.stringify({...defaults,on:false});}}catch{}
  if(raw===cache.raw)return cache.value;
  let value=defaults;try{if(raw)value={...defaults,...JSON.parse(raw)};}catch{}
  cache={raw,value};return value;
