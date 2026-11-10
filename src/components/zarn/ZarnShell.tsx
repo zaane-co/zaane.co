@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Sparkles,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -139,7 +139,6 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
     <div className="zn-nav" data-lenis-prevent>
      {area==='chat'&&<>
       <button type="button" className="zn-nav-item zn-search-btn" onClick={()=>setDialog('search')}><Search size={15}/><span>Search</span><kbd>⌘K</kbd></button>
-      {!guest&&<button type="button" className="zn-nav-item" onClick={()=>setDialog('assistant')}><Sparkles size={15}/><span>Z-BOT</span><kbd>⌘J</kbd></button>}
       {link('/zarn/activity',<Bell size={15}/>,'Activity')}
       {link('/zarn/mentions',<AtSign size={15}/>,'Mentions',badges.activity)}
       {link('/zarn/saved',<Bookmark size={15}/>,'Saved')}
