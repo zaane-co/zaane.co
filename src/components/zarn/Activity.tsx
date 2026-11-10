@@ -33,15 +33,24 @@ export default function Activity(){
   :e.kind==='client_lost'?<><b>{e.title}</b> <span className="zn-in">was closed as lost</span></>
   :<>Project completed for <b>{e.title}</b>{e.detail?<span className="zn-in"> · {e.detail}</span>:null}</>;
  const icon=(k:Kind)=>k==='member_joined'?<UserPlus size={16}/>:k==='client_won'?<Handshake size={16}/>:k==='client_lost'?<HeartCrack size={16}/>:<CircleCheck size={16}/>;
+ // Grouped by day, newest first.
+ const days:[string,Ev[]][]=[];for(const e of shown){const d=dayOf(e.created_at),last=days[days.length-1];if(last&&last[0]===d)last[1].push(e);else days.push([d,[e]]);}
+ const label:Record<Kind,string>={member_joined:'New member',client_won:'Client won',client_lost:'Client lost',project_completed:'Project completed'};
  return <div className="zn-page">
   <header className="zn-page-head"><div><h1><Bell size={20}/>Activity</h1><p>New users, completed projects and closed clients.</p></div></header>
-  <div className="zn-tools"><div className="zn-pills" role="tablist" aria-label="Activity type">{filters.map(f=><button key={f.k} type="button" role="tab" aria-selected={filter===f.k} className={filter===f.k?'is-on':''} onClick={()=>setFilter(f.k)}>{f.label} <span>{events.filter(f.match).length}</span></button>)}</div></div>
-  <div className="zn-crm-list" data-lenis-prevent>
-   {loading?<p className="zn-loading">Loading…</p>:shown.length?shown.map(e=>{
-    const row=<><span className="zn-ev-icon" style={{background:tone[e.kind]}}>{e.kind==='member_joined'&&e.user_id&&people[e.user_id]?<Avatar m={people[e.user_id]} size={34}/>:icon(e.kind)}</span>
-     <div><p className="zn-ev-text">{text(e)}</p><time>{dayOf(e.created_at)} {timeOf(e.created_at)}</time></div></>;
-    const cls=`zn-mention-row zn-ev${new Date(e.created_at).getTime()>seen?' is-unread':''}`;
-    return e.lead_id&&e.kind!=='member_joined'?<Link key={e.id} href={`/zarn/clients/${e.lead_id}`} className={cls}>{row}</Link>:<div key={e.id} className={cls}>{row}</div>;})
+  <div className="zn-act-tabs" role="tablist" aria-label="Activity type">{filters.map(f=>{const n=events.filter(f.match).length;return <button key={f.k} type="button" role="tab" aria-selected={filter===f.k} className={filter===f.k?'is-on':''} onClick={()=>setFilter(f.k)}>{f.label}{n>0&&<em>{n}</em>}</button>;})}</div>
+  <div className="zn-act" data-lenis-prevent>
+   {loading?<p className="zn-loading">Loading…</p>:shown.length?days.map(([d,list])=><section key={d}>
+    <h2 className="zn-act-day">{d}</h2>
+    <div className="zn-act-list">{list.map(e=>{
+     const who=e.kind==='member_joined'&&e.user_id?people[e.user_id]:undefined,unread=new Date(e.created_at).getTime()>seen;
+     const row=<>
+      <span className="zn-act-ico">{who?<Avatar m={who} size={36}/>:<span className="zn-act-glyph" style={{background:tone[e.kind]}}>{icon(e.kind)}</span>}{who&&<i style={{background:tone[e.kind]}}>{icon(e.kind)}</i>}</span>
+      <span className="zn-act-main"><span className="zn-act-text">{text(e)}</span><small>{label[e.kind]}</small></span>
+      <time>{timeOf(e.created_at)}</time>{unread&&<span className="zn-act-dot" aria-label="New"/>}</>;
+     const cls=`zn-act-row${unread?' is-unread':''}`;
+     return e.lead_id&&e.kind!=='member_joined'?<Link key={e.id} href={`/zarn/clients/${e.lead_id}`} className={cls}>{row}</Link>:<div key={e.id} className={cls}>{row}</div>;})}</div>
+   </section>)
    :<div className="zn-empty-state"><h2>Nothing yet</h2><p>When someone joins, a project is completed or a client is closed, it shows up here.</p></div>}
   </div>
  </div>;
