@@ -78,7 +78,7 @@ export function YouTab(){
    {mode&&<Row icon={<Download size={18}/>} label="Install ZARN on this device" onClick={()=>{if(mode==='prompt')void install();else open('install');}}/>}
   </Group>
   <Group label="Go to">
-   {!z.me.account_type.includes('guest')&&<Row icon={<Sparkles size={18}/>} label="Assistant" onClick={()=>open('assistant')}/>}
+   {!z.me.account_type.includes('guest')&&<Row icon={<Sparkles size={18}/>} label="Z-BOT" onClick={()=>open('assistant')}/>}
    <Row href="/zarn/mentions" icon={<AtSign size={18}/>} label="Mentions"/>
    <Row href="/zarn/projects" icon={<FolderKanban size={18}/>} label="Projects"/>
    <Row href="/zarn/docs" icon={<FileText size={18}/>} label="Docs"/>

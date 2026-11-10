@@ -1,6 +1,7 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {Brain,Check,ChevronLeft,History,Loader2,MessageSquarePlus,Paperclip,Plus,Send,Sparkles,Trash2,X} from 'lucide-react';
+import {ArrowUp,Bell,Brain,Check,ChevronLeft,ChevronsLeft,ChevronsRight,Clock,CornerDownRight,FileText,History,ListChecks,Loader2,MessageSquarePlus,MessagesSquare,Paperclip,Plus,Send,Sparkles,Sun,Trash2,X} from 'lucide-react';
+import ZBotMark from './ZBotMark';
 import {useZarn} from './ZarnProvider';
 import {dayOf} from './format';
 import {isFileDrag} from './drop';
@@ -11,7 +12,8 @@ type Convo={id:string;title:string;updated_at:string};
 type Memory={id:string;fact:string};
 type Row={id:string;role:'user'|'assistant';content:string;proposal:Proposal|null;state:'pending'|'done'|'cancelled'|null};
 const KEY='zarn:assistant:conversation';
-const suggestions=['What did I miss?','What’s overdue for me?','Find my chat with Isaac about the pricing page','Send Isaac a message asking if the homepage is ready'];
+const suggestions:[string,React.ReactNode][]=[['What happened in ZARN this week?',<MessagesSquare key="a" size={18} color="#22c55e"/>],['What needs my attention today?',<Bell key="b" size={18} color="#38bdf8"/>],['What’s overdue for me?',<Clock key="c" size={18} color="#f59e0b"/>],['What did I miss?',<Sparkles key="d" size={18} color="#f10c45"/>]];
+const INTRO='zarn:zbot:intro-seen';
 const uid=()=>Math.random().toString(36).slice(2);
 const MAX_CHARS=60000;
 const ATTACH_TYPES='.txt,.md,.markdown,.csv,.json,.html,.log,text/plain';
@@ -19,6 +21,12 @@ const ATTACH_TYPES='.txt,.md,.markdown,.csv,.json,.html,.log,text/plain';
 // Slide-over chat. Conversations and notes are saved, reads happen straight away, and any change shows a confirm card first.
 export default function Assistant({onClose}:{onClose:()=>void}){
  const {db,me,refreshDue}=useZarn();
+ // Wide by default on desktop, like a full page; collapses to the side panel.
+ const [wide,setWide]=useState(()=>{try{return localStorage.getItem('zarn:zbot:wide')!=='0';}catch{return true;}});
+ const toggleWide=()=>setWide(w=>{try{localStorage.setItem('zarn:zbot:wide',w?'0':'1');}catch{}return !w;});
+ const [intro,setIntro]=useState(()=>{try{return !localStorage.getItem(INTRO);}catch{return false;}});
+ const closeIntro=()=>{setIntro(false);try{localStorage.setItem(INTRO,'1');}catch{}};
+ const first=(me.display_name||'there').split(' ')[0];
  const [view,setView]=useState<'chat'|'history'|'memory'>('chat');
  const [conversation,setConversation]=useState<string|null>(()=>{try{return sessionStorage.getItem(KEY);}catch{return null;}});
  const [items,setItems]=useState<Item[]>([]),[convos,setConvos]=useState<Convo[]|null>(null),[memories,setMemories]=useState<Memory[]|null>(null);
@@ -86,9 +94,21 @@ export default function Assistant({onClose}:{onClose:()=>void}){
  }
  async function removeMemory(id:string){setMemories(m=>(m??[]).filter(x=>x.id!==id));await db.from('zarn_ai_memories').delete().eq('id',id);}
 
- return <><button type="button" className="zp-scrim" aria-label="Close assistant" onClick={onClose}/>
-  <aside className="zp-drawer zai" role="dialog" aria-label="Assistant" onDragOver={e=>{if(isFileDrag(e))e.preventDefault();}} onDrop={e=>{if(!isFileDrag(e))return;e.preventDefault();e.stopPropagation();const f=e.dataTransfer.files[0];if(f)void readFile(f);}}>
-   <header>{view==='chat'?<b className="zai-title"><Sparkles size={16}/>Assistant</b>:<button type="button" className="zai-back" onClick={()=>setView('chat')}><ChevronLeft size={16}/>{view==='history'?'History':'Memory'}</button>}
+ const home=!loading&&!items.length;
+ const composer=<form className={`zai-form${home?' is-home':''}`} onSubmit={e=>{e.preventDefault();void send(text);}}>
+    {(file||fileError)&&<div className="zai-attached">{file&&<span className="zai-file"><Paperclip size={13}/>{file.name} · {file.text.length.toLocaleString('en-GB')} characters<button type="button" aria-label="Remove file" onClick={()=>setFile(null)}><X size={13}/></button></span>}{fileError&&<small role="alert">{fileError}</small>}</div>}
+    <div className="zai-row">
+     <input ref={fileInput} type="file" accept={ATTACH_TYPES} hidden onChange={e=>void attach(e)}/>
+     <button type="button" className="zp-icon-btn" aria-label="Attach a text file" data-tip="Attach a document" disabled={busy} onClick={()=>fileInput.current?.click()}>{home?<Plus size={17}/>:<Paperclip size={16}/>}</button>
+     <textarea ref={box} rows={1} value={text} maxLength={MAX_CHARS} placeholder={file?'What should I do with it? (or just send)':home?'Ask anything':'Ask, or paste a document to turn into tasks…'} aria-label="Message the assistant" autoFocus
+      onChange={e=>{setText(e.target.value);setFileError('');e.target.style.height='auto';e.target.style.height=`${Math.min(e.target.scrollHeight,160)}px`;}}
+      onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send(text);}}}/>
+     <button type="submit" className="zai-send" disabled={busy||(!text.trim()&&!file)} aria-label="Send"><ArrowUp size={17}/></button>
+    </div>
+   </form>;
+ return <><button type="button" className="zp-scrim" aria-label="Close Z-BOT" onClick={onClose}/>
+  <aside className={`zp-drawer zai${wide?' is-wide':''}`} role="dialog" aria-label="Z-BOT" onDragOver={e=>{if(isFileDrag(e))e.preventDefault();}} onDrop={e=>{if(!isFileDrag(e))return;e.preventDefault();e.stopPropagation();const f=e.dataTransfer.files[0];if(f)void readFile(f);}}>
+   <header><button type="button" className="zp-icon-btn zai-expand" aria-label={wide?'Collapse to side panel':'Expand'} data-tip={wide?'Side panel':'Expand'} onClick={toggleWide}>{wide?<ChevronsRight size={17}/>:<ChevronsLeft size={17}/>}</button>{view==='chat'?<b className="zai-title"><ZBotMark size={22}/>Z-BOT</b>:<button type="button" className="zai-back" onClick={()=>setView('chat')}><ChevronLeft size={16}/>{view==='history'?'History':'Memory'}</button>}
     <div className="zp-drawer-actions">
      <button type="button" className="zp-icon-btn" aria-label="New chat" data-tip="New chat" onClick={()=>void open(null)}><MessageSquarePlus size={16}/></button>
      <button type="button" className="zp-icon-btn" aria-label="Past chats" data-tip="History" onClick={()=>setView('history')}><History size={16}/></button>
@@ -111,8 +131,13 @@ export default function Assistant({onClose}:{onClose:()=>void}){
 
    {view==='chat'&&<><div className="zp-drawer-body zai-body" data-lenis-prevent>
     {loading&&<p className="zn-loading">Loading…</p>}
-    {!loading&&!items.length&&<div className="zai-empty"><Sparkles size={26}/><h2>How can I help?</h2><p>Ask what you missed, find an old chat, message someone, or have me create and assign work. I always ask before changing or sending anything.</p>
-     <div className="zai-chips">{suggestions.map(s=><button key={s} type="button" onClick={()=>void send(s)}>{s}</button>)}</div></div>}
+    {home&&<div className="zbot-home">
+     <div className="zbot-hello"><ZBotMark size={44}/><h2>Back at it, {first}!</h2></div>
+     <div className="zbot-glow">{composer}</div>
+     <small className="zbot-note">Z-BOT is AI and can make mistakes. It always asks before changing or sending anything.</small>
+     <p className="zbot-rec">Recommended for you</p>
+     <div className="zbot-chips">{suggestions.map(([q,icon])=><button key={q} type="button" onClick={()=>void send(q)}>{icon}<span>{q}</span></button>)}</div>
+    </div>}
     {items.map(i=><div key={i.id} className={`zai-msg is-${i.role}${i.error?' is-error':''}`}>
      {i.role==='assistant'?<AiText text={i.content}/>:<UserText text={i.content}/>}
      {i.proposal&&<div className={`zai-proposal is-${i.state}`}>
@@ -124,18 +149,20 @@ export default function Assistant({onClose}:{onClose:()=>void}){
     {busy&&<div className="zai-msg is-assistant"><p className="zai-typing"><Loader2 size={14} className="zai-spin"/>Thinking…</p></div>}
     <div ref={end}/>
    </div>
-   <form className="zai-form" onSubmit={e=>{e.preventDefault();void send(text);}}>
-    {(file||fileError)&&<div className="zai-attached">{file&&<span className="zai-file"><Paperclip size={13}/>{file.name} · {file.text.length.toLocaleString('en-GB')} characters<button type="button" aria-label="Remove file" onClick={()=>setFile(null)}><X size={13}/></button></span>}{fileError&&<small role="alert">{fileError}</small>}</div>}
-    <div className="zai-row">
-     <input ref={fileInput} type="file" accept={ATTACH_TYPES} hidden onChange={e=>void attach(e)}/>
-     <button type="button" className="zp-icon-btn" aria-label="Attach a text file" data-tip="Attach a document" disabled={busy} onClick={()=>fileInput.current?.click()}><Paperclip size={16}/></button>
-     <textarea ref={box} rows={1} value={text} maxLength={MAX_CHARS} placeholder={file?'What should I do with it? (or just send)':'Ask, or paste a document to turn into tasks…'} aria-label="Message the assistant" autoFocus
-      onChange={e=>{setText(e.target.value);setFileError('');e.target.style.height='auto';e.target.style.height=`${Math.min(e.target.scrollHeight,160)}px`;}}
-      onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send(text);}}}/>
-     <button type="submit" className="zn-btn is-primary" disabled={busy||(!text.trim()&&!file)} aria-label="Send"><Send size={15}/></button>
-    </div>
-   </form></>}
-  </aside></>;
+   {items.length>0&&composer}</>}
+  </aside>
+  {intro&&<div className="zn-modal-scrim zbot-intro-scrim" onClick={closeIntro}><div className="zbot-intro" role="dialog" aria-label="Meet Z-BOT" onClick={e=>e.stopPropagation()}>
+   <button type="button" className="zbot-intro-x" aria-label="Close" onClick={closeIntro}><X size={22}/></button>
+   <ZBotMark size={96}/>
+   <h2>Meet Z-BOT, your AI assistant</h2>
+   <p>Ask questions, catch up on conversations, and get a head start on your work.</p>
+   <ul>
+    <li><Sun size={22}/><div><b>Catch up in seconds</b><span>A rundown of the messages, mentions and tasks that need you.</span></div><button type="button" aria-label="Try it" onClick={()=>{closeIntro();void send('What did I miss?');}}><CornerDownRight size={18}/></button></li>
+    <li><ListChecks size={22}/><div><b>Turn documents into tasks</b><span>Paste a brief or attach a file and Z-BOT breaks it into tasks for the team.</span></div><button type="button" aria-label="Try it" onClick={()=>{closeIntro();fileInput.current?.click();}}><CornerDownRight size={18}/></button></li>
+    <li><FileText size={22}/><div><b>Message and assign for you</b><span>Ask Z-BOT to message someone or create work. It always checks with you first.</span></div><button type="button" aria-label="Try it" onClick={()=>{closeIntro();setText('Send a message to ');box.current?.focus();}}><CornerDownRight size={18}/></button></li>
+   </ul>
+  </div></div>}
+ </>;
 }
 
 // A pasted document would fill the whole chat, so long messages show the start and open on tap.

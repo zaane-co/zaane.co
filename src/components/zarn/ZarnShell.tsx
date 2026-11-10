@@ -136,7 +136,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
     <div className="zn-nav" data-lenis-prevent>
      {area==='chat'&&<>
       <button type="button" className="zn-nav-item zn-search-btn" onClick={()=>setDialog('search')}><Search size={15}/><span>Search</span><kbd>⌘K</kbd></button>
-      {!guest&&<button type="button" className="zn-nav-item" onClick={()=>setDialog('assistant')}><Sparkles size={15}/><span>Assistant</span><kbd>⌘J</kbd></button>}
+      {!guest&&<button type="button" className="zn-nav-item" onClick={()=>setDialog('assistant')}><Sparkles size={15}/><span>Z-BOT</span><kbd>⌘J</kbd></button>}
       {link('/zarn/activity',<Bell size={15}/>,'Activity')}
       {link('/zarn/mentions',<AtSign size={15}/>,'Mentions',badges.activity)}
       {link('/zarn/saved',<Bookmark size={15}/>,'Saved')}
