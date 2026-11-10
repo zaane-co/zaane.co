@@ -2,8 +2,9 @@
 import Dropdown from '@/components/ui/Dropdown';
 import {useEffect,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Check,FileText,Hash,HeartPulse,Lock,Phone,Search as SearchIcon,Smile,UserRound,X} from 'lucide-react';
-import {channelHref,channelSlug,clearAt,clearOptions,liveStatus,statusPresets,usernameOk,zarnApi,type ZChannel,type ZMessage} from '@/lib/zarn';
+import {Check,FileText,Hash,HeartPulse,Lock,MessageSquare,Phone,Search as SearchIcon,Smile,UserRound,X} from 'lucide-react';
+const MessageSquareIcon=()=><MessageSquare size={15}/>;
+import {channelHref,channelSlug,clearAt,clearOptions,liveStatus,statusPresets,usernameOk,zarnApi,type ZAttachment,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
 import AssigneePicker from './AssigneePicker';
@@ -64,7 +65,8 @@ export function Browse({onClose}:{onClose:()=>void}){
 }
 
 export function SearchDialog({onClose}:{onClose:()=>void}){
- const {db,me,people,channels,title}=useZarn(),router=useRouter();
+ const {db,me,people,channels,title,openDm}=useZarn(),router=useRouter();
+ const [tab,setTab]=useState<'all'|'messages'|'files'|'chats'|'people'|'docs'>('all'),[files,setFiles]=useState<{m:ZMessage;a:ZAttachment}[]>([]);
  const [q,setQ]=useState(''),[rows,setRows]=useState<ZMessage[]>([]),[busy,setBusy]=useState(false),[docs,setDocs]=useState<{id:string;title:string;snippet:string}[]>([]);
  // Past conversations with deactivated people are hidden everywhere else; searching their name finds them.
  const past=q.trim().length>=2?channels.filter(c=>c.kind==='dm'&&(c.dm_key??'').split(',').some(id=>id!==me.user_id&&people[id]?.deactivated_at&&people[id]!.display_name.toLowerCase().includes(q.trim().toLowerCase()))):[];
@@ -74,15 +76,36 @@ export function SearchDialog({onClose}:{onClose:()=>void}){
    // Documents you can open, matched on title or text.
    const {data:dd}=await db.from('zarn_docs').select('id,title,content').or(`title.ilike.%${term}%,content.ilike.%${term}%`).order('updated_at',{ascending:false}).limit(8);
    setDocs(((dd??[]) as {id:string;title:string;content:string}[]).map(d=>{const text=d.content.replace(/<[^>]+>/g,' ').replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g,' ').replace(/\s+/g,' ').trim(),i=text.toLowerCase().indexOf(term.toLowerCase());return {id:d.id,title:d.title||'Untitled',snippet:i<0?text.slice(0,110):(i>40?'…':'')+text.slice(Math.max(0,i-40),i+90)};}));
+   // Files shared in chats, matched on file name (recent 400 messages with attachments).
+   const {data:fm}=await db.from('zarn_messages').select('*').neq('attachments','[]').is('deleted_at',null).order('created_at',{ascending:false}).limit(400);
+   setFiles(((fm??[]) as ZMessage[]).flatMap(m=>(m.attachments??[]).filter(x=>x.name.toLowerCase().includes(term.toLowerCase())).map(x=>({m,a:x}))).slice(0,30));
    setBusy(false);},250);
   return()=>clearTimeout(t);
  },[q,db]);
- return <Modal title="Search ZARN" onClose={onClose} wide>
-  <span className="zn-prefix"><SearchIcon size={16}/><input className="zn-input" autoFocus placeholder="Search messages and docs" value={q} onChange={e=>setQ(e.target.value)}/></span>
-  <ul className="zn-list zn-list-scroll">{q.trim().length>=2&&docs.map(d=><li key={d.id}><button type="button" onClick={()=>{onClose();router.push(`/zarn/docs/${d.id}`);}}><span className="zd-ico"><FileText size={16}/></span><span><b>{d.title} <small>Doc</small></b><small className="zn-snippet">{d.snippet}</small></span></button></li>)}{past.map(c=>{const o=(c.dm_key??'').split(',').find(id=>id!==me.user_id)!;return <li key={c.id}><button type="button" onClick={()=>{onClose();router.push(channelHref(c,c.id));}}><Avatar m={people[o]} size={30}/><span><b>{people[o]?.display_name}</b><small>Deactivated · open past conversation</small></span></button></li>;})}{(q.trim().length>=2?rows:[]).map(m=>{const c=channels.find(x=>x.id===m.channel_id);return <li key={m.id}><button type="button" onClick={()=>{onClose();router.push(`${channelHref(c,m.channel_id)}${m.parent_id?'':`#m-${m.id}`}`);}}>
-   <Avatar m={people[m.user_id??'']} size={30}/><span><b>{people[m.user_id??'']?.display_name??'CRM'} <small>in {c?(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`):'a channel'} · {dayOf(m.created_at)} {timeOf(m.created_at)}</small></b><small className="zn-snippet">{plain(m.body,people).slice(0,160)}</small></span></button></li>;})}
-   {q.trim().length>=2&&!busy&&!rows.length&&!docs.length&&<li className="zn-empty-row">Nothing found.</li>}</ul>
- </Modal>;
+ const term=q.trim().toLowerCase(),on=term.length>=2;
+ const chats=on?channels.filter(c=>!c.archived_at&&(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):c.name??'').toLowerCase().includes(term)).slice(0,20):[];
+ const folks=on?Object.values(people).filter(p=>!p.deactivated_at&&p.user_id!==me.user_id&&`${p.display_name} ${p.username??''} ${p.title} ${p.email}`.toLowerCase().includes(term)).slice(0,20):[];
+ const go=(href:string)=>{onClose();router.push(href);};
+ const counts={messages:rows.length,files:files.length,chats:chats.length,people:folks.length,docs:docs.length};
+ const show=(k:keyof typeof counts)=>on&&(tab==='all'||tab===k)&&counts[k]>0;
+ const cap=<T,>(list:T[])=>tab==='all'?list.slice(0,4):list;
+ const Head=({k,label}:{k:keyof typeof counts;label:string})=>tab==='all'?<li className="zn-srch-head"><span>{label}</span>{counts[k]>4&&<button type="button" onClick={()=>setTab(k)}>See all {counts[k]}</button>}</li>:null;
+ const tabs:[typeof tab,string][]=[['all','All'],['messages','Messages'],['files','Files'],['chats','Channels & DMs'],['people','People'],['docs','Docs']];
+ return <div className="zn-modal-scrim zn-srch-scrim" onClick={onClose}><div className="zn-srch" role="dialog" aria-label="Search ZARN" onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Escape')onClose();}}>
+  <div className="zn-srch-bar"><SearchIcon size={18}/><input autoFocus placeholder="Search messages, files, chats, people and docs" value={q} onChange={e=>setQ(e.target.value)}/>{busy&&<small>Searching…</small>}<button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>
+  <div className="zn-srch-tabs">{tabs.map(([k,l])=><button key={k} type="button" className={tab===k?'is-on':''} onClick={()=>setTab(k)}>{l}{on&&k!=='all'&&counts[k as keyof typeof counts]>0&&<em>{counts[k as keyof typeof counts]}</em>}</button>)}</div>
+  <ul className="zn-list zn-srch-list" data-lenis-prevent>
+   {!on&&<li className="zn-empty-row">Type at least 2 letters to search.</li>}
+   {show('chats')&&<><Head k="chats" label="Channels & DMs"/>{cap(chats).map(c=><li key={c.id}><button type="button" onClick={()=>go(channelHref(c,c.id))}><span className="zd-ico">{c.kind==='private'?<Lock size={15}/>:c.kind==='dm'?<MessageSquareIcon/>:<Hash size={15}/>}</span><span><b>{c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`}</b><small>{c.kind==='dm'?'Direct message':c.kind==='client'?'Client space':c.kind==='project'?'Project chat':c.kind==='private'?'Private channel':'Channel'}</small></span></button></li>)}</>}
+   {show('people')&&<><Head k="people" label="People"/>{cap(folks).map(p=><li key={p.user_id}><button type="button" onClick={()=>{onClose();void openDm([p.user_id]);}}><Avatar m={p} size={30}/><span><b>{p.display_name}</b><small>{[p.title,p.username&&`@${p.username}`].filter(Boolean).join(' · ')||p.email}</small></span></button></li>)}</>}
+   {show('files')&&<><Head k="files" label="Files"/>{cap(files).map(({m,a},i)=>{const c=channels.find(x=>x.id===m.channel_id);return <li key={m.id+i}><button type="button" onClick={()=>go(`${channelHref(c,m.channel_id)}#m-${m.id}`)}><span className="zd-ico"><FileText size={15}/></span><span><b>{a.name}</b><small>{people[m.user_id??'']?.display_name??'Someone'} · {c?(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`):'a chat'} · {dayOf(m.created_at)}</small></span></button></li>;})}</>}
+   {show('docs')&&<><Head k="docs" label="Docs"/>{cap(docs).map(d=><li key={d.id}><button type="button" onClick={()=>go(`/zarn/docs/${d.id}`)}><span className="zd-ico"><FileText size={15}/></span><span><b>{d.title}</b><small className="zn-snippet">{d.snippet}</small></span></button></li>)}</>}
+   {on&&(tab==='all'||tab==='chats')&&past.map(c=>{const o=(c.dm_key??'').split(',').find(id=>id!==me.user_id)!;return <li key={c.id}><button type="button" onClick={()=>go(channelHref(c,c.id))}><Avatar m={people[o]} size={30}/><span><b>{people[o]?.display_name}</b><small>Deactivated · open past conversation</small></span></button></li>;})}
+   {show('messages')&&<><Head k="messages" label="Messages"/>{cap(rows).map(m=>{const c=channels.find(x=>x.id===m.channel_id);return <li key={m.id}><button type="button" onClick={()=>go(`${channelHref(c,m.channel_id)}${m.parent_id?'':`#m-${m.id}`}`)}>
+    <Avatar m={people[m.user_id??'']} size={30}/><span><b>{people[m.user_id??'']?.display_name??'CRM'} <small>in {c?(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`):'a channel'} · {dayOf(m.created_at)} {timeOf(m.created_at)}</small></b><small className="zn-snippet">{plain(m.body,people).slice(0,160)}</small></span></button></li>;})}</>}
+   {on&&!busy&&(tab==='all'?Object.values(counts).every(n=>!n)&&!past.length:!counts[tab as keyof typeof counts])&&<li className="zn-empty-row">Nothing found for “{q.trim()}”.</li>}
+  </ul>
+ </div></div>;
 }
 
 // Crop to a centred square and shrink to 512px WebP before upload.
