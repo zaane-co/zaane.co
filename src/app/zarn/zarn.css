@@ -1727,3 +1727,4 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-invite-note-act{display:flex;gap:6px}
 .zn-invite-note small{font-size:12px;color:var(--z-muted)}
 .zn-outsiders b{font-weight:600}
+.zn-nav-item.is-active .zn-admin-eye{border-color:#fff;color:#fff}
