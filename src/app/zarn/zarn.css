@@ -1651,3 +1651,24 @@ html[data-kb] .zn-prompt{display:none}
 .zn-srch-list>li>button small{font-size:12px;color:var(--z-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zn-srch-list .zd-ico{width:32px;height:32px;flex:0 0 32px;border-radius:9px;display:grid;place-items:center;background:var(--z-panel-2);color:var(--z-muted)}
 .zn-srch-list>li>button>span.zd-ico{flex:0 0 32px;display:grid;width:32px}
+/* Search v2: underline tabs, roomier rows, highlighted matches */
+.zn-srch-bar{padding:16px 18px}
+.zn-srch-bar input{font-size:17px}
+.zn-srch-tabs{gap:2px;padding:0 14px}
+.zn-srch-tabs button{position:relative;border-radius:0;padding:12px 10px 11px;font-size:13px;font-weight:600}
+.zn-srch-tabs button:hover{background:none;color:var(--z-fg)}
+.zn-srch-tabs button.is-on{background:none;color:var(--z-fg)}
+.zn-srch-tabs button.is-on::after{content:'';position:absolute;left:8px;right:8px;bottom:-1px;height:2px;border-radius:2px;background:var(--z-accent)}
+.zn-srch-tabs em{opacity:1;min-width:18px;height:18px;padding:0 5px;border-radius:999px;display:inline-grid;place-items:center;background:var(--z-panel-2);color:var(--z-muted);font-size:11px;font-weight:600}
+.zn-srch-tabs button.is-on em{background:var(--z-fg);color:var(--z-bg)}
+.zn-srch-list{padding:8px 10px 12px}
+.zn-srch-head{padding:12px 10px 6px;font-size:12px;letter-spacing:.01em}
+.zn-srch-list>li>button{align-items:flex-start;gap:12px;padding:10px 12px}
+.zn-srch-list>li>button>.zn-avatar,.zn-srch-list>li>button>span.zd-ico{margin-top:1px}
+.zn-srch-meta{display:flex;align-items:baseline;gap:8px;min-width:0}
+.zn-srch-meta b{flex:0 1 auto}
+.zn-srch-meta i{font-style:normal;font-size:12px;font-weight:600;color:var(--z-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.zn-srch-meta time{margin-left:auto;font-size:12px;color:var(--z-faint);white-space:nowrap;flex:none}
+.zn-srch-list>li>button small.zn-srch-snip{margin-top:3px;font-size:13.5px;line-height:1.45;color:var(--z-fg);opacity:.82;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.zn-srch mark{background:var(--z-accent);color:#fff;border-radius:3px;padding:0 2px}
+.zn-srch-head button{margin-left:auto}
