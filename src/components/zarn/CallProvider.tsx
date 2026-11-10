@@ -1,6 +1,6 @@
 'use client';
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
-import {Check,Expand,Maximize2,PictureInPicture2,Shrink,Mic,MicOff,Minimize2,Phone,ScreenShare,ScreenShareOff,Video,VideoOff,Volume2} from 'lucide-react';
+import {Check,Expand,Maximize2,PictureInPicture2,Shrink,Mic,MicOff,Minimize2,Phone,MonitorUp,MonitorOff,Video,VideoOff,Volume2} from 'lucide-react';
 import {createPortal} from 'react-dom';
 import type {RealtimeChannel} from '@supabase/supabase-js';
 import {useZarn} from './ZarnProvider';
@@ -266,10 +266,10 @@ export default function CallProvider({children}:{children:React.ReactNode}){
      {phase!=='active'&&<>
       <button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={22}/>:<Mic size={22}/>}<span>{muted?'Unmute':'Mute'}</span></button>
       <button type="button" className={camOn?'is-on':''} aria-label={camOn?'Turn camera off':'Turn camera on'} aria-pressed={camOn} onClick={()=>void toggleCamera()}>{camOn?<Video size={22}/>:<VideoOff size={22}/>}<span>{camOn?'Camera':'Camera off'}</span></button>
-      {canShare&&<button type="button" disabled aria-label="Share screen" data-tip="Available once they answer"><ScreenShare size={22}/><span>Share</span></button>}</>}
+      {canShare&&<button type="button" disabled aria-label="Share screen" data-tip="Available once they answer"><MonitorUp size={22}/><span>Share</span></button>}</>}
      {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={22}/>:<Mic size={22}/>}<span>{muted?'Unmute':'Mute'}</span></button>}
      {phase==='active'&&<button type="button" className={camOn?'is-on':''} aria-label={camOn?'Turn camera off':'Turn camera on'} aria-pressed={camOn} onClick={()=>void toggleCamera()}>{camOn?<Video size={22}/>:<VideoOff size={22}/>}<span>{camOn?'Camera':'Camera off'}</span></button>}
-     {phase==='active'&&canShare&&<button type="button" className={sharing?'is-on':''} aria-label={sharing?'Stop sharing':'Share screen'} aria-pressed={sharing} onClick={()=>void toggleShare()}>{sharing?<ScreenShareOff size={22}/>:<ScreenShare size={22}/>}<span>{sharing?'Stop share':'Share'}</span></button>}
+     {phase==='active'&&canShare&&<button type="button" className={sharing?'is-on':''} aria-label={sharing?'Stop sharing':'Share screen'} aria-pressed={sharing} onClick={()=>void toggleShare()}>{sharing?<MonitorOff size={22}/>:<MonitorUp size={22}/>}<span>{sharing?'Stop share':'Share'}</span></button>}
      {phase==='active'&&canSink&&<button type="button" aria-label="Choose speaker" aria-expanded={!!outs} onClick={()=>void toggleOutputs()}><Volume2 size={22}/><span>Speaker</span></button>}
      <button type="button" className="is-decline" aria-label={phase==='active'?'End call':'Cancel'} onClick={()=>void finish('end')}><Phone size={22} className="zn-hangup"/><span>{phase==='active'?'End':'Cancel'}</span></button>
     </>}
