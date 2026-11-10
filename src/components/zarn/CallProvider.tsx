@@ -6,6 +6,7 @@ import type {RealtimeChannel} from '@supabase/supabase-js';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
 import {startRing} from '@/lib/zarn-sound';
+import CallLobby,{type LobbyResult} from './CallLobby';
 
 // 1:1 voice and video calls over WebRTC. The server only records call state (zarn_calls); the offer, answer and network candidates travel
 // over a private-by-obscurity Supabase broadcast channel named after the call id, and the audio goes straight between the two people.
@@ -104,14 +105,22 @@ export default function CallProvider({children}:{children:React.ReactNode}){
   }
  }
 
+ // Starting a call opens the lobby first (check camera and mic, pick devices); the lobby hands over its stream.
+ const [lobby,setLobby]=useState<{channelId:string;peerId:string;video:boolean}|null>(null);
  const start=useCallback(async(channelId:string,peerId:string,opts?:{video?:boolean})=>{
   if(phaseRef.current!=='idle')return;
   if(!navigator.mediaDevices?.getUserMedia||typeof RTCPeerConnection==='undefined'){setNotice('Calls aren’t supported on this browser.');return;}
+  setLobby({channelId,peerId,video:!!opts?.video});
+ },[]);
+ const launch=useCallback(async(channelId:string,peerId:string,opts:{video:boolean;pre?:LobbyResult})=>{
+  if(phaseRef.current!=='idle')return;
   go('calling');
-  if(!await mic(!!opts?.video)){go('idle');return;}
+  if(opts.pre){stream.current=opts.pre.stream;const v=opts.pre.stream.getVideoTracks()[0];if(v){camTrack.current=v;setCamOn(true);}setMuted(opts.pre.muted);
+   if(opts.pre.outId&&audio.current&&'setSinkId' in audio.current){void (audio.current as HTMLAudioElement&{setSinkId:(id:string)=>Promise<void>}).setSinkId(opts.pre.outId).then(()=>setOutId(opts.pre!.outId)).catch(()=>{});}}
+  else if(!await mic(opts.video)){go('idle');return;}
   try{
-   const d=await api({action:'start',channel_id:channelId,video:!!opts?.video});
-   iceRef.current=d.ice;initiator.current=true;const c={id:d.call_id as string,peer:peerId,channel:channelId,video:!!opts?.video};callRef.current=c;setCall(c);
+   const d=await api({action:'start',channel_id:channelId,video:opts.video});
+   iceRef.current=d.ice;initiator.current=true;const c={id:d.call_id as string,peer:peerId,channel:channelId,video:opts.video};callRef.current=c;setCall(c);
    buildPc();openSignal(c.id,()=>{});
    stopRing.current=startRing('out');
    timers.current.push(setTimeout(()=>{if(phaseRef.current==='calling')void finish('end','No answer.');},RING_TIMEOUT));
@@ -229,6 +238,7 @@ export default function CallProvider({children}:{children:React.ReactNode}){
  const value=useMemo(()=>({start,busy:phase!=='idle'}),[start,phase]);
  const peer=call?people[call.peer]:undefined,name=peer?.display_name??'Someone',stage=phase==='active'&&(peerVideo||camOn||sharing);
  return <Ctx.Provider value={value}>{children}
+  {lobby&&phase==='idle'&&portal(<CallLobby peer={people[lobby.peerId]} me={people[me.user_id]??me} video={lobby.video} onCancel={()=>setLobby(null)} onStart={r=>{const l=lobby;setLobby(null);void launch(l.channelId,l.peerId,{video:r.video,pre:r});}}/>)}
   <audio ref={audio} autoPlay playsInline/>
   {(notice||phase!=='idle')&&portal(<>
   {notice&&<div className="zn-call-toast" role="status">{notice}</div>}
