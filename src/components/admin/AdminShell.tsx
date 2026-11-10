@@ -33,7 +33,7 @@ const groups:{label:string;items:Item[]}[]=[
  ]},
  // Shown only to people who are on ZARN / are ZARN admins (the layout adds these keys).
  {label:'ZARN',items:[
-  {label:'Open ZARN chat',href:'/zarn',key:'zarn_chat',icon:MessagesSquare},
+  {label:'ZARN chat',href:'/zarn',key:'zarn_chat',icon:MessagesSquare},
   {label:'ZARN admin',href:'/zarn/admin',key:'zarn_admin',icon:Settings2},
  ]},
 ];

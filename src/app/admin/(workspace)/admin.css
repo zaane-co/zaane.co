@@ -26,7 +26,7 @@
 .za-search kbd{font-family:var(--font-geist-mono),monospace;font-size:10.5px;color:var(--a-faint);padding:2px 6px;border-radius:5px;border:1px solid var(--a-border)}
 .za-nav>*{flex-shrink:0}
 .za-nav-group{display:flex;flex-direction:column;gap:2px}
-.za-nav-label{width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 10px 6px;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--a-faint);text-align:left;cursor:pointer}
+.za-nav-label{width:100%;display:flex;align-items:center;justify-content:space-between;padding:14px 10px 6px;font-size:12px;font-weight:600;letter-spacing:0;color:var(--a-faint);text-align:left;cursor:pointer}
 .za-nav-label:hover{color:var(--a-muted)}
 .za-nav-label-chev{transition:transform .15s}
 .za-nav-label-chev.is-closed{transform:rotate(-90deg)}
