@@ -1824,3 +1824,11 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-calls-dur{flex:none;min-width:74px;text-align:right;font-size:13.5px;font-weight:600;color:var(--z-fg);font-variant-numeric:tabular-nums}
 .zn-calls-dur.is-none{color:var(--z-faint);font-weight:500}
 @media(max-width:760px){.zn-calls-dur{min-width:0}}
+/* Self view behind the ringing card, controls before answer */
+.zn-call-selfie{position:absolute;inset:0;z-index:-1;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.zn-call-scrim .zn-call:has(.zn-call-selfie)::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.15) 40%,rgba(0,0,0,.8))}
+.zn-call-scrim .zn-call-actions{gap:18px;flex-wrap:wrap}
+.zn-call-scrim .zn-call-actions button svg{padding:17px}
+.zn-call-scrim .zn-call-actions button:not(.is-decline):not(.is-accept) svg{background:#3f3f46;border-color:#52525b;color:#fff}
+.zn-call-scrim .zn-call-actions button.is-on:not(.is-decline) svg{background:#fff;color:#111}
+.zn-call-scrim .zn-call-actions button:disabled{opacity:.45;cursor:not-allowed}

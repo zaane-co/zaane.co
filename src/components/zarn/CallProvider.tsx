@@ -180,6 +180,12 @@ export default function CallProvider({children}:{children:React.ReactNode}){
   else if(track)vSender.current=p.addTrack(track,stream.current);
  }
  async function toggleCamera(){
+  // Before the call connects there is no peer connection yet: just change what the stream will carry.
+  if(!pc.current){const st=stream.current;
+   if(camOn){camTrack.current?.stop();if(camTrack.current)st?.removeTrack(camTrack.current);camTrack.current=null;setCamOn(false);return;}
+   try{const v=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}}});const t=v.getVideoTracks()[0]!;camTrack.current=t;st?.addTrack(t);setCamOn(true);}
+   catch{setNotice('Allow camera access to turn on video.');timers.current.push(setTimeout(()=>setNotice(''),4000));}
+   return;}
   if(camOn){camTrack.current?.stop();camTrack.current=null;setCamOn(false);if(!screenTrack.current){showVideoTrack(null);send({t:'video',on:false});}return;}
   try{
    const v=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}}});
@@ -244,7 +250,7 @@ export default function CallProvider({children}:{children:React.ReactNode}){
    {phase!=='incoming'&&<button type="button" className="zn-call-min" aria-label="Minimize call" data-tip="Minimize" onClick={()=>setMini(true)}><Minimize2 size={16}/></button>}
    {stage?<div className="zn-call-stage"><video ref={remoteEl} className="zn-call-remote" autoPlay playsInline muted style={{display:peerVideo?undefined:'none'}}/>{!peerVideo&&<div className="zn-call-avatar"><Avatar m={peer} size={96}/></div>}{(camOn||sharing)&&<video key={sharing?'screen':'cam'} ref={localEl} className={`zn-call-local${sharing?'':' is-mirror'}`} autoPlay playsInline muted/>}
     <div className="zn-call-tools">{canPip&&peerVideo&&<button type="button" aria-label="Picture in picture" data-tip="Keep watching in a small window" onClick={()=>void togglePip()}><PictureInPicture2 size={16}/></button>}{!fs&&<button type="button" aria-label={big?'Smaller window':'Larger window'} data-tip={big?'Smaller':'Larger'} onClick={()=>setBig(b=>!b)}>{big?<Shrink size={16}/>:<Expand size={16}/>}</button>}<button type="button" aria-label={fs?'Exit full screen':'Full screen'} data-tip={fs?'Exit full screen':'Full screen'} onClick={toggleFullscreen}>{fs?<Minimize2 size={16}/>:<Maximize2 size={16}/>}</button></div></div>
-    :<>{phase!=='active'&&<><div className="zn-call-bg" aria-hidden style={peer?.avatar_url?{backgroundImage:`url(${peer.avatar_url})`}:undefined}/>
+    :<>{phase!=='active'&&<>{camOn&&phase!=='incoming'?<video key="selfie" ref={localEl} className="zn-call-selfie" autoPlay playsInline muted aria-hidden/>:<div className="zn-call-bg" aria-hidden style={peer?.avatar_url?{backgroundImage:`url(${peer.avatar_url})`}:undefined}/>}
       <span className="zn-call-kind">{call.video?<Video size={13}/>:<Phone size={13}/>}{phase==='incoming'?(call.video?'Incoming video call':'Incoming voice call'):call.video?'Video call':'Voice call'}</span></>}
      <div className={`zn-call-avatar${phase==='incoming'||phase==='calling'?' is-ringing':''}`}><Avatar m={peer} size={phase==='active'?96:120}/></div></>}
    <div className="zn-call-info"><b>{name}</b>{phase!=='active'&&peer?.title&&<em>{peer.title}</em>}<small>{phase==='incoming'?<>Ringing <i className="zn-dots"><b/><b/><b/></i> {fmt(ringFor)}</>:phase==='calling'?<>Calling <i className="zn-dots"><b/><b/><b/></i> {fmt(ringFor)}</>:phase==='connecting'?<>Connecting <i className="zn-dots"><b/><b/><b/></i></>:fmt(secs)}</small></div>
@@ -254,6 +260,10 @@ export default function CallProvider({children}:{children:React.ReactNode}){
      <button type="button" className="is-decline" aria-label="Decline" onClick={()=>void finish('decline')}><Phone size={22} className="zn-hangup"/><span>Decline</span></button>
      <button type="button" className="is-accept" aria-label="Accept" onClick={()=>void accept()}>{call.video?<Video size={22}/>:<Phone size={22}/>}<span>Accept</span></button>
     </>:<>
+     {phase!=='active'&&<>
+      <button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={22}/>:<Mic size={22}/>}<span>{muted?'Unmute':'Mute'}</span></button>
+      <button type="button" className={camOn?'is-on':''} aria-label={camOn?'Turn camera off':'Turn camera on'} aria-pressed={camOn} onClick={()=>void toggleCamera()}>{camOn?<Video size={22}/>:<VideoOff size={22}/>}<span>{camOn?'Camera':'Camera off'}</span></button>
+      {canShare&&<button type="button" disabled aria-label="Share screen" data-tip="Available once they answer"><ScreenShare size={22}/><span>Share</span></button>}</>}
      {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={22}/>:<Mic size={22}/>}<span>{muted?'Unmute':'Mute'}</span></button>}
      {phase==='active'&&<button type="button" className={camOn?'is-on':''} aria-label={camOn?'Turn camera off':'Turn camera on'} aria-pressed={camOn} onClick={()=>void toggleCamera()}>{camOn?<Video size={22}/>:<VideoOff size={22}/>}<span>{camOn?'Camera':'Camera off'}</span></button>}
      {phase==='active'&&canShare&&<button type="button" className={sharing?'is-on':''} aria-label={sharing?'Stop sharing':'Share screen'} aria-pressed={sharing} onClick={()=>void toggleShare()}>{sharing?<ScreenShareOff size={22}/>:<ScreenShare size={22}/>}<span>{sharing?'Stop share':'Share'}</span></button>}
