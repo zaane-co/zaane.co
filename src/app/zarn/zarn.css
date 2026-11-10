@@ -1407,3 +1407,25 @@ html[data-kb] .zn-prompt{display:none}
 .zn-intro.is-person .zn-author-name{font-size:22px;letter-spacing:-.02em}
 .zn-intro.is-person .zn-btn{margin-top:10px}
 .zn-thread-author{padding:0;font:inherit;color:inherit}.zn-thread-author:hover{text-decoration:underline}
+/* Rail foot: new message, theme, and your account menu (Slack-style) */
+.zn-rail-foot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:10px}
+.zn-rail-foot .zn-rail-me{margin-top:0}
+.zn-rail-round{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--z-panel);border:1px solid var(--z-border);color:var(--z-muted);transition:color .15s,background .15s}
+.zn-rail-round:hover{color:var(--z-fg);background:var(--z-hover)}
+.zn-rail-me.is-away .zn-avatar{opacity:.75}
+.zn-me-menu{position:fixed;left:calc(env(safe-area-inset-left) + 64px);bottom:calc(env(safe-area-inset-bottom) + 14px);z-index:60;width:300px;padding:8px 0;border-radius:14px;background:var(--z-panel);border:1px solid var(--z-border);box-shadow:0 18px 48px rgba(0,0,0,.4);color:var(--z-fg)}
+.zn-me-head{display:flex;align-items:center;gap:12px;padding:10px 16px 12px}
+.zn-me-head .zn-avatar{border-radius:12px}
+.zn-me-head b{display:block;font-size:15px}
+.zn-me-head small{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--z-muted)}
+.zn-me-head small i{width:8px;height:8px;border-radius:50%;background:#22c55e}
+.zn-me-head small i.is-away{background:transparent;border:1.5px solid var(--z-muted)}
+.zn-me-status{display:flex;align-items:center;gap:10px;width:calc(100% - 28px);margin:0 14px 6px;padding:10px 12px;border-radius:10px;border:1px solid var(--z-border);color:var(--z-muted);font-size:14px;text-align:left}
+.zn-me-status:hover{border-color:var(--z-muted);color:var(--z-fg)}
+.zn-me-menu>button:not(.zn-me-status),.zn-me-menu>a{display:flex;align-items:center;width:100%;padding:8px 16px;font-size:14px;text-align:left;color:var(--z-fg)}
+.zn-me-menu>button:not(.zn-me-status):hover,.zn-me-menu>a:hover{background:var(--z-accent);color:#fff}
+.zn-me-menu>button b{margin-left:4px}
+.zn-me-menu em{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-style:normal;color:var(--z-muted);font-size:13px}
+.zn-me-menu>button:hover em,.zn-me-menu>a:hover em{color:#fff}
+.zn-me-sep{height:1px;margin:6px 0;background:var(--z-border)}
+@media(max-width:860px){.zn-me-menu{left:12px;right:12px;width:auto}}

@@ -25,7 +25,7 @@ type Ctx={
  me:Me;people:Record<string,ZMember>;members:ZMember[];channels:ZChannel[];membership:Record<string,ZMembership>;unread:Unread;online:Set<string>;
  db:ReturnType<typeof browserClient>;reload:()=>Promise<void>;markRead:(channelId:string)=>void;subscribe:(fn:(e:ZEvent)=>void)=>()=>void;
  active:string|null;setActive:(id:string|null)=>void;title:(c:ZChannel)=>string;lead:(id:string)=>ZLead|undefined;loadLead:(id:string,force?:boolean)=>void;
- openDm:(ids:string[])=>Promise<void>;notifyOn:boolean;enableNotify:()=>void;emit:(e:ZEvent)=>void;
+ openDm:(ids:string[])=>Promise<void>;notifyOn:boolean;enableNotify:()=>void;away:boolean;setAway:(v:boolean)=>void;emit:(e:ZEvent)=>void;
  projects:ZProject[]|null;reloadProjects:()=>Promise<void>;setActiveThread:(id:string|null)=>void;taskStatuses:ZStatus[];reloadStatuses:()=>Promise<void>;dueTasks:number;refreshDue:()=>Promise<void>;
  todos:ZTodo[]|null;saved:Record<string,string>;toggleSaved:(m:{id:string;channel_id:string})=>Promise<void>;addTodo:(fields:TodoFields&{body:string})=>Promise<void>;updateTodo:(id:string,patch:TodoFields)=>Promise<void>;removeTodo:(id:string)=>Promise<void>;
 };
@@ -37,6 +37,10 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  const [members,setMembers]=useState(initial.members),[channels,setChannels]=useState(initial.channels);
  const [membershipRows,setMembershipRows]=useState(initial.membership);
  const [unread,setUnread]=useState<Unread>({}),[online,setOnline]=useState<Set<string>>(new Set());
+ // Manual away: you drop out of everyone's online list until you set yourself active again. Remembered per device.
+ const [away,setAwayState]=useState(()=>{try{return typeof window!=='undefined'&&localStorage.getItem('zarn-away')==='1';}catch{return false;}});
+ const presenceRef=useRef<ReturnType<typeof db.channel>|null>(null),awayRef=useRef(away);
+ const setAway=useCallback((v:boolean)=>{setAwayState(v);awayRef.current=v;try{localStorage.setItem('zarn-away',v?'1':'0');}catch{}const ch=presenceRef.current;if(ch)void (v?ch.untrack():ch.track({at:Date.now()}));},[]);
  const [active,setActive]=useState<string|null>(null);
  const [leads,setLeads]=useState<Record<string,ZLead>>(()=>Object.fromEntries((initial.leads??[]).map(l=>[l.id,l])));
  const listeners=useRef(new Set<(e:ZEvent)=>void>());
@@ -165,9 +169,9 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
     memberTimer.current=setTimeout(()=>{void reload();},400);
    })
    .subscribe();
-  const presence=db.channel('zarn-presence',{config:{presence:{key:me.user_id}}});
+  const presence=db.channel('zarn-presence',{config:{presence:{key:me.user_id}}});presenceRef.current=presence;
   presence.on('presence',{event:'sync'},()=>setOnline(new Set(Object.keys(presence.presenceState()))))
-   .subscribe(async (status:string)=>{if(status==='SUBSCRIBED')await presence.track({at:Date.now()});});
+   .subscribe(async (status:string)=>{if(status==='SUBSCRIBED'&&!awayRef.current)await presence.track({at:Date.now()});});
   const seen=setInterval(()=>{void db.from('zarn_members').update({last_seen_at:new Date().toISOString()}).eq('user_id',me.user_id).then(()=>{});},5*60*1000);
   return()=>{void db.removeChannel(ch);void db.removeChannel(presence);clearInterval(seen);};
  },[db,me.user_id,reload,router]);
@@ -249,7 +253,7 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
 
  // Local echo: your own messages and reactions show instantly; the realtime copy is de-duplicated by id.
  const emit=useCallback((e:ZEvent)=>{listeners.current.forEach(fn=>fn(e));},[]);
- const value=useMemo<Ctx>(()=>({invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,setActiveThread,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
-  [invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,emit,projects,reloadProjects,setActiveThread,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
+ const value=useMemo<Ctx>(()=>({invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,setActive,title,lead:id=>leads[id],loadLead,openDm,notifyOn,enableNotify,away,setAway,emit,projects,reloadProjects,setActiveThread,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo}),
+  [invites,reloadInvites,me,people,members,channels,membership,unread,online,db,reload,markRead,subscribe,active,title,leads,loadLead,openDm,notifyOn,enableNotify,away,setAway,emit,projects,reloadProjects,setActiveThread,taskStatuses,reloadStatuses,dueTasks,refreshDue,todos,saved,toggleSaved,addTodo,updateTodo,removeTodo]);
  return <ZarnCtx.Provider value={value}>{children}</ZarnCtx.Provider>;
 }

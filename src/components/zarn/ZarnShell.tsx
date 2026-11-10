@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {FileText,Bookmark,FolderKanban,Sparkles,Hash,AtSign,BarChart3,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Sparkles,Hash,AtSign,BarChart3,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -36,7 +36,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
  const z=useZarn(),{me,channels}=z,pathname=usePathname(),{light}=useAdminTheme();
  const nav=useNav(),{staffAdmin,guest,canCreate,canBusiness,canAddClient,starred,rooms,dms,clients,archivedClients,badges}=nav;
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({archivedclients:true});
- const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false);
+ const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false),[meMenu,setMeMenu]=useState(false);
  const router=useRouter();
  const {mode:installMode,install}=useInstall(),sound=useSound(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false),[installDone,setInstallDone]=useState(false);
  const routeArea=areaOf(pathname);
@@ -93,7 +93,23 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
     {canBusiness&&railBtn('business',<BarChart3 size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
     {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',badges.projects)}
-    <button type="button" className="zn-rail-me" aria-label="Your profile" onClick={()=>setProfileId(me.user_id)}><Avatar m={me} size={34} online/></button>
+    <div className="zn-rail-foot">
+     <button type="button" className="zn-rail-round" aria-label="New message" data-tip="New message" onClick={()=>setDialog('dm')}><Plus size={20}/></button>
+     <button type="button" className="zn-rail-round" aria-label={light?'Dark mode':'Light mode'} data-tip={light?'Dark mode':'Light mode'} onClick={()=>writeTheme(!light)}>{light?<Moon size={18}/>:<Sun size={18}/>}</button>
+     <button type="button" className={`zn-rail-me${z.away?' is-away':''}`} aria-label="Your account" aria-haspopup="menu" aria-expanded={meMenu} onClick={()=>setMeMenu(v=>!v)}><Avatar m={me} size={34} online={!z.away}/></button>
+    </div>
+    {meMenu&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setMeMenu(false)}/><div className="zn-me-menu" role="menu">
+     <div className="zn-me-head"><Avatar m={me} size={44}/><span><b>{me.display_name}</b><small><i className={z.away?'is-away':''}/>{z.away?'Away':'Active'}</small></span></div>
+     <button type="button" className="zn-me-status" onClick={()=>{setMeMenu(false);setDialog('profile');}}><Smile size={18}/><span>{me.status_text?`${me.status_emoji??''} ${me.status_text}`.trim():'Update your status'}</span></button>
+     <button type="button" role="menuitem" onClick={()=>{z.setAway(!z.away);setMeMenu(false);}}>Set yourself as <b>{z.away?'active':'away'}</b></button>
+     <button type="button" role="menuitem" onClick={()=>{if(push.state==='on'){setMeMenu(false);setSoundOpen(true);}else z.enableNotify();}}>Notifications<em>{push.state==='on'?'On':push.state==='error'?'Fix':'Off'}<ChevronRight size={15}/></em></button>
+     <div className="zn-me-sep"/>
+     <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setProfileId(me.user_id);}}>Profile</button>
+     <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setSoundOpen(true);}}>Preferences</button>
+     <Link role="menuitem" href="/zarn/password" onClick={()=>setMeMenu(false)}>Account settings<em><ExternalLink size={15}/></em></Link>
+     <div className="zn-me-sep"/>
+     <button type="button" role="menuitem" onClick={()=>void signOut()}>Sign out of ZARN</button>
+    </div></>}
    </nav>
    <aside className="zn-sidebar">
     <div className="zn-workspace">
