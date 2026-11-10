@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {ChevronDown,MessageSquare,MessagesSquare,Mic,MoreVertical,Phone,PhoneCall,PhoneIncoming,PhoneMissed,PhoneOff,PhoneOutgoing,PencilLine,Plus,Search,Trash2,Video,X} from 'lucide-react';
+import {ChevronDown,MessageSquare,MessagesSquare,Mic,MoreVertical,Phone,PhoneCall,PhoneIncoming,PhoneMissed,PhoneOutgoing,PencilLine,Plus,Search,Trash2,Video,X} from 'lucide-react';
 import {useCall} from './CallProvider';
 import {channelHref,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
@@ -78,7 +78,7 @@ export function CallsPage(){
       {rows&&rows.length>0&&<span>{rows.length} {rows.length===1?'call':'calls'}{talked?` · ${Math.round(talked/60)} min talked`:''}</span>}</div></div>
     <div className="zn-calls-art" aria-hidden><div className="zn-calls-win"><div className="zn-calls-win-top"><i/><i/><i/></div>
      <div className="zn-calls-win-faces">{members.filter(m=>m.user_id!==me.user_id&&!m.deactivated_at).slice(0,3).map(m=><Avatar key={m.user_id} m={m} size={52}/>)}</div>
-     <div className="zn-calls-win-bar"><span><Mic size={14}/></span><span><Video size={14}/></span><b><PhoneOff size={14}/></b></div></div></div>
+     <div className="zn-calls-win-bar"><span><Mic size={14}/></span><span><Video size={14}/></span><b><Phone size={14} className="zn-hangup"/></b></div></div></div>
     <button type="button" className="zn-calls-hero-x" aria-label="Hide" onClick={hideIntro}><X size={16}/></button>
    </section>}
    <section className="zn-calls-recent">

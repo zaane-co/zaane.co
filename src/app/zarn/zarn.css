@@ -1815,3 +1815,4 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-call-scrim .zn-call-actions .is-accept svg{animation:zn-accept 1.4s ease-in-out infinite}
 @keyframes zn-accept{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @media(prefers-reduced-motion:reduce){.zn-call-scrim .zn-call-actions .is-accept svg,.zn-call-scrim .zn-call-avatar.is-ringing::before,.zn-call-scrim .zn-call-avatar.is-ringing::after{animation:none}}
+.zn-hangup>*{transform:rotate(135deg);transform-box:view-box;transform-origin:center}

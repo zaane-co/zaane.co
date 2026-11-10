@@ -1,6 +1,6 @@
 'use client';
 import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState} from 'react';
-import {Check,Expand,Maximize2,PictureInPicture2,Shrink,Mic,MicOff,Minimize2,Phone,PhoneOff,ScreenShare,ScreenShareOff,Video,VideoOff,Volume2} from 'lucide-react';
+import {Check,Expand,Maximize2,PictureInPicture2,Shrink,Mic,MicOff,Minimize2,Phone,ScreenShare,ScreenShareOff,Video,VideoOff,Volume2} from 'lucide-react';
 import {createPortal} from 'react-dom';
 import type {RealtimeChannel} from '@supabase/supabase-js';
 import {useZarn} from './ZarnProvider';
@@ -236,7 +236,7 @@ export default function CallProvider({children}:{children:React.ReactNode}){
     {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={16}/>:<Mic size={16}/>}</button>}
     {phase==='active'&&<button type="button" className={camOn?'':'is-on'} aria-label={camOn?'Turn camera off':'Turn camera on'} onClick={()=>void toggleCamera()}>{camOn?<Video size={16}/>:<VideoOff size={16}/>}</button>}
     <button type="button" aria-label="Expand call" onClick={()=>setMini(false)}><Maximize2 size={16}/></button>
-    <button type="button" className="is-decline" aria-label="End call" onClick={()=>void finish(phase==='incoming'?'decline':'end')}><PhoneOff size={16}/></button>
+    <button type="button" className="is-decline" aria-label="End call" onClick={()=>void finish(phase==='incoming'?'decline':'end')}><Phone size={16} className="zn-hangup"/></button>
    </div>
   </div>}
   {phase!=='idle'&&call&&!mini&&<div className={phase==='active'?'zn-call-float':'zn-call-scrim'}><div ref={callEl} className={`zn-call${stage?' is-video':''}${phase==='active'?' is-floating':''}${big?' is-big':''}${fs?' is-fs':''}`} style={phase==='active'&&!fs?{transform:`translate(${pos.x}px,${pos.y}px)`}:undefined} role="dialog" aria-modal={phase!=='active'} aria-label="Call">
@@ -251,14 +251,14 @@ export default function CallProvider({children}:{children:React.ReactNode}){
    {phase==='incoming'&&<div className="zn-call-replies">{['Can’t talk now, I’ll call you back.','In a meeting. Text me?','On my way, 5 minutes.'].map(t=><button key={t} type="button" onClick={()=>void replyDecline(t)}>{t}</button>)}</div>}
    <div className="zn-call-actions">
     {phase==='incoming'?<>
-     <button type="button" className="is-decline" aria-label="Decline" onClick={()=>void finish('decline')}><PhoneOff size={22}/><span>Decline</span></button>
+     <button type="button" className="is-decline" aria-label="Decline" onClick={()=>void finish('decline')}><Phone size={22} className="zn-hangup"/><span>Decline</span></button>
      <button type="button" className="is-accept" aria-label="Accept" onClick={()=>void accept()}>{call.video?<Video size={22}/>:<Phone size={22}/>}<span>Accept</span></button>
     </>:<>
      {phase==='active'&&<button type="button" className={muted?'is-on':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={22}/>:<Mic size={22}/>}<span>{muted?'Unmute':'Mute'}</span></button>}
      {phase==='active'&&<button type="button" className={camOn?'is-on':''} aria-label={camOn?'Turn camera off':'Turn camera on'} aria-pressed={camOn} onClick={()=>void toggleCamera()}>{camOn?<Video size={22}/>:<VideoOff size={22}/>}<span>{camOn?'Camera':'Camera off'}</span></button>}
      {phase==='active'&&canShare&&<button type="button" className={sharing?'is-on':''} aria-label={sharing?'Stop sharing':'Share screen'} aria-pressed={sharing} onClick={()=>void toggleShare()}>{sharing?<ScreenShareOff size={22}/>:<ScreenShare size={22}/>}<span>{sharing?'Stop share':'Share'}</span></button>}
      {phase==='active'&&canSink&&<button type="button" aria-label="Choose speaker" aria-expanded={!!outs} onClick={()=>void toggleOutputs()}><Volume2 size={22}/><span>Speaker</span></button>}
-     <button type="button" className="is-decline" aria-label={phase==='active'?'End call':'Cancel'} onClick={()=>void finish('end')}><PhoneOff size={22}/><span>{phase==='active'?'End':'Cancel'}</span></button>
+     <button type="button" className="is-decline" aria-label={phase==='active'?'End call':'Cancel'} onClick={()=>void finish('end')}><Phone size={22} className="zn-hangup"/><span>{phase==='active'?'End':'Cancel'}</span></button>
     </>}
    </div>
    {outs&&<ul className="zn-call-outs" aria-label="Speakers">{outs.length?outs.map(d=><li key={d.deviceId}><button type="button" onClick={()=>void pickOutput(d.deviceId)}>{(outId||'default')===d.deviceId?<Check size={14}/>:<i/>}<span>{d.label||'Speaker'}</span></button></li>):<li className="is-empty">No other speakers found.</li>}</ul>}
