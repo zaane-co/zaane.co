@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Sparkles,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Sparkles,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -204,6 +204,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
   <CareAlerts/>
   <NotifyPrompt wait={!installDone} installMode={installMode} onInstall={()=>setDialog('install')}/>
   {prefs&&<Preferences initial={prefs} onClose={()=>setPrefs(null)} onStatus={()=>{setPrefs(null);setDialog('profile');}}/>}
+  <Toast/>
   {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {newProject&&<NewProject onClose={()=>setNewProject(false)}/>}
@@ -229,3 +230,10 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
 }
 
 export async function signOut(){await fetch('/api/zarn/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});window.location.assign('/zarn/login');}
+
+// Small confirmation pill: window.dispatchEvent(new CustomEvent('zarn-toast',{detail:'Saved'})).
+function Toast(){
+ const [msg,setMsg]=useState('');
+ useEffect(()=>{let t:ReturnType<typeof setTimeout>;const h=(e:Event)=>{setMsg((e as CustomEvent<string>).detail);clearTimeout(t);t=setTimeout(()=>setMsg(''),2400);};window.addEventListener('zarn-toast',h);return()=>{window.removeEventListener('zarn-toast',h);clearTimeout(t);};},[]);
+ return msg?<div className="zn-toast" role="status"><Check size={15}/>{msg}</div>:null;
+}

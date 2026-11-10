@@ -127,9 +127,10 @@ export function Profile({onClose,initialTab='profile'}:{onClose:()=>void;initial
   const {error:e2}=await z.db.from('zarn_emergency').upsert({user_id:me.user_id,name:em.name.trim(),relation:em.relation.trim(),phone:em.phone.trim(),updated_at:new Date().toISOString()});
   // About me is saved on its own so the rest still saves while the bio column rolls out.
   const extra={bio:bio.trim(),phone2:x.phone2.trim(),phone3:x.phone3.trim(),whatsapp:x.whatsapp.trim()};
-  if(Object.entries(extra).some(([k,val])=>val!==((me as Record<string,unknown>)[k]??'')))await z.db.from('zarn_members').update(extra).eq('user_id',me.user_id);
+  if(Object.entries(extra).some(([k,val])=>val!==((me as Record<string,unknown>)[k]??''))){const {error:e3}=await z.db.from('zarn_members').update(extra).eq('user_id',me.user_id);
+   if(e3){setBusy(false);await z.reload();return setErr('Saved, except About me, extra phone numbers and WhatsApp. Those need a quick update on our side first.');}}
   setBusy(false);if(e2)return setErr('Saved your profile, but not the emergency contact. Try again.');
-  await z.reload();onClose();
+  await z.reload();onClose();window.dispatchEvent(new CustomEvent('zarn-toast',{detail:'Profile saved'}));
  }
  const pick=(p:typeof statusPresets[number])=>setSt({emoji:p.emoji,text:p.text,clear:p.clear===null?'':String(p.clear),date:''});
  const tabs:[ProfileTab,string,React.ReactNode][]=[['profile','Profile',<UserRound key="p" size={16}/>],['status','Status',<Smile key="s" size={16}/>],['contact','Contact',<Phone key="c" size={16}/>],['emergency','Emergency contact',<HeartPulse key="e" size={16}/>]];

@@ -1541,3 +1541,4 @@ html[data-kb] .zn-prompt{display:none}
 .zn-wa-btn{background:#25d366!important;border-color:#25d366!important;color:#fff!important}
 .zn-wa-ico{color:#25d366!important}
 .zn-pe-add{align-self:flex-start;font-size:13px;font-weight:600;color:var(--z-accent)}
+.zn-toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:300;display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:var(--z-fg);color:var(--z-bg);font-size:14px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:zn-fade .15s}
