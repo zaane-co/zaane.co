@@ -2,7 +2,7 @@
 import Flash from '../Flash';
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Briefcase,ExternalLink,Hash,KeyRound,Lock,MoreHorizontal,Pencil,Power,RotateCcw,Search,Send,ShieldCheck,Trash2,UserPlus,X} from 'lucide-react';
+import {Briefcase,Check,ExternalLink,Hash,KeyRound,Lock,MoreHorizontal,Pencil,Power,RotateCcw,Search,Send,ShieldCheck,Trash2,UserPlus,X} from 'lucide-react';
 import {roleInfo,type Role} from '@/lib/cms';
 import {ago,initials} from '@/lib/crm';
 import {zarnApi,type ZMember} from '@/lib/zarn';
@@ -125,7 +125,7 @@ function AccessForm({mode,row,channels,isMe,onClose,onDone}:{mode:'invite'|'edit
    </div>}
    <p className="za-access-label">Account type</p>
    <div className="za-role-pick za-role-pick-2">{(['member','guest'] as const).map(t=><button key={t} type="button" role="radio" aria-checked={a.account_type===t} disabled={(isMe||row?.protected)&&t==='guest'} className={a.account_type===t?'is-on':''} onClick={()=>setType(t)}>
-    <span className="za-col-dot" style={{background:t==='member'?'#2563eb':'#f59e0b'}}/><span><strong>{t==='member'?'Member':'Guest'}</strong><small>{t==='member'?'Sees all public channels and the team directory.':'Only the channels you pick, only people in them, optional end date.'}</small></span></button>)}</div>
+    <span className="za-col-dot" style={{background:t==='member'?'#2563eb':'#f59e0b'}}/><span><strong>{t==='member'?'Member':'Guest'}</strong><small>{t==='member'?'All public channels and the directory.':'Only picked channels, optional end date.'}</small></span></button>)}</div>
    <p className="za-access-label">Permissions</p>
    <Toggle on={admin||lockAdmin&&!!row?.is_admin} disabled={guest||lockAdmin} onChange={setAdmin} label="ZARN admin" hint={guest?'Guests can’t be ZARN admins.':lockAdmin?'Can’t be changed for this account.':'Invite, edit and remove members, and manage channels.'}/>
    <Toggle on={a.can_view_crm} onChange={v=>setA({...a,can_view_crm:v})} label="CRM access" hint="See the pipeline, lead cards and CRM posts (read-only)."/>
@@ -133,8 +133,7 @@ function AccessForm({mode,row,channels,isMe,onClose,onDone}:{mode:'invite'|'edit
    </div>
    <div className="za-access-col za-access-side">
    <p className="za-access-label">Channels {guest?'(required)':''}<span>{a.channels.length} selected</span></p>
-   <div className="za-zarn-pick za-access-channels">{channels.map(c=><label key={c.id} className="za-check-row"><span className={`za-chan-ico${c.kind==='private'?' is-private':''}`}>{c.kind==='private'?<Lock size={14}/>:<Hash size={14}/>}</span><input type="checkbox" checked={a.channels.includes(c.id)} onChange={e=>setA({...a,channels:e.target.checked?[...a.channels,c.id]:a.channels.filter(x=>x!==c.id)})}/>
-    <span><b>{c.name}</b><small>{[c.is_default&&'Everyone joins',c.kind==='private'&&'Private'].filter(Boolean).join(' · ')||'Public'}</small></span></label>)}</div>
+   <div className="za-chan-chips">{channels.map(c=>{const on=a.channels.includes(c.id);return <label key={c.id} className={on?'is-on':''} title={[c.is_default&&'Everyone joins',c.kind==='private'&&'Private'].filter(Boolean).join(' · ')||'Public'}><input type="checkbox" checked={on} onChange={e=>setA({...a,channels:e.target.checked?[...a.channels,c.id]:a.channels.filter(x=>x!==c.id)})}/>{c.kind==='private'?<Lock size={13}/>:<Hash size={13}/>}{c.name}{on&&<Check size={13} className="za-chip-tick"/>}</label>;})}</div>
    {guest&&<><p className="za-access-label">Time limit</p>
     <div className="za-chips za-expiry">{expiryOptions.map(([k,l])=><button key={k} type="button" className={a.expiry===k?'is-on':''} onClick={()=>setA({...a,expiry:k})}>{l}</button>)}
      {a.expiry==='custom'&&<input type="date" aria-label="End date" min={new Date().toISOString().slice(0,10)} value={a.custom} onChange={e=>setA({...a,custom:e.target.value})}/>}</div>

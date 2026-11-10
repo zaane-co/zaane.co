@@ -740,3 +740,15 @@
 .za-access .za-modal-foot .za-btn{min-width:120px}
 .za-access-who{color:var(--a-fg);font-weight:600}
 .za-access .za-modal-head{margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--a-border)}
+/* Access window v3: one column, channel chips */
+.za-modal.za-access{max-width:600px;width:min(600px,calc(100vw - 32px))}
+.za-access-body{display:block}
+.za-access-side{position:static}
+.za-access-col>.za-access-label:first-child{margin-top:0}
+.za-access-side>.za-access-label:first-child{margin-top:20px}
+.za-chan-chips{display:flex;flex-wrap:wrap;gap:8px}
+.za-chan-chips label{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--a-border);background:var(--a-panel-2);font-size:13px;font-weight:500;color:var(--a-muted);cursor:pointer;user-select:none}
+.za-chan-chips label:hover{color:var(--a-fg)}
+.za-chan-chips label.is-on{background:var(--accent);border-color:var(--accent);color:#fff}
+.za-chan-chips input{position:absolute;opacity:0;pointer-events:none}
+.za-chan-chips label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
