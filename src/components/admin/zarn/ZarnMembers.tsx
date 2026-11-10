@@ -117,6 +117,7 @@ function AccessForm({mode,row,channels,isMe,onClose,onDone}:{mode:'invite'|'edit
  return <div className="za-modal-scrim" onClick={onClose}><form className="za-modal za-modal-wide za-access" role="dialog" aria-label={mode==='invite'?'Invite to ZARN':'Edit access'} onClick={e=>e.stopPropagation()} onSubmit={submit}>
   <div className="za-modal-head"><span className="za-modal-icon za-modal-icon-brand">{mode==='invite'?<UserPlus size={18}/>:<Pencil size={18}/>}</span><div><strong>{mode==='invite'?'Invite to ZARN':`Edit access: ${row!.display_name}`}</strong><small>{mode==='invite'?'They get an email to set their password.':row!.email}</small></div><button type="button" className="za-icon-btn za-push" aria-label="Close" onClick={onClose}><X size={16}/></button></div>
   <div className="za-access-body" data-lenis-prevent>
+   <div className="za-access-col">
    {mode==='invite'&&<div className="za-form-grid">
     <F label="Name *"><input required autoFocus maxLength={80} value={who.name} onChange={e=>setWho({...who,name:e.target.value})}/></F>
     <F label="Email *"><input required type="email" maxLength={254} value={who.email} onChange={e=>setWho({...who,email:e.target.value})}/></F>
@@ -129,13 +130,16 @@ function AccessForm({mode,row,channels,isMe,onClose,onDone}:{mode:'invite'|'edit
    <Toggle on={admin||lockAdmin&&!!row?.is_admin} disabled={guest||lockAdmin} onChange={setAdmin} label="ZARN admin" hint={guest?'Guests can’t be ZARN admins.':lockAdmin?'Can’t be changed for this account.':'Invite, edit and remove members, and manage channels.'}/>
    <Toggle on={a.can_view_crm} onChange={v=>setA({...a,can_view_crm:v})} label="CRM access" hint="See the pipeline, lead cards and CRM posts (read-only)."/>
    <Toggle on={!guest&&a.can_create_channels} disabled={guest} onChange={v=>setA({...a,can_create_channels:v})} label="Create channels" hint={guest?'Guests can’t create channels.':'Start new public or private channels.'}/>
+   </div>
+   <div className="za-access-col za-access-side">
    <p className="za-access-label">Channels {guest?'(required)':''}<span>{a.channels.length} selected</span></p>
-   <div className="za-zarn-pick za-access-channels">{channels.map(c=><label key={c.id} className="za-check-row"><input type="checkbox" checked={a.channels.includes(c.id)} onChange={e=>setA({...a,channels:e.target.checked?[...a.channels,c.id]:a.channels.filter(x=>x!==c.id)})}/>
-    <span><b>{c.kind==='private'?<Lock size={12}/>:<Hash size={12}/>} {c.name}</b><small>{[c.is_default&&'Everyone joins',c.kind==='private'&&'Private'].filter(Boolean).join(' · ')||'Public'}</small></span></label>)}</div>
+   <div className="za-zarn-pick za-access-channels">{channels.map(c=><label key={c.id} className="za-check-row"><span className={`za-chan-ico${c.kind==='private'?' is-private':''}`}>{c.kind==='private'?<Lock size={14}/>:<Hash size={14}/>}</span><input type="checkbox" checked={a.channels.includes(c.id)} onChange={e=>setA({...a,channels:e.target.checked?[...a.channels,c.id]:a.channels.filter(x=>x!==c.id)})}/>
+    <span><b>{c.name}</b><small>{[c.is_default&&'Everyone joins',c.kind==='private'&&'Private'].filter(Boolean).join(' · ')||'Public'}</small></span></label>)}</div>
    {guest&&<><p className="za-access-label">Time limit</p>
     <div className="za-chips za-expiry">{expiryOptions.map(([k,l])=><button key={k} type="button" className={a.expiry===k?'is-on':''} onClick={()=>setA({...a,expiry:k})}>{l}</button>)}
      {a.expiry==='custom'&&<input type="date" aria-label="End date" min={new Date().toISOString().slice(0,10)} value={a.custom} onChange={e=>setA({...a,custom:e.target.value})}/>}</div>
     <p className="za-modal-hint">Access ends automatically on that date. You can extend it here any time.</p></>}
+   </div>
   </div>
   {error&&<Flash tone="error">{error}</Flash>}
   <div className="za-modal-foot"><button type="button" className="za-btn za-btn-ghost" onClick={onClose}>Cancel</button><button className="za-btn za-btn-primary" disabled={busy}>{busy?'Saving…':mode==='invite'?'Send invite':'Save access'}</button></div>
