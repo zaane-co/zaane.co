@@ -50,7 +50,9 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  // multi: tasks from several projects (my tasks, or one client's projects). mine: my own tasks across everything.
  const multi=!id,mine=!id&&!leadId;
 
- const [project,setProject]=useState<ZProject|null|undefined>(multi?null:undefined),[members,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
+ const [project,setProject]=useState<ZProject|null|undefined>(multi?null:undefined),[allMembers,setMembers]=useState<string[]>([]),[tasks,setTasks]=useState<Task[]>([]),[assign,setAssign]=useState<Record<string,string[]>>({}),[loaded,setLoaded]=useState(false);
+ // Deactivated people stay in the database (their messages too) but drop off the member list.
+ const members=useMemo(()=>allMembers.filter(u=>!people[u]?.deactivated_at),[allMembers,people]);
  const [view,setView]=useState<View>(id?'chat':'list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
  const [formMembers,setFormMembers]=useState<string[]|null>(null),[templates,setTemplates]=useState<{save?:boolean}|null>(null);

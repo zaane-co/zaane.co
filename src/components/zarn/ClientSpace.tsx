@@ -33,7 +33,9 @@ type Tab='chat'|'overview'|'tasks'|'projects'|'reminders'|'deliverables'|'files'
 
 // A client's private space: team chat plus everything we're tracking for them.
 export default function ClientSpace({data}:{data:SpaceData}){
- const {lead,team,stages}=data,z=useZarn(),router=useRouter(),confirm=useConfirm(),[pending,start]=useTransition(),isAdmin=z.me.zarnAdmin;
+ const {lead,stages}=data,z=useZarn(),router=useRouter(),confirm=useConfirm(),[pending,start]=useTransition(),isAdmin=z.me.zarnAdmin;
+ // Deactivated people keep their messages but drop off the team.
+ const team=data.team.filter(id=>z.people[id]&&!z.people[id]!.deactivated_at);
  const [tab,setTab]=useState<Tab>('chat'),[adding,setAdding]=useState(false),[flash,setFlash]=useState('');
  const stage=stages.find(s=>s.key===lead.status);
  const [menu,setMenu]=useState(false),[deleting,setDeleting]=useState(false);
@@ -92,6 +94,7 @@ export default function ClientSpace({data}:{data:SpaceData}){
 
 function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=>Promise<boolean>;onTab:(t:Tab)=>void}){
  const {lead}=data,z=useZarn(),{profile}=useShell(),isAdmin=z.me.zarnAdmin;
+ const team=data.team.filter(id=>z.people[id]&&!z.people[id]!.deactivated_at);
  const [note,setNote]=useState(''),[copied,setCopied]=useState(false);
  const owner=lead.owner_id?(z.people[lead.owner_id]?.display_name??data.names[lead.owner_id]):null;
  const stage=data.stages.find(s=>s.key===lead.status);
@@ -149,8 +152,8 @@ function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=
      {data.canStudio&&<a className="zn-link" href={`/admin/leads/${lead.id}`} target="_blank" rel="noopener noreferrer"><ExternalLink size={13}/>Edit in Studio admin</a>}
     </section>
     <section className="zn-card">
-     <div className="zn-card-head"><h3>Team</h3><small className="zn-muted">{data.team.length} {data.team.length===1?'person':'people'}</small></div>
-     <ul className="zn-team-list">{data.team.map(id=><li key={id} className="is-click" role="button" tabIndex={0} onClick={()=>profile(id)}><Avatar m={z.people[id]} size={32} online={z.online.has(id)}/><span><b>{z.people[id]?.display_name??data.names[id]??'Former member'}</b><small>{z.people[id]?.title||(z.online.has(id)?'Online':'Offline')}</small></span></li>)}</ul>
+     <div className="zn-card-head"><h3>Team</h3><small className="zn-muted">{team.length} {team.length===1?'person':'people'}</small></div>
+     <ul className="zn-team-list">{team.map(id=><li key={id} className="is-click" role="button" tabIndex={0} onClick={()=>profile(id)}><Avatar m={z.people[id]} size={32} online={z.online.has(id)}/><span><b>{z.people[id]?.display_name??data.names[id]??'Former member'}</b><small>{z.people[id]?.title||(z.online.has(id)?'Online':'Offline')}</small></span></li>)}</ul>
     </section>
    </aside>
   </div>

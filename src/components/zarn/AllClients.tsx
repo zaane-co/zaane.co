@@ -20,7 +20,7 @@ export default function AllClients({rows}:{rows:ClientRow[]}){
    <span className="zn-stage-dot" style={{background:r.color}}/><span className="zn-crm-name"><b>{r.name}</b><small>{r.contact||' '}</small></span>
    <span className="zn-stage" style={{background:r.color}}>{r.stage}</span>
    <span className="zn-crm-val">{r.value!=null?money(Number(r.value),r.currency):''}</span>
-   <span className="zn-team-stack zn-crm-owner">{r.team.slice(0,4).map(id=><Avatar key={id} m={people[id]} size={22}/>)}{r.team.length>4&&<span className="zn-more">+{r.team.length-4}</span>}</span>
+   {(()=>{const t=r.team.filter(id=>people[id]&&!people[id]!.deactivated_at);return <span className="zn-team-stack zn-crm-owner">{t.slice(0,4).map(id=><Avatar key={id} m={people[id]} size={22}/>)}{t.length>4&&<span className="zn-more">+{t.length-4}</span>}</span>;})()}
   </>;
    return r.canOpen?<Link key={r.lead_id} href={`/zarn/clients/${r.lead_id}`} className="zn-crm-row zn-client-row">{body}</Link>
     :<div key={r.lead_id} className="zn-crm-row zn-client-row is-locked" title="Only this client’s team can open it">{body}<Lock size={13}/></div>;})
