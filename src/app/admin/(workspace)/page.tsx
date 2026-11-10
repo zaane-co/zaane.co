@@ -12,7 +12,7 @@ async function overdue(today:string){const db=await sessionClient();const {count
 async function latest(table:string,cols:string,n=5){const db=await sessionClient();const {data}=await db.from(table).select(cols).order('created_at',{ascending:false}).limit(n);return (data||[]) as unknown as Row[];}
 
 export default async function Page(){
- const user=await staff();const role=user?.role;const editor=role==='editor',sales=role==='sales',finance=role==='finance';
+ const user=await staff();const role=user?.role;const editor=role==='editor',sales=role==='sales',finance=role==='finance'||role==='finance_staff';
  const isoToday=new Date().toISOString().slice(0,10);
  const stats:Stat[]=finance?[
   {label:'Drafts',value:await count('invoices',['status','draft']),href:'/admin/invoices',icon:FileText},

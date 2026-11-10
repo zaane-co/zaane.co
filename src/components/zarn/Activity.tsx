@@ -20,7 +20,7 @@ const filters:{k:Filter;label:string;match:(e:Ev)=>boolean}[]=[
 
 // Company news: people who joined, projects completed and clients closed. Mentions have their own page.
 export default function Activity(){
- const {db,people,me}=useZarn(),admin=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const {db,people,me}=useZarn(),admin=me.zarnAdmin;
  const [events,setEvents]=useState<Ev[]>([]),[loading,setLoading]=useState(true),[filter,setFilter]=useState<Filter>('all'),[seen]=useState(()=>{try{return Number(localStorage.getItem(SEEN))||0;}catch{return 0;}});
  useEffect(()=>{let live=true;void (async()=>{
   const {data}=await db.from('zarn_events').select('id,kind,lead_id,user_id,title,detail,meta,created_at').order('created_at',{ascending:false}).limit(200);

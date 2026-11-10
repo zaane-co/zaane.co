@@ -32,5 +32,5 @@ export const staff = cache(async () => {
   if (!id) return null;
   const db = await sessionClient();
   const {data} = await db.from('users').select('id,name,email,role').eq('id',id).single();
-  return data?.role ? data as {id:string;name:string;email:string;role:'super_admin'|'admin'|'editor'|'sales'|'finance'} : null;
+  return data?.role ? data as {id:string;name:string;email:string;role:import('@/lib/cms').Role} : null;
 });

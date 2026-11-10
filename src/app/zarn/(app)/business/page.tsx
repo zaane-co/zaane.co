@@ -6,7 +6,7 @@ export const dynamic='force-dynamic';
 // Business home: pipeline numbers, my clients and the tasks assigned to me across clients.
 export default async function Page(){
  const me=await zarnMember();if(!me)redirect('/zarn/login');
- const admin=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const admin=me.zarnAdmin;
  if(me.account_type==='guest'||!admin)redirect('/zarn');
  const db=serviceClient();
  const [{data:leads},{data:spaces},{data:mine},{data:tasks}]=await Promise.all([

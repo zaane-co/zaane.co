@@ -29,7 +29,7 @@ export async function POST(request:Request){
  if(!vaultReady())return fail('The vault isn’t set up yet. An admin needs to add the VAULT_KEY setting.',503);
  const parsed=actions.safeParse(await request.json().catch(()=>null));if(!parsed.success)return fail(parsed.error.issues[0]?.message||'Invalid request');
  const b=parsed.data,db=serviceClient();
- const admin=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const admin=me.zarnAdmin;
  const log=(lead_id:string,item_id:string|null,item_label:string,action:'create'|'update'|'delete'|'reveal'|'copy'|'share_create'|'share_revoke')=>db.from('zarn_vault_log').insert({lead_id,item_id,item_label,user_id:me.user_id,action});
  // Items are always checked against the client they belong to, not just the id.
  const load=async(itemId:string)=>{const {data}=await db.from('zarn_vault_items').select('*').eq('id',itemId).maybeSingle();if(!data)return null;const {allowed}=await clientAccess(me,data.lead_id);return allowed?data:null;};

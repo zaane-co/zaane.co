@@ -10,7 +10,7 @@ import {Avatar} from './format';
 
 // New client from inside ZARN: saves it to the CRM (Won stage) and opens a private client space for the chosen team.
 export default function AddClient({onClose}:{onClose:()=>void}){
- const z=useZarn(),router=useRouter(),admin=z.me.staffRole==='super_admin'||z.me.staffRole==='admin';
+ const z=useZarn(),router=useRouter(),admin=z.me.zarnAdmin;
  const [v,setV]=useState({name:'',company:'',email:'',phone:'',service:'',deal_value:'',currency:'NGN',brief:''});
  const [team,setTeam]=useState<string[]>([]),[q,setQ]=useState(''),[busy,setBusy]=useState(false),[err,setErr]=useState('');
  const people=z.members.filter(m=>!m.deactivated_at&&m.account_type==='member'&&m.user_id!==z.me.user_id&&`${m.display_name} ${m.title}`.toLowerCase().includes(q.toLowerCase()));

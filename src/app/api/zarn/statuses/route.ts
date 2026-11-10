@@ -27,7 +27,7 @@ export async function POST(request:Request){
  const {data:st}=await db.from('zarn_task_statuses').select('key,builtin,created_by').eq('key',b.key).maybeSingle();
  if(!st)return fail('That status no longer exists.',404);
  if(st.builtin)return fail('The built-in statuses can’t be deleted.');
- const admin=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const admin=me.zarnAdmin;
  if(st.created_by!==me.user_id&&!admin)return fail('Only the person who added it, or an admin, can delete this status.',403);
  await db.from('zarn_tasks').update({status:'todo'}).eq('status',b.key);
  const {error}=await db.from('zarn_task_statuses').delete().eq('key',b.key);

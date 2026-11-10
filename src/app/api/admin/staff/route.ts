@@ -3,7 +3,7 @@ import {emailBase} from '@/lib/site';
 import {staff,serviceClient} from '@/lib/supabase/server';
 import {roles,roleInfo} from '@/lib/cms';
 import {sendNewPassword} from '@/lib/send-password';
-const role=z.enum(roles);
+const role=z.enum(roles).refine(r=>r!=='super_admin',{message:'There is only one super admin.'});
 const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('invite'),name:z.string().trim().min(1,'Enter their name.').max(120),email:z.email('Enter a valid email.').max(254),role}),
  z.object({action:z.literal('set_role'),id:z.uuid(),role:role.nullable()}),

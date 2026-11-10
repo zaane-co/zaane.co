@@ -1,18 +1,16 @@
 import {z} from 'zod';
 import {emailBase} from '@/lib/site';
-import {staff,serviceClient} from '@/lib/supabase/server';
-import {isAdmin} from '@/lib/cms';
+import {serviceClient} from '@/lib/supabase/server';
+import {zarnMember} from '@/lib/zarn-server';
 import {channelSlug} from '@/lib/zarn';
 import {sendNewPassword} from '@/lib/send-password';
 // ZARN administration. Only staff admins and super admins can invite people or manage channels.
 const id=z.uuid();
 // Who gets what: account type, CRM + channel-creation toggles, the channels they're in, and an optional expiry (guests).
 const access=z.object({account_type:z.enum(['member','guest']).default('member'),can_view_crm:z.boolean().default(true),can_create_channels:z.boolean().default(true),channels:z.array(id).max(500).optional(),expires_at:z.iso.datetime({offset:true}).nullable().default(null)});
-// Studio admin rights given from ZARN admin. 'none' takes admin rights away. Super admins only.
-const adminRole=z.enum(['none','admin','super_admin']).optional();
 const actions=z.discriminatedUnion('action',[
- z.object({action:z.literal('invite'),name:z.string().trim().min(1,'Enter their name.').max(80),email:z.email('Enter a valid email.').max(254),title:z.string().trim().max(80).default(''),staff_role:adminRole,...access.shape}),
- z.object({action:z.literal('update_access'),user_id:id,staff_role:adminRole,...access.shape}),
+ z.object({action:z.literal('invite'),name:z.string().trim().min(1,'Enter their name.').max(80),email:z.email('Enter a valid email.').max(254),title:z.string().trim().max(80).default(''),is_admin:z.boolean().optional(),...access.shape}),
+ z.object({action:z.literal('update_access'),user_id:id,is_admin:z.boolean().optional(),...access.shape}),
  z.object({action:z.literal('send_password'),user_id:id}),
  z.object({action:z.literal('resend'),user_id:id}),
  z.object({action:z.literal('deactivate'),user_id:id}),
@@ -36,27 +34,19 @@ async function mail(to:string,replyTo:string,subject:string,heading:string,lines
 export async function POST(request:Request){
  const origin=new URL(request.url).origin;
  if(request.headers.get('origin')!==origin)return fail('Invalid origin',403);
- const me=await staff();if(!me||!isAdmin(me.role))return fail('Only admins can manage ZARN.',403);
+ // ZARN admins (and the Studio super admin) manage ZARN. Studio roles alone give no ZARN powers.
+ const zm=await zarnMember();if(!zm?.zarnAdmin)return fail('Only ZARN admins can manage ZARN.',403);
+ const me={id:zm.user_id,name:zm.display_name,email:zm.email,role:zm.staffRole};
  const parsed=actions.safeParse(await request.json().catch(()=>null));
  if(!parsed.success)return fail(parsed.error.issues[0]?.message||'Invalid request');
  const b=parsed.data,db=serviceClient();
- // Admin rights: only super admins grant or remove them, never on themselves, and only for full members.
- if((b.action==='invite'||b.action==='update_access')&&b.staff_role){
-  if(me.role!=='super_admin')return fail('Only a super admin can give or remove admin rights.',403);
-  if(b.action==='update_access'&&b.user_id===me.id)return fail('You can’t change your own admin rights. Ask another super admin.');
-  if(b.staff_role!=='none'&&b.account_type==='guest')return fail('Guests can’t be admins. Make them a Member first.');
- }
+ // ZARN admin: members only, and nobody takes it away from themselves.
+ if((b.action==='invite'||b.action==='update_access')&&b.is_admin&&b.account_type==='guest')return fail('Guests can’t be ZARN admins. Make them a Member first.');
+ if(b.action==='update_access'&&b.user_id===me.id&&b.is_admin===false)return fail('You can’t remove your own ZARN admin. Ask another ZARN admin.');
+ const setZarnAdmin=async(userId:string,v:boolean|undefined)=>{if(v!==undefined)await db.from('zarn_members').update({is_admin:v}).eq('user_id',userId);};
  // The protected owner account stays a full member and super admin; it can't be deactivated or removed.
  if(b.action==='update_access'||b.action==='deactivate'||b.action==='remove'){const {data:t}=await db.from('users').select('protected').eq('id',b.user_id).maybeSingle();
-  if(t?.protected&&(b.action!=='update_access'||b.account_type==='guest'||(b.staff_role&&b.staff_role!=='super_admin')))return fail('This is the protected owner account. It stays a super admin and full member, and can’t be deactivated or removed.');}
- const setAdmin=async(userId:string,email:string,name:string,role:'none'|'admin'|'super_admin'|undefined)=>{
-  if(!role)return true;
-  const {data:cur}=await db.from('users').select('role').eq('id',userId).maybeSingle();
-  // 'none' only strips admin-level roles; an editor or sales person keeps their Studio role.
-  if(role==='none'){if(!isAdmin(cur?.role))return true;const {error}=await db.from('users').update({role:null}).eq('id',userId);return !error;}
-  const {error}=cur?await db.from('users').update({role}).eq('id',userId):await db.from('users').upsert({id:userId,email,name,role});
-  return !error;
- };
+  if(t?.protected&&(b.action!=='update_access'||b.account_type==='guest'||b.is_admin===false))return fail('This is the protected owner account. It stays a super admin and full member, and can’t be deactivated or removed.');}
  // Channel membership: an explicit list from the form wins; otherwise members get the auto-join channels and guests get nothing.
  const setChannels=async(userId:string,picked:string[]|undefined,type:'member'|'guest',replace:boolean)=>{
   let want=picked;
@@ -90,7 +80,7 @@ export async function POST(request:Request){
     const {error}=await db.from('zarn_members').insert({user_id:existing.id,email,display_name:b.name,title:b.title,invited_by:me.id,joined_at:new Date().toISOString(),username:await pickUsername(email),work_email:email,...accessRow(b)});
     if(error)return fail('Could not add them.');
     await setChannels(existing.id,b.channels,b.account_type,false);
-    if(!await setAdmin(existing.id,email,existing.name||b.name,b.staff_role))return fail('Added to ZARN, but admin rights could not be set. Try Edit access.');
+    await setZarnAdmin(existing.id,b.is_admin);
     const sent=await mail(email,me.email,'You’ve been added to ZARN','You’re on ZARN',[`Hi ${b.name.split(' ')[0]}, ${me.name||'the Zaane team'} added you to ZARN, our team chat.`,'Sign in with the same email and password you already use for Zaane.'],'Open ZARN',`${emailBase()}/zarn/login`);
     return Response.json({ok:true,existing:true,emailed:sent});
    }
@@ -98,15 +88,14 @@ export async function POST(request:Request){
    const {error}=await db.from('zarn_members').insert({user_id:r.userId,email,display_name:b.name,title:b.title,invited_by:me.id,username:await pickUsername(email),work_email:email,...accessRow(b)});
    if(error){await db.auth.admin.deleteUser(r.userId);return fail('Could not add them.');}
    await setChannels(r.userId,b.channels,b.account_type,false);
-   if(!await setAdmin(r.userId,email,b.name,b.staff_role))return fail('Invite sent, but admin rights could not be set. Try Edit access.');
+   await setZarnAdmin(r.userId,b.is_admin);
    return Response.json({ok:true,emailed:r.sent});
   }
   case 'update_access':{
    const {error}=await db.from('zarn_members').update(accessRow(b)).eq('user_id',b.user_id);
    if(error)return fail('Could not update their access.');
    if(b.channels)await setChannels(b.user_id,b.channels,b.account_type,true);
-   if(b.staff_role){const {data:m}=await db.from('zarn_members').select('email,display_name').eq('user_id',b.user_id).single();
-    if(!m||!await setAdmin(b.user_id,m.email,m.display_name,b.staff_role))return fail('Access saved, but admin rights could not be changed.');}
+   await setZarnAdmin(b.user_id,b.is_admin);
    return Response.json({ok:true});
   }
   case 'send_password':{

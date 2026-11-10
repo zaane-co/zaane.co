@@ -33,8 +33,8 @@ export default async function Page({params}:{params:Promise<{id:string}>}){
   db.from('zarn_client_deliverables').select('id,title,next_on').eq('lead_id',id).not('next_on','is',null).order('next_on').limit(50),
  ]);
  if(!lead)notFound();
- const data:SpaceData={care:{reminders:(reminders??[]).filter(r=>r.audience==='team'||r.created_by===me.user_id).map(({id,title,next_on})=>({id,title,next_on})),deliverables:deliverables??[],today:lagosToday()},files:files??[],me:me.user_id,lead,channelId:channel.id,stages:(stages??[]).sort((a,b)=>(a.kind==='lost'?1:0)-(b.kind==='lost'?1:0)||a.position-b.position),team:(team??[]).map(t=>t.user_id),tasks:tasks??[],materials:materials??[],activities:activities??[],invoices:invoices.data,names:Object.fromEntries((staff??[]).map(u=>[u.id,u.name||u.email])),archived:!!channel.archived_at,canDelete:me.staffRole==='super_admin'||me.staffRole==='admin',canManage:canManageTeams(me),canStudio:me.staffRole==='super_admin'||me.staffRole==='admin'||me.staffRole==='sales'};
+ const data:SpaceData={care:{reminders:(reminders??[]).filter(r=>r.audience==='team'||r.created_by===me.user_id).map(({id,title,next_on})=>({id,title,next_on})),deliverables:deliverables??[],today:lagosToday()},files:files??[],me:me.user_id,lead,channelId:channel.id,stages:(stages??[]).sort((a,b)=>(a.kind==='lost'?1:0)-(b.kind==='lost'?1:0)||a.position-b.position),team:(team??[]).map(t=>t.user_id),tasks:tasks??[],materials:materials??[],activities:activities??[],invoices:invoices.data,names:Object.fromEntries((staff??[]).map(u=>[u.id,u.name||u.email])),archived:!!channel.archived_at,canDelete:me.zarnAdmin,canManage:canManageTeams(me),canStudio:me.zarnAdmin||me.staffRole==='sales'};
  // Amounts are for admins only: blank them out before they reach the browser.
- if(me.staffRole!=='super_admin'&&me.staffRole!=='admin'){data.lead={...data.lead,deal_value:null};if(data.invoices)data.invoices=data.invoices.map(i=>({...i,total:0,amount_paid:0}));}
+ if(!me.zarnAdmin){data.lead={...data.lead,deal_value:null};if(data.invoices)data.invoices=data.invoices.map(i=>({...i,total:0,amount_paid:0}));}
  return <ClientSpace key={id} data={data}/>;
 }

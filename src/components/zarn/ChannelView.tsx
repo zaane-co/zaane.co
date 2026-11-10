@@ -25,7 +25,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  const list=useRef<HTMLDivElement>(null),stick=useRef(true),typingCh=useRef<ReturnType<typeof db.channel>|null>(null),lastTyping=useRef(0);
  const joined=!!membership[id];
  // Admins can read and post in client spaces and projects they aren't on.
- const canPost=joined||((channel?.kind==='client'||channel?.kind==='project')&&(me.staffRole==='super_admin'||me.staffRole==='admin'));
+ const canPost=joined||((channel?.kind==='client'||channel?.kind==='project')&&(me.zarnAdmin));
  useEffect(()=>{if(channel?.kind==='client'&&!embedded&&channel.lead_id)router.replace(`/zarn/clients/${channel.lead_id}`);if(channel?.kind==='project'&&!embedded&&channel.project_id)router.replace(`/zarn/projects/${channel.project_id}?view=chat`);},[channel,embedded,router]);
  const counted=useRef(new Set<string>());
  // Read receipts: each member's last_read_at in this channel, kept live.
@@ -210,7 +210,7 @@ function Details({c,pinned,onClose,onJump}:{c:ZChannel;pinned:ZMessage[];onClose
  },[db,c.id,c.kind,adding]);
  const mine=membership[c.id];
  const saveTopic=async()=>{try{await zarnApi('/api/zarn',{action:'topic',id:c.id,topic});setMsg('Topic updated.');await z.reload();}catch(e){setMsg(e instanceof Error?e.message:'Could not save.');}};
- const staff=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const staff=me.zarnAdmin;
  const canDelete=(c.kind==='public'||c.kind==='private')&&(staff||(c.created_by===me.user_id&&!c.is_default&&!c.crm_feed));
  const remove=async()=>{setDeleting(true);try{await zarnApi('/api/zarn',{action:'channel_delete',id:c.id});await z.reload();router.push('/zarn');}catch(e){setMsg(e instanceof Error?e.message:'Could not delete the channel.');setConfirmDel(false);}finally{setDeleting(false);}};
  const leave=async()=>{await db.from('zarn_channel_members').delete().eq('channel_id',c.id).eq('user_id',me.user_id);await z.reload();router.push('/zarn');};

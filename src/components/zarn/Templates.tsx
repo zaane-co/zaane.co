@@ -49,7 +49,7 @@ type View={k:'list'}|{k:'preview';t:Template}|{k:'edit';id?:string;name:string;d
 export default function TemplateDialog({target,candidates,start,onClose,onApplied}:{target:Omit<Target,'assignees'>;candidates:string[];start?:{name:string;items:TemplateItem[]};onClose:()=>void;onApplied:(n:number)=>void}){
  const {db,me}=useZarn(),confirm=useConfirm(),{all,ready,reload}=useTemplates();
  const [view,setView]=useState<View>(start?{k:'edit',name:start.name,description:'',text:toOutline(start.items)}:{k:'list'});
- const isAdmin=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const isAdmin=me.zarnAdmin;
  const title=view.k==='list'?'Templates':view.k==='preview'?view.t.name:view.id?'Edit template':'New template';
  return <Modal title={title} onClose={onClose} wide>
   {view.k==='list'&&<List all={all} onPick={t=>setView({k:'preview',t})} onNew={()=>setView({k:'edit',name:'',description:'',text:''})}/>}

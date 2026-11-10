@@ -6,7 +6,7 @@ export const dynamic='force-dynamic';
 // Every client with a space: stage, value, team size, open tasks. Opening one requires being on its team (or admin).
 export default async function Page(){
  const me=await zarnMember();if(!me)redirect('/zarn/login');
- const admin=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const admin=me.zarnAdmin;
  if(me.account_type==='guest'||!admin)redirect('/zarn');
  const db=serviceClient();
  const [{data:spaces},{data:links},{data:tasks},{data:stages}]=await Promise.all([

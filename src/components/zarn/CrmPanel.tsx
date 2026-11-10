@@ -18,7 +18,7 @@ export default function CrmPanel(){
  const stages=useMemo(()=>{const m=new Map<string,{label:string;color:string;kind:string;n:number}>();for(const r of rows){const k=r.status;const s=m.get(k)??{label:r.stage_label??k,color:r.stage_color??'#52525b',kind:r.stage_kind??'open',n:0};s.n++;m.set(k,s);}return [...m.entries()];},[rows]);
  const shown=rows.filter(r=>(stage==='all'||r.status===stage)&&(!q||`${r.name} ${r.company} ${r.categories.join(' ')} ${r.owner_name??''}`.toLowerCase().includes(q.toLowerCase())));
  const openTotals=useMemo(()=>{const m:Record<string,number>={};for(const r of rows)if(r.stage_kind==='open'&&r.deal_value)m[r.currency]=(m[r.currency]??0)+Number(r.deal_value);return Object.entries(m).map(([c,v])=>money(v,c)).join(' · ')||'-';},[rows]);
- const staff=me.staffRole&&['super_admin','admin','sales'].includes(me.staffRole);
+ const staff=(me.zarnAdmin||me.staffRole==='sales');
  if(!me.can_view_crm)return <div className="zn-empty-state"><h2>No CRM access</h2><p>Ask a ZARN admin to turn on CRM access for your account.</p></div>;
  const targets=channels.filter(c=>membership[c.id]&&!c.archived_at&&c.kind!=='client');
  async function share(){

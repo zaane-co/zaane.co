@@ -15,7 +15,7 @@ export const useShell=()=>useContext(ShellCtx);
 // Lists, permissions and unread badges, computed once from ZARN state.
 export function useNav(){
  const z=useZarn(),{me,channels,membership,unread,title}=z;
- const staffAdmin=me.staffRole==='super_admin'||me.staffRole==='admin';
+ const staffAdmin=me.zarnAdmin;
  const guest=me.account_type==='guest';
  const canCreate=!guest&&me.can_create_channels,canBusiness=!guest&&staffAdmin;
  const canAddClient=!guest&&(staffAdmin||me.staffRole==='sales');

@@ -62,7 +62,7 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
  const toggleTheme=()=>writeTheme(!light);
 
  const can=(key?:string)=>!key||allowedKeys.includes(key);
- const admin=user.role==='super_admin'||user.role==='admin',zarnMode=admin&&pathname.startsWith('/admin/zarn');
+ const zarnMode=false;
  const visible=(zarnMode?zarnGroups:groups).map(g=>({...g,items:g.items.map(i=>({...i,children:i.children?.filter(c=>can(c.key))})).filter(i=>i.children?i.children.length>0:can(i.key))})).filter(g=>g.items.length);
  const isActive=(href:string)=>href==='/admin'||href==='/admin/zarn'||href==='/admin/subscribers'?pathname===href:href==='/admin/newsletter'?pathname===href||(pathname.startsWith(href+'/')&&!pathname.startsWith('/admin/newsletter/templates')):pathname===href||pathname.startsWith(href+'/');
  const subActive=(href:string)=>pathname===href||(href==='/admin/blog'&&/^\/admin\/blog\/[0-9a-f-]{36}$/.test(pathname));
@@ -88,7 +88,6 @@ export default function AdminShell({user,allowedKeys,newLeads,children}:{user:Us
     <button className="za-icon-btn za-mobile-close" onClick={()=>setMobileOpen(false)} aria-label="Close menu"><X size={16}/></button>
    </div>
    <nav className="za-nav" aria-label="Admin navigation" data-lenis-prevent>
-    {admin&&<div className="za-switch" role="tablist" aria-label="Switch admin"><Link href="/admin" role="tab" aria-selected={!zarnMode} className={zarnMode?'':'is-on'}>Studio</Link><Link href="/admin/zarn" role="tab" aria-selected={zarnMode} className={zarnMode?'is-on':''}><MessagesSquare size={13}/>ZARN</Link></div>}
     <div className="za-search">
      <Search size={14}/>
      <input ref={searchRef} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search menu…" aria-label="Search menu"/>

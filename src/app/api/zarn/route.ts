@@ -82,7 +82,7 @@ export async function POST(request:Request){
    // Private channels: the person who created it, or an admin, can remove someone. They can be invited again later.
    const {data:ch}=await admin.from('zarn_channels').select('kind,created_by,is_default').eq('id',b.id).single();
    if(!ch||ch.kind!=='private')return fail('People can only be removed from private channels.');
-   const staff=me.staffRole==='super_admin'||me.staffRole==='admin';
+   const staff=me.zarnAdmin;
    if(ch.created_by!==me.user_id&&!staff)return fail('Only the person who created this channel, or an admin, can remove people.',403);
    if(b.user_id===me.user_id)return fail('Use Leave channel to remove yourself.');
    if(b.user_id===ch.created_by&&!staff)return fail('The channel’s creator can’t be removed.',403);
@@ -111,7 +111,7 @@ export async function POST(request:Request){
    // Staff admins can delete any channel; otherwise only the person who created it (never auto-join or CRM feed channels).
    const {data:c}=await admin.from('zarn_channels').select('kind,created_by,is_default,crm_feed').eq('id',b.id).maybeSingle();
    if(!c||(c.kind!=='public'&&c.kind!=='private'))return fail('Channel not found.',404);
-   const staff=me.staffRole==='super_admin'||me.staffRole==='admin';
+   const staff=me.zarnAdmin;
    if(!staff&&(c.created_by!==me.user_id||c.is_default||c.crm_feed))return fail('Only an admin or the channel’s creator can delete it.',403);
    const {error}=await admin.from('zarn_channels').delete().eq('id',b.id);
    return error?fail('Could not delete the channel.'):Response.json({ok:true});

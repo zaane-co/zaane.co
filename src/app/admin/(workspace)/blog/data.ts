@@ -5,7 +5,7 @@ import {allowed,isAdmin} from '@/lib/cms';
 import type {Category,Post} from '@/components/admin/blog/shared';
 export async function blogAccess(){
  const user=await staff();if(!user||!allowed('blog_posts',user.role))notFound();
- return {user,db:await sessionClient(),canPublish:isAdmin(user.role)};
+ return {user,db:await sessionClient(),canPublish:isAdmin(user.role)||user.role==='dev'};
 }
 export async function loadCategories(db:Awaited<ReturnType<typeof sessionClient>>){
  const {data}=await db.from('blog_categories').select('*').order('name');

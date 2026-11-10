@@ -33,6 +33,7 @@ export async function POST(request:Request){
  const parsed=actions.safeParse(await request.json().catch(()=>null));
  if(!parsed.success)return fail(parsed.error.issues[0]?.message||'Invalid request');
  const b=parsed.data,db=await sessionClient();
+ if(user.role==='finance_staff'&&(b.action==='delete'||b.action==='payment_delete'))return fail('Only a finance admin can delete invoices or payments.',403);
  const load=async(invoiceId:string)=>(await db.from('invoices').select('*').eq('id',invoiceId).single()).data;
  switch(b.action){
   case 'create_full':{

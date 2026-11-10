@@ -13,5 +13,7 @@ export const zarnMember=cache(async()=>{
   db.from('users').select('role').eq('id',user.id).maybeSingle(),
  ]);
  if(!m||m.deactivated_at||(m.expires_at&&new Date(m.expires_at)<=new Date()))return null;
- return {...(m as ZMember),staffRole:(s?.role as string|null)??null,db};
+ // ZARN admin is its own flag on the member row; the Studio super admin is always one too.
+ const staffRole=(s?.role as string|null)??null;
+ return {...(m as ZMember),staffRole,zarnAdmin:!!(m as {is_admin?:boolean}).is_admin||staffRole==='super_admin',db};
 });

@@ -22,7 +22,7 @@ const fail=(error:string,status=400)=>Response.json({error},{status});
 // Anyone who can manage invoices can add or edit the company's bank accounts.
 export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return fail('Invalid origin',403);
- const user=await staff();if(!user||!allowed('invoices',user.role)||user.role==='sales')return fail('Access denied',403);
+ const user=await staff();if(!user||!allowed('invoices',user.role)||user.role==='sales'||user.role==='finance_staff')return fail('Access denied',403);
  const parsed=actions.safeParse(await request.json().catch(()=>null));
  if(!parsed.success)return fail(parsed.error.issues[0]?.message||'Invalid request');
  const b=parsed.data,db=await sessionClient();

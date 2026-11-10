@@ -98,7 +98,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  },[db,everyone,id,members,leadId,clientTeam]);
  useEffect(()=>{if(!form){setFormMembers(null);return;}let live=true;void chipMembersFor(form.project_id||null).then(m=>{if(live)setFormMembers(m);});return()=>{live=false;};},[form?.project_id,!!form,chipMembersFor]); // eslint-disable-line react-hooks/exhaustive-deps
 
- const canManage=!multi&&!!project&&(project.created_by===me.user_id||me.staffRole==='super_admin'||me.staffRole==='admin');
+ const canManage=!multi&&!!project&&(project.created_by===me.user_id||me.zarnAdmin);
  const projectName=(pid:string|null)=>pid?(projects??[]).find(p=>p.id===pid)?.name??'Project':'';
  const shown=useMemo(()=>tasks.filter(t=>(prio==='all'||t.priority===prio)&&(who==='all'||(who==='me'?(assign[t.id]??[]).includes(me.user_id):(assign[t.id]??[]).includes(who)))&&`${t.title} ${t.description} ${t.type} ${projectName(t.project_id)}`.toLowerCase().includes(q.toLowerCase())),[tasks,assign,q,prio,who,me.user_id,projects]); // eslint-disable-line react-hooks/exhaustive-deps
  const typeOptions=useMemo(()=>[...new Set([...typeSuggestions,...tasks.map(t=>t.type).filter(Boolean)])],[tasks]);
@@ -185,7 +185,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   setTasks(ts=>ts.map(t=>t.status===g.key?{...t,status:'todo'}:t));await reloadStatuses();
  };
  const kanbanView=<div className="zp-kanban" style={{gridTemplateColumns:`repeat(${statuses.length},minmax(250px,1fr)) 190px`,minWidth:statuses.length*264+204}}>{statuses.map(g=>{const rows=shown.filter(t=>t.status===g.key).sort((a,b)=>a.position-b.position);return <section key={g.key} className="zp-col" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const tid=e.dataTransfer.getData('text/plain');setDragging(null);if(tid)void patch(tid,{status:g.key});}}>
-  <header><i style={{background:g.color}}/><b>{g.label}</b><span className="zp-count">{rows.length}</span>{!g.builtin&&(g.created_by===me.user_id||me.staffRole==='super_admin'||me.staffRole==='admin')&&<button type="button" className="zp-icon-btn zp-del-status" aria-label={`Delete status ${g.label}`} data-tip="Delete status" onClick={()=>void deleteStatus(g)}><Trash2 size={13}/></button>}<button type="button" className="zp-icon-btn" aria-label={`Add task to ${g.label}`} data-tip="Add task" onClick={()=>add(g.key)}><Plus size={15}/></button></header>
+  <header><i style={{background:g.color}}/><b>{g.label}</b><span className="zp-count">{rows.length}</span>{!g.builtin&&(g.created_by===me.user_id||me.zarnAdmin)&&<button type="button" className="zp-icon-btn zp-del-status" aria-label={`Delete status ${g.label}`} data-tip="Delete status" onClick={()=>void deleteStatus(g)}><Trash2 size={13}/></button>}<button type="button" className="zp-icon-btn" aria-label={`Add task to ${g.label}`} data-tip="Add task" onClick={()=>add(g.key)}><Plus size={15}/></button></header>
   <div className="zp-cards">{rows.map(t=><article key={t.id} className={`zp-card${t.status==='done'?' is-done':''}${dragging===t.id?' is-dragging':''}`} draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',t.id);setDragging(t.id);}} onDragEnd={()=>setDragging(null)} onClick={()=>setOpen(t.id)}>
    <div className="zp-card-top">{multi&&t.project_id&&projectPill(t.project_id)}{typePill(t.type)}{pill(t.priority)}</div>
    <b>{t.title}</b>{t.description&&<p>{t.description}</p>}

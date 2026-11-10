@@ -515,7 +515,7 @@
 /* ZARN members (Slack-style manage members) */
 .za-seg-scroll{overflow-x:auto;max-width:100%}
 .za-seg-n{opacity:.6;margin-left:2px}
-.za-zm-table tr.is-off td{opacity:.6}
+.za-zm-table tr.is-off td:not(.za-status-cell),.za-zm-table tr.is-off .za-row-actions{opacity:.6}
 .za-zm-acct{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .za-zm-staff{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--a-fg);color:var(--a-bg)}
 .za-zm-exp{display:block;margin-top:4px;font-size:11.5px;color:#f59e0b;font-weight:600}
@@ -689,3 +689,16 @@
 .za-nl-tpl-select{margin-left:auto;font-size:12.5px;max-width:200px}
 
 .za-role .za-tags{margin-top:8px}.za-role .za-tags span{white-space:nowrap}
+/* ZARN admin frame (inside ZARN at /zarn/admin) */
+.zaf{min-height:100vh;background:var(--a-bg);color:var(--a-fg);display:flex;flex-direction:column}
+.zaf-top{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:16px;padding:12px 24px;background:var(--a-panel);border-bottom:1px solid var(--a-border)}
+.zaf-back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--a-muted)}
+.zaf-back:hover{color:var(--a-fg)}
+.zaf-brand{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
+.zaf-brand img{width:26px;height:26px;border-radius:7px}
+.zaf-tabs{display:flex;gap:4px;margin-left:auto}
+.zaf-tabs a{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:9px;font-size:13px;font-weight:600;color:var(--a-muted)}
+.zaf-tabs a:hover{color:var(--a-fg);background:var(--a-hover)}
+.zaf-tabs a.is-on{background:var(--accent);color:#fff}
+.zaf-main{flex:1;width:100%;padding:28px 32px}
+@media(max-width:640px){.zaf-main{padding:20px 16px}.zaf-top{flex-wrap:wrap;padding:10px 16px}.zaf-brand{display:none}.zaf-tabs{margin-left:0;order:3;width:100%}}

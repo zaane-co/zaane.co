@@ -118,7 +118,7 @@ export function LeadCard({id,compact}:{id:string;compact?:boolean}){
  const {lead,loadLead,me}=useZarn();const l=lead(id);
  useEffect(()=>{if(me.can_view_crm)loadLead(id);},[id,loadLead,me.can_view_crm]);
  if(!me.can_view_crm)return <div className="zn-lead is-loading">A CRM lead was shared here. Ask an admin for CRM access to see it.</div>;
- const staff=me.staffRole&&['super_admin','admin','sales'].includes(me.staffRole);
+ const staff=(me.zarnAdmin||me.staffRole==='sales');
  if(!l)return <div className="zn-lead is-loading">Loading lead…</div>;
  return <div className={`zn-lead${compact?' is-compact':''}`}>
   <div className="zn-lead-top"><b>{l.name}</b>{l.stage_label&&<span className="zn-stage" style={{background:l.stage_color??'#52525b'}}>{l.stage_label}</span>}</div>
@@ -141,7 +141,7 @@ function CrmEvent({m}:{m:ZMessage}){
   :e==='stage'?<><b>{name}</b> moved to {stage}</>
   :e==='invoice_sent'?<>Invoice <b>{String(m.meta.number)}</b> sent to <b>{name}</b> <span className="zn-crm-amt">{money(Number(m.meta.total),String(m.meta.currency))}</span></>
   :e==='invoice_paid'?<>Invoice <b>{String(m.meta.number)}</b> paid by <b>{name}</b> <span className="zn-crm-amt is-paid">{money(Number(m.meta.total),String(m.meta.currency))}</span></>:null;
- const staff=!!me.staffRole&&['super_admin','admin','sales'].includes(me.staffRole);
+ const staff=!!(me.zarnAdmin||me.staffRole==='sales');
  const sub=l?[l.company?l.name:null,l.service_interested,l.deal_value!=null?money(Number(l.deal_value),l.currency):null,l.owner_name].filter(Boolean):[];
  return <div className="zn-crm"><div className="zn-crm-body">
   <p><Icon size={13} className="zn-crm-mini"/>{text}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time></p>

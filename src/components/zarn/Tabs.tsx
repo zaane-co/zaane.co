@@ -90,7 +90,7 @@ export function YouTab(){
   </Group>
   {(staffAdmin||me.staffRole)&&<Group label="Admin">
    {staffAdmin&&<Row icon={<UserPlus size={18}/>} label="Invite people" onClick={()=>open('invite')}/>}
-   {staffAdmin&&<Row href="/admin/zarn" icon={<Settings2 size={18}/>} label="ZARN admin"/>}
+   {staffAdmin&&<Row href="/zarn/admin" icon={<Settings2 size={18}/>} label="ZARN admin"/>}
    {me.staffRole&&<Row href="/admin" icon={<LayoutDashboard size={18}/>} label="Studio admin"/>}
   </Group>}
   <Group label=" "><Row icon={<LogOut size={18}/>} label="Sign out" onClick={()=>void signOut()}/></Group>

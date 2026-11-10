@@ -110,7 +110,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       {installMode&&<button type="button" onClick={()=>{setMenu(false);if(installMode==='prompt')void install();else setDialog('install');}}><Download size={15}/>Install ZARN on this device</button>}
       {staffAdmin&&<><div className="zn-menu-sep"/><p className="zn-menu-label">Admin</p>
        <button type="button" onClick={()=>{setMenu(false);setDialog('invite');}}><UserPlus size={15}/>Invite people</button>
-       <Link href="/admin/zarn"><Settings2 size={15}/>ZARN admin</Link></>}
+       <Link href="/zarn/admin"><Settings2 size={15}/>ZARN admin</Link></>}
       {me.staffRole&&<Link href="/admin"><LayoutDashboard size={15}/>Studio admin</Link>}
       <div className="zn-menu-sep"/>
       <button type="button" className="is-danger" onClick={()=>void signOut()}><LogOut size={15}/>Sign out</button>
@@ -136,7 +136,7 @@ export default function ZarnShell({children}:{children:React.ReactNode}){
       {link('/zarn/business',<BarChart3 size={15}/>,'Overview')}
       {link('/zarn/crm',<Briefcase size={15}/>,'Pipeline',0,false)}
       {link('/zarn/business/clients',<Users size={15}/>,'All clients')}
-      {staffAdmin||me.staffRole==='finance'||me.staffRole==='sales'?<a className="zn-nav-item" href="/admin/invoices" target="_blank" rel="noopener noreferrer"><LayoutDashboard size={15}/><span>Invoices (admin)</span></a>:null}
+      {staffAdmin||me.staffRole==='finance'||me.staffRole==='finance_staff'||me.staffRole==='sales'?<a className="zn-nav-item" href="/admin/invoices" target="_blank" rel="noopener noreferrer"><LayoutDashboard size={15}/><span>Invoices (admin)</span></a>:null}
       <p className="zn-nav-note">Client conversations live under Clients. Deals, values and stages live here.</p>
      </>}
      {area==='projects'&&<>

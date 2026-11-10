@@ -33,7 +33,7 @@ type Tab='chat'|'overview'|'tasks'|'projects'|'reminders'|'deliverables'|'files'
 
 // A client's private space: team chat plus everything we're tracking for them.
 export default function ClientSpace({data}:{data:SpaceData}){
- const {lead,team,stages}=data,z=useZarn(),router=useRouter(),confirm=useConfirm(),[pending,start]=useTransition(),isAdmin=z.me.staffRole==='super_admin'||z.me.staffRole==='admin';
+ const {lead,team,stages}=data,z=useZarn(),router=useRouter(),confirm=useConfirm(),[pending,start]=useTransition(),isAdmin=z.me.zarnAdmin;
  const [tab,setTab]=useState<Tab>('chat'),[adding,setAdding]=useState(false),[flash,setFlash]=useState('');
  const stage=stages.find(s=>s.key===lead.status);
  const [menu,setMenu]=useState(false),[deleting,setDeleting]=useState(false);
@@ -91,7 +91,7 @@ export default function ClientSpace({data}:{data:SpaceData}){
 }
 
 function Overview({data,onAct,onTab}:{data:SpaceData;onAct:(b:object,m?:string)=>Promise<boolean>;onTab:(t:Tab)=>void}){
- const {lead}=data,z=useZarn(),{profile}=useShell(),isAdmin=z.me.staffRole==='super_admin'||z.me.staffRole==='admin';
+ const {lead}=data,z=useZarn(),{profile}=useShell(),isAdmin=z.me.zarnAdmin;
  const [note,setNote]=useState(''),[copied,setCopied]=useState(false);
  const owner=lead.owner_id?(z.people[lead.owner_id]?.display_name??data.names[lead.owner_id]):null;
  const stage=data.stages.find(s=>s.key===lead.status);
