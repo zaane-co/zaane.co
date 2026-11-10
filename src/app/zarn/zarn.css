@@ -1622,3 +1622,9 @@ html[data-kb] .zn-prompt{display:none}
 .zn-menu .zn-theme-toggle i{width:30px;height:18px}.zn-menu .zn-theme-toggle i::after{width:14px;height:14px}.zn-menu .zn-theme-toggle i.is-on::after{transform:translateX(12px)}
 .zn-menu-me{padding:6px 10px 10px}.zn-menu-me b{font-size:14px}
 .zn-menu>button.is-danger,.zn-menu>button.is-danger svg{color:var(--z-accent)}
+/* Rail: selected item is unmistakable (red icon, bold label, red edge bar); hover stays a soft tile */
+.zn-rail-btn{position:relative}
+.zn-rail-btn.is-on .zn-rail-icon{color:var(--z-accent);background:var(--z-panel-2);box-shadow:inset 0 0 0 1px var(--z-border)}
+.zn-rail-btn.is-on small{color:var(--z-fg);font-weight:800}
+.zn-rail-btn.is-on::before{content:"";position:absolute;left:-4px;top:8px;width:3px;height:32px;border-radius:0 3px 3px 0;background:var(--z-accent)}
+.zn-rail-btn:not(.is-on) small{color:var(--z-faint)}
