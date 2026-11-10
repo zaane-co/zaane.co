@@ -255,7 +255,32 @@ export default function CallProvider({children}:{children:React.ReactNode}){
     <button type="button" className="is-decline" aria-label="End call" onClick={()=>void finish(phase==='incoming'?'decline':'end')}><Phone size={16} className="zn-hangup"/></button>
    </div>
   </div>}
-  {phase!=='idle'&&call&&!mini&&<div className={phase==='active'?'zn-call-float':'zn-call-scrim'}><div ref={callEl} className={`zn-call${stage?' is-video':''}${phase==='active'?' is-floating':''}${big?' is-big':''}${fs?' is-fs':''}`} style={phase==='active'&&!fs?{transform:`translate(${pos.x}px,${pos.y}px)`}:undefined} role="dialog" aria-modal={phase!=='active'} aria-label="Call">
+  {phase!=='idle'&&phase!=='incoming'&&call&&!mini&&<div ref={callEl} className="zn-room" role="dialog" aria-label="Call">
+   <header className="zn-room-head">
+    <span className="zn-room-title">{call.video?<Video size={15}/>:<Phone size={15}/>}{call.video?'Video':'Voice'} call with <b>{name}</b></span>
+    <span className={`zn-room-status${phase==='active'?' is-live':''}`}>{phase==='active'?<><i/>{fmt(secs)}</>:phase==='connecting'?<>Connecting <i className="zn-dots"><b/><b/><b/></i></>:<>Ringing <i className="zn-dots"><b/><b/><b/></i> {fmt(ringFor)}</>}</span>
+    <span className="zn-room-tools">{canPip&&peerVideo&&<button type="button" aria-label="Picture in picture" data-tip="Picture in picture" onClick={()=>void togglePip()}><PictureInPicture2 size={16}/></button>}
+     <button type="button" aria-label={fs?'Exit full screen':'Full screen'} data-tip={fs?'Exit full screen':'Full screen'} onClick={toggleFullscreen}>{fs?<Minimize2 size={16}/>:<Maximize2 size={16}/>}</button>
+     <button type="button" aria-label="Minimize call" data-tip="Minimize" onClick={()=>setMini(true)}><Shrink size={16}/></button></span>
+   </header>
+   <div className={`zn-room-stage${phase==='active'?' is-two':''}${peerScreen?' is-screen':''}`}>
+    <div className="zn-tile is-me">{camOn||sharing?<video key={sharing?'screen':'cam'} ref={localEl} className={sharing?'':'is-mirror'} autoPlay playsInline muted/>:<Avatar m={people[me.user_id]??me} size={112}/>}
+     <span className="zn-tile-name">{muted&&<MicOff size={12}/>}You{sharing?' (sharing)':''}</span></div>
+    {phase==='active'&&<div className="zn-tile is-peer"><video ref={remoteEl} autoPlay playsInline muted style={{display:peerVideo?undefined:'none'}}/>{!peerVideo&&<Avatar m={peer} size={112}/>}<span className="zn-tile-name">{name}{peerScreen?' (sharing)':''}</span></div>}
+    {phase!=='active'&&<div className="zn-room-waiting"><Avatar m={peer} size={28}/><span>Waiting for <b>{name}</b> to join</span></div>}
+   </div>
+   <footer className="zn-room-bar">
+    <div className="zn-room-ctl">
+     <button type="button" className={muted?'is-off':''} aria-label={muted?'Unmute':'Mute'} aria-pressed={muted} data-tip={muted?'Unmute':'Mute'} onClick={()=>setMuted(m=>!m)}>{muted?<MicOff size={19}/>:<Mic size={19}/>}</button>
+     <button type="button" className={camOn?'':'is-off'} aria-label={camOn?'Turn camera off':'Turn camera on'} aria-pressed={camOn} data-tip={camOn?'Camera off':'Camera on'} onClick={()=>void toggleCamera()}>{camOn?<Video size={19}/>:<VideoOff size={19}/>}</button>
+     {canShare&&<button type="button" className={sharing?'is-on':''} disabled={phase!=='active'} aria-label={sharing?'Stop sharing':'Share screen'} aria-pressed={sharing} data-tip={phase!=='active'?'Share once they join':sharing?'Stop sharing':'Share screen'} onClick={()=>void toggleShare()}>{sharing?<MonitorOff size={19}/>:<MonitorUp size={19}/>}</button>}
+     {canSink&&<button type="button" aria-label="Choose speaker" aria-expanded={!!outs} data-tip="Speaker" onClick={()=>void toggleOutputs()}><Volume2 size={19}/></button>}
+    </div>
+    <button type="button" className="zn-room-leave" onClick={()=>void finish('end')}><Phone size={16} className="zn-hangup"/>{phase==='active'?'Leave':'Cancel'}</button>
+    {outs&&<ul className="zn-call-outs zn-room-outs" aria-label="Speakers">{outs.length?outs.map(d=><li key={d.deviceId}><button type="button" onClick={()=>void pickOutput(d.deviceId)}>{(outId||'default')===d.deviceId?<Check size={14}/>:<i/>}<span>{d.label||'Speaker'}</span></button></li>):<li className="is-empty">No other speakers found.</li>}</ul>}
+   </footer>
+  </div>}
+  {(['incoming'] as Phase[]).includes(phase)&&call&&!mini&&<div className={phase==='active'?'zn-call-float':'zn-call-scrim'}><div ref={callEl} className={`zn-call${stage?' is-video':''}${phase==='active'?' is-floating':''}${big?' is-big':''}${fs?' is-fs':''}`} style={phase==='active'&&!fs?{transform:`translate(${pos.x}px,${pos.y}px)`}:undefined} role="dialog" aria-modal={phase!=='active'} aria-label="Call">
    {phase==='active'&&<div className="zn-call-grip" {...grip} aria-hidden="true"><i/></div>}
    {phase!=='incoming'&&<button type="button" className="zn-call-min" aria-label="Minimize call" data-tip="Minimize" onClick={()=>setMini(true)}><Minimize2 size={16}/></button>}
    {stage?<div className="zn-call-stage"><video ref={remoteEl} className="zn-call-remote" autoPlay playsInline muted style={{display:peerVideo?undefined:'none'}}/>{!peerVideo&&<div className="zn-call-avatar"><Avatar m={peer} size={96}/></div>}{(camOn||sharing)&&<video key={sharing?'screen':'cam'} ref={localEl} className={`zn-call-local${sharing?'':' is-mirror'}`} autoPlay playsInline muted/>}
