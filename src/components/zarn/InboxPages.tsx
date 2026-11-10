@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Headphones,MessagesSquare,Phone,PhoneIncoming,PhoneMissed,PhoneOutgoing,Send,Trash2,Video} from 'lucide-react';
+import {MessagesSquare,Phone,PhoneIncoming,PhoneMissed,PhoneOutgoing,Send,Trash2,Video} from 'lucide-react';
 import {channelHref,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
@@ -44,7 +44,7 @@ export function HuddlesPage(){
  const {db,me,people,channels}=useZarn();
  const [rows,setRows]=useState<Call[]|null>(null);
  useEffect(()=>{let live=true;void db.from('zarn_calls').select('*').or(`caller_id.eq.${me.user_id},callee_id.eq.${me.user_id}`).order('created_at',{ascending:false}).limit(80).then(({data}:{data:Call[]|null})=>{if(live)setRows(data??[]);});return()=>{live=false;};},[db,me.user_id]);
- return <Page icon={<Headphones size={20}/>} title="Huddles" sub="Voice and video calls you made or received.">
+ return <Page icon={<Phone size={20}/>} title="Calls" sub="Voice and video calls you made or received.">
   {rows===null?<p className="zn-loading">Loading…</p>:!rows.length?<Empty title="No calls yet" text="Start a call from the phone or video button in any DM."/>:
   <div className="zp-saved">{rows.map(c=>{const out=c.caller_id===me.user_id,other=people[out?c.callee_id:c.caller_id],missed=c.status==='missed'||c.status==='declined',ch=channels.find(x=>x.id===c.channel_id);
    const Icon=missed?PhoneMissed:out?PhoneOutgoing:PhoneIncoming;
