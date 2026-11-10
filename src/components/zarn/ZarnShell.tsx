@@ -144,11 +144,13 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
       {link('/zarn/threads',<MessageSquareText size={18} strokeWidth={1.75}/>,'Threads')}
       {link('/zarn/calls',<Phone size={18} strokeWidth={1.75}/>,'Calls')}
       {link('/zarn/drafts',<Send size={18} strokeWidth={1.75}/>,'Drafts & sent')}
-      {link('/zarn/saved',<Bookmark size={18} strokeWidth={1.75}/>,'Saved')}
       {link('/zarn/people',<BookUser size={18} strokeWidth={1.75}/>,'Directories')}
-      {link('/zarn/docs',<FileText size={18} strokeWidth={1.75}/>,'Docs',undefined,false)}
-      {link('/zarn/files',<Files size={18} strokeWidth={1.75}/>,'Files')}
-      {link('/zarn/todos',<ListChecks size={18} strokeWidth={1.75}/>,'To-dos',z.dueTasks)}
+      {section('library','Library',<>
+       {link('/zarn/docs',<FileText size={18} strokeWidth={1.75}/>,'Docs',undefined,false)}
+       {link('/zarn/files',<Files size={18} strokeWidth={1.75}/>,'Files')}
+       {link('/zarn/saved',<Bookmark size={18} strokeWidth={1.75}/>,'Saved')}</>)}
+      {section('tasks','Tasks',<>
+       {link('/zarn/todos',<ListChecks size={18} strokeWidth={1.75}/>,'To-dos',z.dueTasks)}</>)}
       {starred.length>0&&section('starred','Starred',starred.map(c=><ChannelRow key={c.id} c={c}/>))}
       <Invites/>
       {section('channels','Channels',<>{rooms.map(c=><ChannelRow key={c.id} c={c}/>)}{!guest&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('browse')}><Plus size={15}/><span>Browse channels</span></button>}</>,canCreate?()=>setDialog('channel'):undefined)}
