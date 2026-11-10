@@ -2,16 +2,16 @@
 import {useSyncExternalStore} from 'react';
 // ZARN message sound, made with Web Audio (no file to download). Browsers only allow audio after the person has
 // interacted with the page, so the context is unlocked on the first tap/click. Settings live in this browser only.
-export type Tone='chime'|'pop'|'bell'|'ding'|'ping'|'droplet'|'marimba'|'knock'|'rise'|'triple'|'alarm'|'siren';
+export type Tone='tap'|'chime'|'pop'|'bell'|'ding'|'ping'|'droplet'|'marimba'|'knock'|'rise'|'triple'|'alarm'|'siren';
 export type Volume='low'|'medium'|'high'|'max';
 export type Scope='direct'|'all';
 export type SoundSettings={on:boolean;tone:Tone;volume:Volume;scope:Scope};
 export const tones:{id:Tone;label:string;loud?:boolean}[]=[
- {id:'chime',label:'Chime'},{id:'pop',label:'Pop'},{id:'bell',label:'Bell'},{id:'ding',label:'Ding'},{id:'ping',label:'Ping'},{id:'droplet',label:'Droplet'},
+ {id:'tap',label:'Tap'},{id:'chime',label:'Chime'},{id:'pop',label:'Pop'},{id:'bell',label:'Bell'},{id:'ding',label:'Ding'},{id:'ping',label:'Ping'},{id:'droplet',label:'Droplet'},
  {id:'marimba',label:'Marimba'},{id:'knock',label:'Knock'},{id:'rise',label:'Rise'},{id:'triple',label:'Triple'},{id:'alarm',label:'Alarm',loud:true},{id:'siren',label:'Siren',loud:true}];
 const KEY='zarn-sound-v2',OLD='zarn-sound';
 const gains:Record<Volume,number>={low:.12,medium:.32,high:.65,max:1};
-const defaults:SoundSettings={on:true,tone:'chime',volume:'medium',scope:'direct'};
+const defaults:SoundSettings={on:true,tone:'tap',volume:'medium',scope:'direct'};
 let ctx:AudioContext|null=null;
 const listeners=new Set<()=>void>();
 function unlock(){
@@ -55,6 +55,11 @@ export function playChime(force=false,override?:Partial<SoundSettings>){
  const p=gains[s.volume],c=ctx;target=dest(c,s.volume==='max');
  const n=(type:OscillatorType,f:number,at:number,len:number,k=1,to=f)=>note(c,type,f,to,at,len,p*k);
  switch(s.tone){
+  // Tap: a soft woody double knock (short wood-block hit plus a breath of filtered noise).
+  case 'tap':for(const [t,f] of [[0,1180],[.085,880]] as const){n('triangle',f,t,.09,1.25,f*.72);n('sine',f*2.02,t,.05,.35);
+   const at=c.currentTime+t,len=.04,buf=c.createBuffer(1,Math.floor(c.sampleRate*len),c.sampleRate),d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+   const src=c.createBufferSource(),bp=c.createBiquadFilter(),g=c.createGain();src.buffer=buf;bp.type='bandpass';bp.frequency.value=f*1.6;bp.Q.value=4;g.gain.value=p*.5;
+   src.connect(bp).connect(g).connect(target??c.destination);src.start(at);}break;
   case 'pop':n('triangle',700,0,.16,1.3,300);break;
   case 'bell':n('sine',1046.5,0,.9);n('sine',2093,0,.5,.4);n('sine',1568,.12,.8,.7);break;
   case 'ding':n('sine',1318.5,0,.7);n('sine',2637,0,.3,.3);break;
