@@ -73,9 +73,16 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   }else if(leadId){
    const {data}=await db.from('zarn_tasks').select('*').eq('lead_id',leadId).order('position');taskRows=(data??[]) as Task[];
   }else{
-   const [{data:a},{data:c}]=await Promise.all([db.from('zarn_task_assignees').select('task_id').eq('user_id',me.user_id),db.from('zarn_tasks').select('id').eq('created_by',me.user_id)]);
-   const ids=[...new Set([...((a??[]) as {task_id:string}[]).map(x=>x.task_id),...((c??[]) as {id:string}[]).map(x=>x.id)])];
-   for(let i=0;i<ids.length;i+=100){const {data}=await db.from('zarn_tasks').select('*').in('id',ids.slice(i,i+100));taskRows.push(...((data??[]) as Task[]));}
+   // ZARN admins see every task across projects; everyone else sees what they're assigned to, plus their own unassigned to-dos.
+   if(me.zarnAdmin){const {data}=await db.from('zarn_tasks').select('*').is('lead_id',null).order('position').limit(2000);taskRows=(data??[]) as Task[];}
+   else{
+    const [{data:a},{data:c}]=await Promise.all([db.from('zarn_task_assignees').select('task_id').eq('user_id',me.user_id),db.from('zarn_tasks').select('id').eq('created_by',me.user_id)]);
+    const created=((c??[]) as {id:string}[]).map(x=>x.id);
+    const {data:anyone}=created.length?await db.from('zarn_task_assignees').select('task_id').in('task_id',created):{data:[]};
+    const taken=new Set(((anyone??[]) as {task_id:string}[]).map(x=>x.task_id));
+    const ids=[...new Set([...((a??[]) as {task_id:string}[]).map(x=>x.task_id),...created.filter(id=>!taken.has(id))])];
+    for(let i=0;i<ids.length;i+=100){const {data}=await db.from('zarn_tasks').select('*').in('id',ids.slice(i,i+100));taskRows.push(...((data??[]) as Task[]));}
+   }
    taskRows=taskRows.filter(t=>!t.lead_id);
    taskRows.sort((x,y)=>x.position-y.position);
   }
@@ -83,7 +90,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   const map:Record<string,string[]>={};
   for(let i=0;i<taskRows.length;i+=100){const {data}=await db.from('zarn_task_assignees').select('task_id,user_id').in('task_id',taskRows.slice(i,i+100).map(t=>t.id));for(const r of (data??[]) as {task_id:string;user_id:string}[])(map[r.task_id]??=[]).push(r.user_id);}
   setAssign(map);setLoaded(true);
- },[db,id,leadId,me.user_id]);
+ },[db,id,leadId,me.user_id,me.zarnAdmin]);
  useEffect(()=>{void load();},[load]);
 
  // Who can be assigned: the project's members, or the whole team for a task with no project.
@@ -223,7 +230,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  const chatId=id?z.channels.find(c=>c.kind==='project'&&c.project_id===id)?.id:undefined,chatUnread=chatId&&view!=='chat'?z.unread[chatId]?.unread??0:0;
  return <div className="zn-page zp-page">
   {!leadId&&<header className="zp-head">
-   {mine?<div className="zp-title"><span className="zp-badge is-ink"><ListChecks size={22}/></span><div><h1>To-dos</h1><p>Tasks you created or were assigned, across every project.</p></div></div>
+   {mine?<div className="zp-title"><span className="zp-badge is-ink"><ListChecks size={22}/></span><div><h1>To-dos</h1><p>{me.zarnAdmin?'Every task across every project. Others only see tasks assigned to them.':'Tasks assigned to you, plus your own to-dos, across every project.'}</p></div></div>
     :<div className="zp-title"><span className="zp-badge" style={{background:project!.color}}>{project!.name.slice(0,1).toUpperCase()}</span><div><h1>{project!.name}</h1>{project!.description&&<p>{project!.description}</p>}{project!.lead_id&&(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project!.lead_id);return c?<p><Link href={`/zarn/clients/${project!.lead_id}`} className="zp-client-link">Client: {z.title(c)}</Link></p>:null;})()}</div></div>}
    {!mine&&<div className="zp-head-right">
     <button type="button" className="zp-members" aria-label="Project members" data-tip="Members" onClick={()=>setShowMembers(true)}><Stack ids={members} max={4}/></button>
