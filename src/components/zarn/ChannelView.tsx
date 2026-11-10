@@ -41,6 +41,9 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  // The page remounts this view per channel (key=id), so first load starts from fresh state.
  // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
  useEffect(()=>{void load().then(rows=>{setMessages(rows);setLoading(false);});},[load]);
+ // ?thread=<message id> (from Threads, Drafts & sent) opens that thread beside the chat.
+ useEffect(()=>{const t=new URLSearchParams(window.location.search).get('thread');if(!t)return;let live=true;
+  void db.from('zarn_messages').select('*').eq('id',t).eq('channel_id',id).maybeSingle().then(({data}:{data:ZMessage|null})=>{if(live&&data)setThread(data);});return()=>{live=false;};},[db,id]);
  // Safety net for live updates: phones drop the realtime socket when the app is backgrounded or the network blips, and anything
  // sent meanwhile (new messages, edits, deletes) is never replayed. Re-read the latest page on return/reconnect and every 20s while visible.
  useEffect(()=>{

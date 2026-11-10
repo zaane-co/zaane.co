@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {BookUser,Headphones,MessageSquareText,Send,Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -81,7 +81,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
   <div className="zn-section-head"><button type="button" className="zn-section-toggle" onClick={()=>setCollapsed(c=>({...c,[id]:!c[id]}))}><ChevronDown size={14} className={collapsed[id]?'is-closed':''}/>{label}</button>{add&&<button type="button" className="zn-section-add" aria-label={`Add ${label.toLowerCase()}`} data-tip={`Add ${label.toLowerCase()}`} onClick={add}><Plus size={15}/></button>}</div>
   {!collapsed[id]&&children}
  </div>;
- const link=(href:string,icon:React.ReactNode,label:string,badge?:number,exact=true)=><Link href={href} className={`zn-nav-item${(exact?pathname===href:pathname.startsWith(href))?' is-active':''}${badge?' is-unread':''}`}>{icon}<span>{label}</span>{badge?<em className="zn-badge">{badge}</em>:null}</Link>;
+ const link=(href:string,icon:React.ReactNode,label:string,badge?:number,exact=true)=><Link href={href} className={`zn-nav-item is-big-link${(exact?pathname===href:pathname.startsWith(href))?' is-active':''}${badge?' is-unread':''}`}>{icon}<span>{label}</span>{badge?<em className="zn-badge">{badge}</em>:null}</Link>;
  const railBtn=(a:Area,icon:React.ReactNode,label:string,badge:number)=><button type="button" className={`zn-rail-btn${area===a?' is-on':''}`} aria-pressed={area===a} onClick={()=>setArea(a)}><span className="zn-rail-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small>{label}</small></button>;
  const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span></Link>;};
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
@@ -139,13 +139,16 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
     <div className="zn-nav" data-lenis-prevent>
      {area==='chat'&&<>
       <button type="button" className="zn-nav-item zn-search-btn" onClick={()=>setDialog('search')}><Search size={15}/><span>Search</span><kbd>⌘K</kbd></button>
-      {link('/zarn/activity',<Bell size={15}/>,'Activity')}
-      {link('/zarn/mentions',<AtSign size={15}/>,'Mentions',badges.activity)}
-      {link('/zarn/saved',<Bookmark size={15}/>,'Saved')}
-      {link('/zarn/docs',<FileText size={15}/>,'Docs',undefined,false)}
-      {link('/zarn/files',<Files size={15}/>,'Files')}
-      {link('/zarn/todos',<ListChecks size={15}/>,'To-dos',z.dueTasks)}
-      {link('/zarn/people',<Contact size={15}/>,'People')}
+      {link('/zarn/activity',<Bell size={18} strokeWidth={1.75}/>,'Activity')}
+      {link('/zarn/mentions',<AtSign size={18} strokeWidth={1.75}/>,'Mentions',badges.activity)}
+      {link('/zarn/threads',<MessageSquareText size={18} strokeWidth={1.75}/>,'Threads')}
+      {link('/zarn/huddles',<Headphones size={18} strokeWidth={1.75}/>,'Huddles')}
+      {link('/zarn/drafts',<Send size={18} strokeWidth={1.75}/>,'Drafts & sent')}
+      {link('/zarn/saved',<Bookmark size={18} strokeWidth={1.75}/>,'Saved')}
+      {link('/zarn/people',<BookUser size={18} strokeWidth={1.75}/>,'Directories')}
+      {link('/zarn/docs',<FileText size={18} strokeWidth={1.75}/>,'Docs',undefined,false)}
+      {link('/zarn/files',<Files size={18} strokeWidth={1.75}/>,'Files')}
+      {link('/zarn/todos',<ListChecks size={18} strokeWidth={1.75}/>,'To-dos',z.dueTasks)}
       {starred.length>0&&section('starred','Starred',starred.map(c=><ChannelRow key={c.id} c={c}/>))}
       <Invites/>
       {section('channels','Channels',<>{rooms.map(c=><ChannelRow key={c.id} c={c}/>)}{!guest&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('browse')}><Plus size={15}/><span>Browse channels</span></button>}</>,canCreate?()=>setDialog('channel'):undefined)}
