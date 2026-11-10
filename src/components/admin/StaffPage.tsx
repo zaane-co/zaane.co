@@ -8,7 +8,7 @@ import {roles,roleInfo,type Role} from '@/lib/cms';
 import {ago,initials} from '@/lib/crm';
 import {F} from './crm/NewLead';
 
-export type Member={id:string;email:string;name:string;role:Role|null;created_at:string;last_sign_in_at:string|null;};
+export type Member={id:string;email:string;name:string;role:Role|null;created_at:string;last_sign_in_at:string|null;protected?:boolean;};
 const roleColor:Record<Role,string>={super_admin:'#f10c45',admin:'#2563eb',editor:'#7c3aed',sales:'#f59e0b',finance:'#16a34a'};
 // What each Studio role reaches, in a couple of words.
 const roleArea:Record<Role,string>={super_admin:'Full access',admin:'All of Studio',editor:'Blog, content & newsletter',sales:'CRM & contacts',finance:'Invoices & payments'};
@@ -31,11 +31,11 @@ export default function StaffPage({members,me}:{members:Member[];me:string}){
  }
  const Row=({m}:{m:Member})=><tr>
   <td><div className="za-cell-main"><span className="za-crm-avatar" style={{background:m.role?roleColor[m.role]:'#52525b'}}>{initials(m.name||m.email)}</span><span><b>{m.name||m.email.split('@')[0]}{m.id===me&&' (you)'}</b><small>{m.email}</small></span></div></td>
-  <td>{m.id===me?<span className="za-status" style={{background:roleColor[m.role!]}}>{roleInfo[m.role!].label}</span>
+  <td>{m.id===me||m.protected?<span className="za-status" style={{background:roleColor[m.role!]}}>{roleInfo[m.role!].label}</span>
    :<Dropdown variant="toolbar" label={`Studio role for ${m.name||m.email}`} value={m.role??''} disabled={busy===m.id} onChange={x=>void run(m.id,{action:'set_role',id:m.id,role:x||null},x?`Studio role changed to ${roleInfo[x as Role].label}.`:'Studio access removed.')} options={[{value:'',label:'No Studio access'},...roles.map(r=>({value:r,label:roleInfo[r].label,color:roleColor[r],hint:roleArea[r]}))]}/>}
    {m.role&&<small className="za-access-area">{roleArea[m.role]}</small>}</td>
   <td className="za-hide-sm za-cell-muted">{m.last_sign_in_at?ago(m.last_sign_in_at):'Invite pending'}</td>
-  <td><div className="za-row-actions"><button type="button" className="za-row-btn" aria-label={`Send ${m.name||m.email} a new password`} data-tip="Email a new password" onClick={()=>setResetting(m)}><KeyRound size={14}/></button>{m.id!==me&&<button type="button" className="za-row-danger" aria-label={`Remove ${m.name||m.email}`} data-tip="Delete account" onClick={()=>{setConfirmText('');setRemoving(m);}}><Trash2 size={14}/></button>}</div></td>
+  <td><div className="za-row-actions"><button type="button" className="za-row-btn" aria-label={`Send ${m.name||m.email} a new password`} data-tip="Email a new password" onClick={()=>setResetting(m)}><KeyRound size={14}/></button>{m.id!==me&&!m.protected&&<button type="button" className="za-row-danger" aria-label={`Remove ${m.name||m.email}`} data-tip="Delete account" onClick={()=>{setConfirmText('');setRemoving(m);}}><Trash2 size={14}/></button>}</div></td>
  </tr>;
 
  return <div className="za-page">

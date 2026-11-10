@@ -54,11 +54,11 @@ export function NewDm({onClose}:{onClose:()=>void}){
 export function Browse({onClose}:{onClose:()=>void}){
  const z=useZarn(),router=useRouter();
  const [q,setQ]=useState('');
- const list=z.channels.filter(c=>c.kind==='public'&&!c.archived_at&&(c.name??'').includes(q.toLowerCase()));
+ const list=z.channels.filter(c=>(c.kind==='public'||c.kind==='private')&&!c.archived_at&&(c.name??'').includes(q.toLowerCase()));
  const join=async(c:ZChannel)=>{if(!z.membership[c.id]){await z.db.from('zarn_channel_members').insert({channel_id:c.id,user_id:z.me.user_id});await z.reload();}onClose();router.push(`/zarn/c/${c.id}`);};
  return <Modal title="Browse channels" onClose={onClose}>
   <input className="zn-input" autoFocus placeholder="Search channels" value={q} onChange={e=>setQ(e.target.value)}/>
-  <ul className="zn-list zn-list-scroll">{list.map(c=><li key={c.id}><button type="button" onClick={()=>void join(c)}><Hash size={16}/><span><b>{c.name}</b><small>{c.topic||'No topic'}</small></span><em>{z.membership[c.id]?'Joined':'Join'}</em></button></li>)}
+  <ul className="zn-list zn-list-scroll">{list.map(c=><li key={c.id}><button type="button" onClick={()=>void join(c)}>{c.kind==='private'?<Lock size={16}/>:<Hash size={16}/>}<span><b>{c.name}</b><small>{c.topic||'No topic'}</small></span><em>{z.membership[c.id]?'Joined':'Join'}</em></button></li>)}
    {!list.length&&<li className="zn-empty-row">No channels match.</li>}</ul>
  </Modal>;
 }
