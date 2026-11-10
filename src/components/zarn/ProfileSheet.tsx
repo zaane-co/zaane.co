@@ -22,6 +22,7 @@ export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onCl
  return <>
   <div className="zn-sheet-scrim" onClick={onClose}><aside className="zn-sheet zn-prof" role="dialog" aria-label={`${p.display_name}’s profile`} onClick={e=>e.stopPropagation()}>
    <header className="zn-prof-head"><b>Profile</b><button type="button" aria-label="Close" onClick={onClose}><X size={20}/></button></header>
+   <div className="zn-prof-side">
    <div className="zn-prof-photo">{p.avatar_url?<img src={p.avatar_url} alt=""/>:<Avatar m={p} size={220}/>}</div>
    <div className="zn-prof-name"><h2>{p.display_name}{p.account_type==='guest'&&<span className="zn-guest-tag">Guest</span>}</h2>{isMe&&<button type="button" className="zn-prof-edit" onClick={()=>setEdit('profile')}>Edit</button>}</div>
    {p.title&&<p className="zn-prof-title">{p.title}</p>}
@@ -37,6 +38,8 @@ export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onCl
     {wa&&<a className="zn-btn zn-wa-btn" href={wa} target="_blank" rel="noopener noreferrer"><WaIcon/>WhatsApp</a>}
    </div>
 
+   </div>
+   <div className="zn-prof-main">
    <section className="zn-prof-sec">
     <div className="zn-prof-sec-head"><h3>Contact information</h3>{isMe&&<button type="button" className="zn-prof-edit" onClick={()=>setEdit('contact')}>Edit</button>}</div>
     {email&&<a className="zn-prof-contact" href={`mailto:${email}`}><span><Mail size={18}/></span><div><small>Email address</small><b>{email}</b></div></a>}
@@ -57,6 +60,7 @@ export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onCl
      :<p className="zn-prof-muted">{isMe?'Add someone we can call in an emergency.':'Not added yet.'}</p>}
     <p className="zn-prof-muted zn-prof-small">Visible to the team, never to guests.</p>
    </section>}
+   </div>
   </aside></div>
   {edit&&<div className="zn-over-sheet">
    {edit==='profile'&&<EditProfile onClose={()=>setEdit(null)}/>}
