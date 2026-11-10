@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {MessagesSquare,Phone,PhoneIncoming,PhoneMissed,PhoneOutgoing,Send,Trash2,Video} from 'lucide-react';
+import {MessagesSquare,Phone,PhoneIncoming,PhoneMissed,PhoneOutgoing,PencilLine,Trash2,Video} from 'lucide-react';
 import {channelHref,type ZChannel,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,dayOf,plain,timeOf} from './format';
@@ -54,25 +54,25 @@ export function HuddlesPage(){
  </Page>;
 }
 
-// Unsent drafts (saved on this device as you type) and the messages you sent.
+// Unsent drafts, saved as you type and synced across your devices.
+type Draft={key:string;channel:string;parent:string;text:string;at:string};
 export function DraftsPage(){
- const {db,me,people,channels}=useZarn(),where=useWhere();
- const [tab,setTab]=useState<'drafts'|'sent'>('drafts'),[drafts,setDrafts]=useState<{key:string;channel:string;parent:string;text:string}[]>([]),[sent,setSent]=useState<ZMessage[]|null>(null);
- useEffect(()=>{const list:typeof drafts=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i)??'',m=k.match(/^zarn-draft-([0-9a-f-]{36})-(.*)$/);const t=m&&localStorage.getItem(k);if(m&&t?.trim())list.push({key:k,channel:m[1]!,parent:m[2]!,text:t});}}catch{}
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage is only readable on the client
-  setDrafts(list);},[]);
- useEffect(()=>{if(tab!=='sent'||sent)return;void db.from('zarn_messages').select('*').eq('user_id',me.user_id).is('deleted_at',null).order('created_at',{ascending:false}).limit(60).then(({data}:{data:ZMessage[]|null})=>setSent(data??[]));},[tab,sent,db,me.user_id]);
- const drop=(k:string)=>{try{localStorage.removeItem(k);}catch{}setDrafts(d=>d.filter(x=>x.key!==k));};
- const shown=drafts.filter(d=>channels.some(c=>c.id===d.channel));
- return <Page icon={<Send size={20}/>} title="Drafts & sent" sub="Messages you haven’t sent yet, and the ones you have.">
-  <div className="zn-seg zn-inbox-seg"><button type="button" className={`zn-seg-btn${tab==='drafts'?' is-on':''}`} onClick={()=>setTab('drafts')}>Drafts{shown.length?` · ${shown.length}`:''}</button><button type="button" className={`zn-seg-btn${tab==='sent'?' is-on':''}`} onClick={()=>setTab('sent')}>Sent</button></div>
-  {tab==='drafts'?(!shown.length?<Empty title="No drafts" text="Start typing in any chat and leave it unsent. It’s kept here until you send it."/>:
+ const {db,channels}=useZarn(),where=useWhere();
+ const [drafts,setDrafts]=useState<Draft[]|null>(null);
+ useEffect(()=>{let live=true;void (async()=>{
+  const {data}=await db.from('zarn_drafts').select('channel_id,parent_key,body,updated_at').order('updated_at',{ascending:false});
+  const map=new Map<string,Draft>();
+  for(const d of (data??[]) as {channel_id:string;parent_key:string;body:string;updated_at:string}[])map.set(`zarn-draft-${d.channel_id}-${d.parent_key}`,{key:`zarn-draft-${d.channel_id}-${d.parent_key}`,channel:d.channel_id,parent:d.parent_key,text:d.body,at:d.updated_at});
+  // This device's copy is the freshest.
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i)??'',m=k.match(/^zarn-draft-([0-9a-f-]{36})-(.*)$/),t=m&&localStorage.getItem(k);if(m&&t?.trim())map.set(k,{key:k,channel:m[1]!,parent:m[2]!,text:t,at:map.get(k)?.at??new Date().toISOString()});}}catch{}
+  if(live)setDrafts([...map.values()].filter(d=>d.text.trim()).sort((a,b)=>b.at.localeCompare(a.at)));
+ })();return()=>{live=false;};},[db]);
+ const drop=(d:Draft)=>{try{localStorage.removeItem(d.key);}catch{}void db.from('zarn_drafts').delete().eq('channel_id',d.channel).eq('parent_key',d.parent).then(()=>{});setDrafts(l=>(l??[]).filter(x=>x.key!==d.key));};
+ const shown=(drafts??[]).filter(d=>channels.some(c=>c.id===d.channel));
+ return <Page icon={<PencilLine size={20}/>} title="Drafts" sub="Messages you started but haven’t sent. They follow you to every device.">
+  {drafts===null?<p className="zn-loading">Loading…</p>:!shown.length?<Empty title="No drafts" text="Start typing in any chat and leave it unsent. It’s kept here until you send it."/>:
    <div className="zp-saved">{shown.map(d=>{const c=channels.find(x=>x.id===d.channel);const href=channelHref(c,d.channel);return <div key={d.key} className="zp-saved-row"><Link href={d.parent?withThread(href,d.parent):href}>
-    <span className="zn-todo-from"><Send size={12}/>{d.parent?'Thread reply in ':''}{where(c)}</span><span className="zn-todo-body zn-clamp2">{d.text}</span></Link>
-    <button type="button" className="zn-todo-del" aria-label="Delete draft" data-tip="Delete draft" onClick={()=>drop(d.key)}><Trash2 size={15}/></button></div>;})}</div>)
-  :sent===null?<p className="zn-loading">Loading…</p>:!sent.length?<Empty title="Nothing sent yet" text="Messages you send show up here."/>:
-   <div className="zp-saved">{sent.map(m=>{const c=channels.find(x=>x.id===m.channel_id),href=channelHref(c,m.channel_id);return <div key={m.id} className="zp-saved-row"><Link href={m.parent_id?withThread(href,m.parent_id):`${href}#m-${m.id}`}>
-    <span className="zn-todo-from"><Send size={12}/>{m.parent_id?'Thread reply in ':'To '}{where(c)}<time className="zn-inbox-time">{dayOf(m.created_at)} {timeOf(m.created_at)}</time></span>
-    <span className="zn-todo-body zn-clamp2">{plain(m.body||(m.attachments.length?'Shared a file':''),people)}</span></Link></div>;})}</div>}
+    <span className="zn-todo-from"><PencilLine size={12}/>{d.parent?'Thread reply in ':''}{where(c)}<time className="zn-inbox-time">{dayOf(d.at)} {timeOf(d.at)}</time></span><span className="zn-todo-body zn-clamp2">{d.text}</span></Link>
+    <button type="button" className="zn-todo-del" aria-label="Delete draft" data-tip="Delete draft" onClick={()=>drop(d)}><Trash2 size={15}/></button></div>;})}</div>}
  </Page>;
 }

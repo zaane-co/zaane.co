@@ -18,8 +18,17 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
  const [leadPicker,setLeadPicker]=useState(false),[error,setError]=useState(''),[sending,setSending]=useState(false);
  const box=useRef<HTMLTextAreaElement>(null),fileInput=useRef<HTMLInputElement>(null);
  const draftKey=`zarn-draft-${channelId}-${parentId??''}`;
- useEffect(()=>{try{setText(localStorage.getItem(draftKey)??'');}catch{}},[draftKey]);
- useEffect(()=>{try{if(text)localStorage.setItem(draftKey,text);else localStorage.removeItem(draftKey);}catch{}},[text,draftKey]);
+ // Drafts: kept on this device instantly and in the database (zarn_drafts) so they follow you to other devices.
+ const draftReady=useRef(false);
+ useEffect(()=>{draftReady.current=false;let live=true,local='';try{local=localStorage.getItem(draftKey)??'';}catch{}
+  setText(local);
+  if(local){draftReady.current=true;return;}
+  void db.from('zarn_drafts').select('body').eq('channel_id',channelId).eq('parent_key',parentId??'').maybeSingle().then(({data}:{data:{body:string}|null})=>{if(!live)return;if(data?.body)setText(t=>t||data.body);draftReady.current=true;});
+  return()=>{live=false;};},[draftKey,db,channelId,parentId]);
+ useEffect(()=>{try{if(text)localStorage.setItem(draftKey,text);else localStorage.removeItem(draftKey);}catch{}
+  if(!draftReady.current)return;
+  const t=setTimeout(()=>{const q=db.from('zarn_drafts');void (text.trim()?q.upsert({channel_id:channelId,parent_key:parentId??'',body:text,updated_at:new Date().toISOString()}):q.delete().eq('channel_id',channelId).eq('parent_key',parentId??'')).then(()=>{});},text.trim()?800:0);
+  return()=>clearTimeout(t);},[text,draftKey,db,channelId,parentId]);
  useEffect(()=>{const el=box.current;if(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,240)+'px';}},[text]);
  // Phones: opening a chat shouldn't throw the keyboard up. Native chat apps wait for a tap on the box.
  useEffect(()=>{if(!window.matchMedia('(pointer: coarse)').matches)box.current?.focus();},[channelId,parentId]);

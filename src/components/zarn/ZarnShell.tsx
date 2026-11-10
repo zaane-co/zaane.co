@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {BookUser,Phone,MessageSquareText,Send,Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {BookUser,Phone,MessageSquareText,PencilLine,Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -143,7 +143,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
       {link('/zarn/mentions',<AtSign size={18} strokeWidth={1.75}/>,'Mentions',badges.activity)}
       {link('/zarn/threads',<MessageSquareText size={18} strokeWidth={1.75}/>,'Threads')}
       {link('/zarn/calls',<Phone size={18} strokeWidth={1.75}/>,'Calls')}
-      {link('/zarn/drafts',<Send size={18} strokeWidth={1.75}/>,'Drafts & sent')}
+      {link('/zarn/drafts',<PencilLine size={18} strokeWidth={1.75}/>,'Drafts')}
       {link('/zarn/people',<BookUser size={18} strokeWidth={1.75}/>,'Directories')}
       {section('library','Library',<>
        {link('/zarn/docs',<FileText size={18} strokeWidth={1.75}/>,'Docs',undefined,false)}
