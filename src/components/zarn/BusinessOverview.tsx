@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import {AlarmClock,BarChart3,Briefcase,Trophy} from 'lucide-react';
+import {AlarmClock,TrendingUp,Briefcase,Trophy} from 'lucide-react';
 import {money,dueLabel,dueState} from '@/lib/crm';
 import {useZarn} from './ZarnProvider';
 
@@ -16,7 +16,7 @@ export default function BusinessOverview({data}:{data:Overview}){
  const mine=data.leads.filter(l=>data.myLeadIds.includes(l.id));
  const byId=Object.fromEntries(data.leads.map(l=>[l.id,l]));
  return <div className="zn-page"><div className="zn-scroll" data-lenis-prevent>
-  <header className="zn-page-head"><div><h1><BarChart3 size={20}/>Business</h1><p>Hi {me.display_name.split(' ')[0]}, here’s where things stand.</p></div></header>
+  <header className="zn-page-head"><div><h1><TrendingUp size={20}/>Business</h1><p>Hi {me.display_name.split(' ')[0]}, here’s where things stand.</p></div></header>
   <div className="zn-crm-stats">
    <div><small>Open pipeline</small><b>{totals(open)}</b><span>{plural(open.length,'open deal')}</span></div>
    <div><small>Won</small><b>{totals(won)}</b><span>{plural(won.length,'client')}</span></div>

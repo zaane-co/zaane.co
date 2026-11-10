@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import {useState} from 'react';
-import {FileText,Bookmark,AtSign,BarChart3,Bell,Files,FolderKanban,Sparkles,ListChecks,Volume2,VolumeX,Briefcase,ChevronRight,Contact,Download,LayoutDashboard,LogOut,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users} from 'lucide-react';
+import {FileText,Bookmark,AtSign,TrendingUp,Bell,Files,FolderKanban,Sparkles,ListChecks,Volume2,VolumeX,Briefcase,ChevronRight,Contact,Download,LayoutDashboard,LogOut,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {liveStatus} from '@/lib/zarn';
@@ -30,7 +30,7 @@ export function HomeTab(){
   <Invites/>
   <button type="button" className="zn-search-bar" onClick={()=>open('search')}><Search size={16}/>Search messages</button>
   {canBusiness&&<Group label="Business">
-   <Row href="/zarn/business" icon={<BarChart3 size={18}/>} label="Overview" sub="Pipeline, my clients, my tasks"/>
+   <Row href="/zarn/business" icon={<TrendingUp size={18}/>} label="Overview" sub="Pipeline, my clients, my tasks"/>
    <Row href="/zarn/crm" icon={<Briefcase size={18}/>} label="Pipeline"/>
    <Row href="/zarn/business/clients" icon={<Users size={18}/>} label="All clients"/>
   </Group>}
@@ -86,7 +86,7 @@ export function YouTab(){
    <Row href="/zarn/files" icon={<Files size={18}/>} label="Files"/>
    <Row href="/zarn/todos" icon={<ListChecks size={18}/>} label="To-dos"/>
    <Row href="/zarn/people" icon={<Contact size={18}/>} label="People"/>
-   {canBusiness&&<Row href="/zarn/business" icon={<BarChart3 size={18}/>} label="Business"/>}
+   {canBusiness&&<Row href="/zarn/business" icon={<TrendingUp size={18}/>} label="Business"/>}
   </Group>
   {(staffAdmin||me.staffRole)&&<Group label="Admin">
    {staffAdmin&&<Row icon={<UserPlus size={18}/>} label="Invite people" onClick={()=>open('invite')}/>}

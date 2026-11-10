@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Sparkles,Hash,AtSign,BarChart3,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Sparkles,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -93,7 +93,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
     <button type="button" className="zn-rail-logo" aria-label="Workspace menu" onClick={()=>setMenu(v=>!v)}><img src="/zarn%20logo2.png" alt="ZARN"/></button>
     {railBtn('chat',<MessageSquare size={20}/>,'Home',badges.home+badges.dms)}
     {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',badges.projects)}
-    {canBusiness&&railBtn('business',<BarChart3 size={20}/>,'Business',0)}
+    {canBusiness&&railBtn('business',<TrendingUp size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
     {!guest&&<button type="button" className={`zn-rail-btn${dialog==='assistant'?' is-on':''}`} aria-pressed={dialog==='assistant'} onClick={()=>setDialog('assistant')}><span className="zn-rail-icon zn-rail-zbot"><ZBotMark size={22}/></span><small>Z-BOT</small></button>}
     <div className="zn-rail-foot">
@@ -153,7 +153,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
       {section('dms','Direct messages',<>{dms.map(c=><ChannelRow key={c.id} c={c}/>)}{staffAdmin&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('invite')}><UserPlus size={15}/><span>Invite people</span></button>}</>,()=>setDialog('dm'))}
      </>}
      {area==='business'&&<>
-      {link('/zarn/business',<BarChart3 size={15}/>,'Overview')}
+      {link('/zarn/business',<TrendingUp size={15}/>,'Overview')}
       {link('/zarn/crm',<Briefcase size={15}/>,'Pipeline',0,false)}
       {link('/zarn/business/clients',<Users size={15}/>,'All clients')}
       {staffAdmin||me.staffRole==='finance'||me.staffRole==='finance_staff'||me.staffRole==='sales'?<a className="zn-nav-item" href="/admin/invoices" target="_blank" rel="noopener noreferrer"><LayoutDashboard size={15}/><span>Invoices (admin)</span></a>:null}
@@ -187,7 +187,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
      {quickAction(<Search size={24}/>,'Search',()=>setDialog('search'))}
      {quickAction(<UserRound size={24}/>,'Status',()=>setDialog('profile'))}
      {quickAction(<Contact size={24}/>,'People',()=>router.push('/zarn/people'))}
-     {canBusiness&&quickAction(<BarChart3 size={24}/>,'Business',()=>router.push('/zarn/business'))}
+     {canBusiness&&quickAction(<TrendingUp size={24}/>,'Business',()=>router.push('/zarn/business'))}
      {staffAdmin&&quickAction(<UserPlus size={24}/>,'Invite',()=>setDialog('invite'))}
     </div></>}
    <nav className="zn-tabbar" aria-label="ZARN">
