@@ -7,7 +7,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import LinkExt from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import {ImagePlus,Bold,Check,ChevronLeft,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,Loader2,Quote,Redo2,Share2,Strikethrough,Trash2,Underline as UnderlineIcon,Undo2} from 'lucide-react';
+import {ImagePlus,Bold,Check,ChevronLeft,ChevronRight,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,Loader2,Quote,Redo2,Share2,Strikethrough,Trash2,Underline as UnderlineIcon,Undo2} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import ShareDoc from './ShareDoc';
@@ -17,7 +17,7 @@ import {DocSync} from './doc-sync';
 import {usePictureClick} from './ImageLightbox';
 import Image from '@tiptap/extension-image';
 import {imageTools} from './editor-images';
-type Doc={id:string;title:string;content:string;owner_id:string;updated_at:string};
+type Doc={id:string;title:string;content:string;owner_id:string;updated_at:string;drive:'my'|'team'|'client';folder_id:string|null;lead_id:string|null};
 type Role='owner'|'edit'|'view';
 // Opens a document: owners and editors can type, everyone else reads. Changes save by themselves.
 export default function DocPage({id}:{id:string}){
@@ -26,7 +26,7 @@ export default function DocPage({id}:{id:string}){
  useEffect(()=>{
   let live=true;
   void (async()=>{
-   const [{data},{data:r}]=await Promise.all([db.from('zarn_docs').select('id,title,content,owner_id,updated_at').eq('id',id).maybeSingle(),db.rpc('zarn_doc_role',{d:id})]);
+   const [{data},{data:r}]=await Promise.all([db.from('zarn_docs').select('id,title,content,owner_id,updated_at,drive,folder_id,lead_id').eq('id',id).maybeSingle(),db.rpc('zarn_doc_role',{d:id})]);
    if(!live)return;setDoc((data as Doc|null)??null);setRole((r as Role|null)??null);
   })();
   return()=>{live=false;};
@@ -49,7 +49,21 @@ function Collab({doc,role,meId}:{doc:Doc;role:Role;meId:string}){
  return <Editing doc={doc} role={role} meId={meId} sync={ready.sync}/>;
 }
 function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSync|null}){
- const {db,people}=useZarn(),router=useRouter(),confirm=useConfirm(),pics=usePictureClick();
+ const {db,people,me,channels,title:chTitle}=useZarn(),router=useRouter(),confirm=useConfirm(),pics=usePictureClick();
+ // Where this doc lives in Drive: its drive, then each folder above it. Every step links back.
+ const [crumbs,setCrumbs]=useState<{name:string;href:string}[]>([]);
+ useEffect(()=>{
+  let live=true;
+  void (async()=>{
+   const client=channels.find(c=>c.kind==='client'&&c.lead_id===doc.lead_id);
+   const root=doc.drive==='team'?{name:'Team drive',href:'/zarn/drive?v=team'}:doc.drive==='client'?{name:client?chTitle(client):'Client drive',href:`/zarn/drive?v=client&l=${doc.lead_id}`}
+    :doc.owner_id===me.user_id?{name:'My Drive',href:'/zarn/drive'}:{name:'Shared with me',href:'/zarn/drive?v=shared'};
+   const trail:{name:string;href:string}[]=[];let f=doc.folder_id,hops=0;
+   while(f&&hops<20){const {data}=await db.from('zarn_drive_folders').select('id,name,parent_id').eq('id',f).maybeSingle();if(!data)break;trail.unshift({name:data.name as string,href:`/zarn/drive?f=${data.id}`});f=data.parent_id as string|null;hops++;}
+   if(live)setCrumbs([root,...trail]);
+  })();
+  return()=>{live=false;};
+ },[db,doc.drive,doc.folder_id,doc.lead_id,doc.owner_id,me.user_id,channels,chTitle]);
  // Who else has this document open right now.
  const [here,setHere]=useState<string[]>([]);
  useEffect(()=>{
@@ -85,7 +99,8 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
  }
  return <div className="zn-page zd-page">
   <header className="zd-head">
-   <Link href="/zarn/drive" className="zn-icon" aria-label="Back to Drive"><ChevronLeft size={20}/></Link>
+   <Link href={crumbs.length?crumbs[crumbs.length-1].href:'/zarn/drive'} className="zn-icon" aria-label="Back"><ChevronLeft size={20}/></Link>
+   <nav className="zd-crumbs" aria-label="Location">{crumbs.map(c=><span key={c.href}><Link href={c.href}>{c.name}</Link><ChevronRight size={14}/></span>)}</nav>
    <input className="zd-title" value={title} readOnly={!canEdit} maxLength={200} placeholder="Untitled" aria-label="Title" onChange={e=>{setTitle(e.target.value);latest.current.title=e.target.value;queue();}}/>
    {here.length>0&&<span className="zd-here" title={here.map(u=>people[u]?.display_name??'Someone').join(', ')+' also has this open'}>{here.slice(0,4).map(u=><Avatar key={u} m={people[u]} size={24}/>)}{here.length>4&&<em>+{here.length-4}</em>}</span>}
    <span className={`zd-state${state==='error'?' is-error':''}`}>{!canEdit?'View only':state==='saving'?<><Loader2 size={13} className="zn-spin"/>Saving…</>:state==='error'?'Not saved. Retry by typing.':<><Check size={13}/>Saved</>}</span>
