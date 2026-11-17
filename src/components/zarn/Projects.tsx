@@ -60,8 +60,8 @@ export default function Projects(){
   <p className="zpc-desc">{p.description||'No description yet.'}</p>
  </Link>;
  return <div className="zn-page">
-  <header className="zn-page-head"><div><h1><FolderKanban size={20}/>Projects</h1><p>Our in-house projects, by group. Each has its chat, board, docs, team and vault.</p></div>
-   <button type="button" className="zn-btn is-primary" onClick={()=>setCreating(true)}><Plus size={15}/>New project</button></header>
+  <header className="zn-page-head zpg-head-bar"><div><h1><FolderKanban size={16}/>Projects</h1><p>Our in-house projects, by group. Each has its chat, board, docs, team and vault.</p></div>
+   <button type="button" className="zn-btn is-primary" onClick={()=>setCreating(true)}><Plus size={14}/>New project</button></header>
   <div className="zn-crm-list zpg-list" data-lenis-prevent>
    {projects===null?<p className="zn-loading">Loading…</p>:inHouse.length||projectGroups.length?<>
     {groups.map(g=><section key={g.id||'none'} className="zpg-group">
