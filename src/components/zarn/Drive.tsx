@@ -29,7 +29,7 @@ export default function Drive(){
  const {db,me,people,channels,title}=useZarn(),confirm=useConfirm(),router=useRouter(),params=useSearchParams();
  const [items,setItems]=useState<Item[]|null>(null),[stars,setStars]=useState<Set<string>>(new Set()),[err,setErr]=useState('');
  const [q,setQ]=useState(''),[layout,setLayout]=useState<'grid'|'list'>('grid'),[sort,setSort]=useState<'name'|'updated'>('updated');
- const [menu,setMenu]=useState<{item:Item;x:number;y:number}|null>(null),[newMenu,setNewMenu]=useState(false);
+ const [menu,setMenu]=useState<{item:Item;x:number;y:number}|null>(null),[newMenu,setNewMenu]=useState(false),[bgMenu,setBgMenu]=useState<{x:number;y:number}|null>(null);
  const [renaming,setRenaming]=useState<Item|null>(null),[naming,setNaming]=useState(false),[moving,setMoving]=useState<Item|null>(null),[sharingDoc,setSharingDoc]=useState<string|null>(null),[sharingFile,setSharingFile]=useState<Item|null>(null),[viewing,setViewing]=useState<Item|null>(null);
  const [uploads,setUploads]=useState<{name:string;done:boolean;err?:string}[]>([]),[dragOver,setDragOver]=useState<string|null>(null);
  const pick=useRef<HTMLInputElement>(null);
@@ -212,7 +212,7 @@ export default function Drive(){
  ];
  const heading=list==='shared'?'Shared with me':list==='recent'?'Recent':list==='starred'?'Starred':list==='trash'?'Trash':list==='chats'?'From chats':place?rootLabel(place):'';
 
- return <div className="zdr" onClick={()=>{setMenu(null);setNewMenu(false);}}>
+ return <div className="zdr" onClick={()=>{setMenu(null);setNewMenu(false);setBgMenu(null);}}>
   <aside className="zdr-side">
    {canAdd||list!=='chats'?<div className="zdr-new-wrap"><button type="button" className="zdr-new" disabled={guest} onClick={e=>{e.stopPropagation();if(!place)router.push('/zarn/drive');setNewMenu(o=>!o);}}><Plus size={18}/>New</button>
     {newMenu&&place&&<div className="zn-menu zdr-pop" onClick={e=>e.stopPropagation()}>
@@ -227,7 +227,7 @@ export default function Drive(){
   <input ref={pick} type="file" multiple hidden onChange={e=>{void upload(Array.from(e.target.files??[]));e.target.value='';}}/>
 
   {list==='chats'?<div className="zdr-main is-embed"><Files/></div>:
-  <section className="zdr-main" {...(place?dropOn(place,'here'):{})} data-over={dragOver==='here'||undefined}>
+  <section className="zdr-main" {...(place?dropOn(place,'here'):{})} data-over={dragOver==='here'||undefined} onContextMenu={e=>{if(!canAdd)return;e.preventDefault();setMenu(null);setBgMenu({x:e.clientX,y:e.clientY});}}>
    <header className="zdr-head">
     <div className="zdr-crumbs">
      {place&&!q?<>
@@ -250,18 +250,18 @@ export default function Drive(){
    <div className="zdr-body" data-lenis-prevent>
     {items===null?<p className="zn-loading">Loading…</p>:!shown.length?<div className="zn-empty-state"><h2>{q?'Nothing matches':list==='trash'?'Trash is empty':list==='starred'?'No starred items':list==='shared'?'Nothing shared with you yet':place?.folder?'This folder is empty':'Nothing here yet'}</h2><p>{q?'Try another name.':canAdd?'Use New to add a folder, a doc or files, or drop files here.':'Items will show up here.'}</p></div>
     :layout==='grid'?<>
-     {shown.some(i=>i.kind==='folder')&&<><p className="zdr-group">Folders</p><div className="zdr-folders">{shown.filter(i=>i.kind==='folder').map(f=><div key={f.id} role="button" tabIndex={0} className="zdr-folder" {...dragProps(f)} {...(f.trashed_at?{}:dropOn(asPlace(f),`f:${f.id}`))} data-over={dragOver===`f:${f.id}`||undefined} onClick={()=>open(f)} onKeyDown={e=>{if(e.key==='Enter')open(f);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setMenu({item:f,x:e.clientX,y:e.clientY});}}>
+     {shown.some(i=>i.kind==='folder')&&<><p className="zdr-group">Folders</p><div className="zdr-folders">{shown.filter(i=>i.kind==='folder').map(f=><div key={f.id} role="button" tabIndex={0} className="zdr-folder" {...dragProps(f)} {...(f.trashed_at?{}:dropOn(asPlace(f),`f:${f.id}`))} data-over={dragOver===`f:${f.id}`||undefined} onClick={()=>open(f)} onKeyDown={e=>{if(e.key==='Enter')open(f);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:f,x:e.clientX,y:e.clientY});}}>
       {icon(f)}<span>{f.name}</span>{stars.has(`folder:${f.id}`)&&<Star size={12} className="zdr-star" fill="currentColor"/>}
       <button type="button" className="zdr-dots" aria-label={`More for ${f.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({item:f,x:r.right,y:r.bottom});}}><MoreVertical size={16}/></button>
      </div>)}</div></>}
-     {shown.some(i=>i.kind!=='folder')&&<><p className="zdr-group">Files</p><div className="zdr-grid">{shown.filter(i=>i.kind!=='folder').map(it=><div key={`${it.kind}:${it.id}`} role="button" tabIndex={0} className="zdr-card" {...dragProps(it)} onClick={()=>open(it)} onKeyDown={e=>{if(e.key==='Enter')open(it);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setMenu({item:it,x:e.clientX,y:e.clientY});}}>
+     {shown.some(i=>i.kind!=='folder')&&<><p className="zdr-group">Files</p><div className="zdr-grid">{shown.filter(i=>i.kind!=='folder').map(it=><div key={`${it.kind}:${it.id}`} role="button" tabIndex={0} className="zdr-card" {...dragProps(it)} onClick={()=>open(it)} onKeyDown={e=>{if(e.key==='Enter')open(it);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:it,x:e.clientX,y:e.clientY});}}>
       <div className="zdr-card-top">{icon(it,16)}<b title={it.name}>{it.name}</b><button type="button" className="zdr-dots" aria-label={`More for ${it.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({item:it,x:r.right,y:r.bottom});}}><MoreVertical size={16}/></button></div>
       <div className={`zdr-thumb is-${it.kind}`}>{it.kind==='file'&&isImage(it.type)?<img src={`/api/zarn/files?f=${it.id}`} alt="" loading="lazy"/>:it.kind==='doc'?<FileText size={42}/>:<em>{ext(it.name)}</em>}</div>
       <small><Avatar m={people[it.owner_id]} size={18}/>{list==='recent'||q?where(it):`${it.owner_id===me.user_id?'You':ownerName(it.owner_id)}`} · {dayOf(it.updated_at)}{stars.has(`${it.kind}:${it.id}`)&&<Star size={11} className="zdr-star" fill="currentColor"/>}</small>
      </div>)}</div></>}
     </>
     :<table className="zdr-table"><thead><tr><th>Name</th><th>Owner</th><th className="zdr-hide-sm">{list==='recent'||list==='starred'||q?'Location':'Last modified'}</th><th className="zdr-hide-sm">Size</th><th aria-label="Actions"/></tr></thead><tbody>
-     {shown.map(it=><tr key={`${it.kind}:${it.id}`} {...dragProps(it)} {...(it.kind==='folder'&&!it.trashed_at?dropOn(asPlace(it),`f:${it.id}`):{})} data-over={dragOver===`f:${it.id}`||undefined} onClick={()=>open(it)} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setMenu({item:it,x:e.clientX,y:e.clientY});}}>
+     {shown.map(it=><tr key={`${it.kind}:${it.id}`} {...dragProps(it)} {...(it.kind==='folder'&&!it.trashed_at?dropOn(asPlace(it),`f:${it.id}`):{})} data-over={dragOver===`f:${it.id}`||undefined} onClick={()=>open(it)} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:it,x:e.clientX,y:e.clientY});}}>
       <td><span className="zdr-name">{icon(it,18)}<b>{it.name}</b>{stars.has(`${it.kind}:${it.id}`)&&<Star size={12} className="zdr-star" fill="currentColor"/>}{it.shared&&<Users size={12} className="zdr-faint"/>}</span></td>
       <td><span className="zdr-owner"><Avatar m={people[it.owner_id]} size={20}/>{ownerName(it.owner_id)}</span></td>
       <td className="zdr-hide-sm">{list==='recent'||list==='starred'||q?where(it):dayOf(it.updated_at)}</td>
@@ -276,6 +276,11 @@ export default function Drive(){
   {menu&&<ItemMenu item={menu.item} x={menu.x} y={menu.y} starred={stars.has(`${menu.item.kind}:${menu.item.id}`)} mine={menu.item.owner_id===me.user_id}
    onOpen={()=>open(menu.item)} onRename={()=>setRenaming(menu.item)} onMove={()=>setMoving(menu.item)} onStar={()=>void toggleStar(menu.item)}
    onShare={()=>menu.item.kind==='doc'?setSharingDoc(menu.item.id):setSharingFile(menu.item)} onTrash={()=>void trash(menu.item)} onRestore={()=>void trash(menu.item,true)} onDestroy={()=>void destroy(menu.item)} close={()=>setMenu(null)}/>}
+  {bgMenu&&<div className="zn-menu zdr-ctx" style={{left:Math.min(bgMenu.x,window.innerWidth-240),top:Math.min(bgMenu.y,window.innerHeight-140)}} onClick={e=>e.stopPropagation()} role="menu">
+   <button type="button" onClick={()=>{setBgMenu(null);setNaming(true);}}><FolderPlus size={15}/>New folder</button>
+   <button type="button" onClick={()=>{setBgMenu(null);void newDoc();}}><FileText size={15}/>New doc</button>
+   <button type="button" onClick={()=>{setBgMenu(null);pick.current?.click();}}><Upload size={15}/>Upload files</button>
+  </div>}
   {naming&&<NameDialog title="New folder" initial="Untitled folder" confirm="Create" onClose={()=>setNaming(false)} onSave={n=>newFolder(n)}/>}
   {renaming&&<NameDialog title="Rename" initial={renaming.name} confirm="Rename" onClose={()=>setRenaming(null)} onSave={n=>rename(renaming,n)}/>}
   {moving&&<MoveDialog item={moving} items={items??[]} clients={clients} guest={guest} onClose={()=>setMoving(null)} onMove={to=>move(moving,to)}/>}
