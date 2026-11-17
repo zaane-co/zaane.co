@@ -1999,3 +1999,5 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zdr-hide-sm{display:none}
  .zdr-pop{position:fixed;top:auto;left:12px}
 }
+
+@media(min-width:861px){.zarn.is-drive .zn-sidebar{display:none}}

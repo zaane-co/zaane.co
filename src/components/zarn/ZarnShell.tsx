@@ -27,8 +27,8 @@ import {usePushState} from '@/lib/zarn-push-client';
 import CallProvider from './CallProvider';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 
-type Area='chat'|'business'|'clients'|'projects';
-const areaOf=(p:string):Area=>p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')?'clients':p.startsWith('/zarn/business')||p.startsWith('/zarn/crm')?'business':'chat';
+type Area='chat'|'business'|'clients'|'projects'|'drive';
+const areaOf=(p:string):Area=>p.startsWith('/zarn/drive')||p.startsWith('/zarn/docs')?'drive':p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')?'clients':p.startsWith('/zarn/business')||p.startsWith('/zarn/crm')?'business':'chat';
 // Phone tab roots (tab bar visible). Inside a conversation the tab bar hides and a back arrow shows instead.
 const tabs=['/zarn/home','/zarn/dms','/zarn/clients','/zarn/activity','/zarn/you'];
 
@@ -90,11 +90,12 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
  return <ConfirmProvider><CallProvider><ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
- <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}${fileDrag&&hasDropTarget()?' is-file-drag':''}`} data-lenis-prevent>
+ <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}${area==='drive'?' is-drive':''}${fileDrag&&hasDropTarget()?' is-file-drag':''}`} data-lenis-prevent>
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
     <button type="button" className="zn-rail-logo" aria-label="Workspace menu" onClick={()=>setMenu(v=>!v)}><img src="/zarn%20logo2.png" alt="ZARN"/></button>
     {railBtn('chat',<MessageSquare size={20}/>,'Home',badges.home+badges.dms)}
+    <button type="button" className={`zn-rail-btn${area==='drive'?' is-on':''}`} aria-pressed={area==='drive'} onClick={()=>{setArea('drive');if(!pathname.startsWith('/zarn/drive'))router.push('/zarn/drive');}}><span className="zn-rail-icon"><HardDrive size={20}/></span><small>Drive</small></button>
     {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',badges.projects)}
     {canBusiness&&railBtn('business',<TrendingUp size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
@@ -149,8 +150,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
        {link('/zarn/calls',<Phone size={18} strokeWidth={1.75}/>,'Calls')}
        {link('/zarn/drafts',<PencilLine size={18} strokeWidth={1.75}/>,'Drafts')}</>)}
       {section('library','Library',<>
-       {link('/zarn/drive',<HardDrive size={18} strokeWidth={1.75}/>,'Drive',undefined,false)}
-       {link('/zarn/saved',<Bookmark size={18} strokeWidth={1.75}/>,'Saved')}
+        {link('/zarn/saved',<Bookmark size={18} strokeWidth={1.75}/>,'Saved')}
  {link('/zarn/people',<BookUser size={18} strokeWidth={1.75}/>,'Directories')}</>)}
       {section('tasks','Tasks',<>
        {link('/zarn/todos',<ListChecks size={18} strokeWidth={1.75}/>,'To-dos',z.dueTasks)}</>)}
