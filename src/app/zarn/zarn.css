@@ -829,12 +829,12 @@ html:has(.zarn.is-light),body:has(.zarn.is-light),html:has(.zarn-auth.is-light),
 .zp-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--z-muted);display:grid;place-items:center;color:#fff;font-size:12px;font-weight:800}
 .zp-check[aria-pressed=true]{background:#16a34a;border-color:#16a34a}
 .zp-empty-row{padding:12px;font-size:13px;color:var(--z-muted)}
-.zp-kanban{display:grid;grid-template-columns:repeat(4,minmax(250px,1fr));gap:14px;align-items:start;min-width:1040px}
-.zp-col{display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:14px;background:var(--z-panel);min-height:200px}
+.zp-kanban{display:grid;grid-template-columns:repeat(4,minmax(250px,1fr));grid-template-rows:minmax(0,100%);height:100%;gap:14px;align-items:start;min-width:1040px}
+.zp-col{display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:14px;background:var(--z-panel);min-height:200px;max-height:100%}
 .zp-col>header{display:flex;align-items:center;gap:8px;padding:2px 4px;font-size:14px}
 .zp-col>header i{width:4px;height:16px;border-radius:3px}
 .zp-col>header .zp-icon-btn{margin-left:auto}
-.zp-cards{display:flex;flex-direction:column;gap:10px}
+.zp-cards{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;margin:0 -4px;padding:0 4px 2px}
 .zp-card{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;background:var(--z-bg);border:1px solid var(--z-border);cursor:grab}
 .zp-card:hover{border-color:var(--z-muted)}
 .zp-card.is-done b{text-decoration:line-through;opacity:.6}
