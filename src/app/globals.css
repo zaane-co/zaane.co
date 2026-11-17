@@ -2843,3 +2843,4 @@ body:has(.za-admin,.admin-login,.za-invoice-page,.zarn,.zarn-auth) [data-edge-bl
 .vs-row button,.vs-btn{height:30px;min-width:30px;border-radius:8px;border:0;background:#f4f4f5;color:#27272a;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 8px;font-size:13px;font-weight:600;cursor:pointer}
 .vs-btn{background:#c40a3a;color:#fff;text-decoration:none;padding:0 12px;grid-column:3/-1}
 .vs-note{font-size:13px;color:#52525b;line-height:1.5;white-space:pre-wrap}
+.docpub-sheet{margin:16px 0}.docpub-sheet h2{font-size:16px;margin:0 0 8px}.docpub-sheet-scroll{overflow-x:auto}.docpub-sheet table{border-collapse:collapse;font-size:14px}.docpub-sheet td{border:1px solid #e4e4e7;padding:4px 8px;white-space:nowrap;min-width:80px}

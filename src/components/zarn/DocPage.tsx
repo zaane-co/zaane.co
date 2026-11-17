@@ -21,16 +21,18 @@ type Doc={id:string;title:string;content:string;owner_id:string;updated_at:strin
 type Role='owner'|'edit'|'view';
 // Opens a document: owners and editors can type, everyone else reads. Changes save by themselves.
 export default function DocPage({id}:{id:string}){
- const {db,me}=useZarn();
+ const {db,me}=useZarn(),router=useRouter();
  const [doc,setDoc]=useState<Doc|null|undefined>(undefined),[role,setRole]=useState<Role|null>(null);
  useEffect(()=>{
   let live=true;
   void (async()=>{
-   const [{data},{data:r}]=await Promise.all([db.from('zarn_docs').select('id,title,content,owner_id,updated_at,drive,folder_id,lead_id').eq('id',id).maybeSingle(),db.rpc('zarn_doc_role',{d:id})]);
-   if(!live)return;setDoc((data as Doc|null)??null);setRole((r as Role|null)??null);
+   const [{data},{data:r}]=await Promise.all([db.from('zarn_docs').select('id,title,content,owner_id,updated_at,drive,folder_id,lead_id,kind').eq('id',id).maybeSingle(),db.rpc('zarn_doc_role',{d:id})]);
+   if(!live)return;
+   if((data as {kind?:string}|null)?.kind==='sheet'){router.replace(`/zarn/sheets/${id}`);return;}
+   if(data)void db.from('zarn_drive_opens').upsert({user_id:me.user_id,kind:'doc',item_id:id,opened_at:new Date().toISOString()});setDoc((data as Doc|null)??null);setRole((r as Role|null)??null);
   })();
   return()=>{live=false;};
- },[db,id]);
+ },[db,id,me.user_id,router]);
  if(doc===undefined)return <div className="zn-page"><p className="zn-loading">Loading…</p></div>;
  if(!doc||!role)return <div className="zn-page"><div className="zn-empty-state"><h2>Document not found</h2><p>It may have been deleted, or it isn’t shared with you.</p><Link className="zn-btn" href="/zarn/drive">Back to Drive</Link></div></div>;
  return <Collab doc={doc} role={role} meId={me.user_id}/>;

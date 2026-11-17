@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
-import {Download,FileText,Files as FilesIcon,Lock,Loader2,Paperclip,Search,Send,Share2,Trash2,Upload,Users,X} from 'lucide-react';
+import {Download,FolderInput,FileText,Files as FilesIcon,Lock,Loader2,Paperclip,Search,Send,Share2,Trash2,Upload,Users,X} from 'lucide-react';
 import {channelHref,type ZAttachment,type ZMessage} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {dayOf} from './format';
@@ -26,7 +26,7 @@ type FileRow={id:string;owner_id:string;name:string;size:number;type:string;key:
 export default function Files(){
  const {db,me,people,channels,title}=useZarn();
  const [items,setItems]=useState<Item[]>([]),[loading,setLoading]=useState(true),[q,setQ]=useState(''),[kind,setKind]=useState<Kind>('all'),[scope,setScope]=useState<Scope>('all');
- const [uploading,setUploading]=useState(false),[docOpen,setDocOpen]=useState<Item|null>(null),[dropped,setDropped]=useState<File[]>([]),[sharing,setSharing]=useState<Item|null>(null),[posting,setPosting]=useState<Item|null>(null),[removing,setRemoving]=useState<Item|null>(null),[error,setError]=useState('');
+ const [uploading,setUploading]=useState(false),[docOpen,setDocOpen]=useState<Item|null>(null),[dropped,setDropped]=useState<File[]>([]),[sharing,setSharing]=useState<Item|null>(null),[posting,setPosting]=useState<Item|null>(null),[removing,setRemoving]=useState<Item|null>(null),[error,setError]=useState(''),[savedKeys,setSavedKeys]=useState<Set<string>>(new Set());
  const load=useCallback(async()=>{
   const [{data:msgs},{data:files},{data:shares}]=await Promise.all([
    db.from('zarn_messages').select('id,channel_id,user_id,attachments,created_at').neq('attachments','[]').is('deleted_at',null).order('created_at',{ascending:false}).limit(500),
@@ -47,6 +47,13 @@ export default function Files(){
  const scopeCount=(s:Scope)=>items.filter(x=>s==='all'||(s==='mine'?x.origin.type==='mine':s==='shared'?x.origin.type==='shared':x.origin.type==='chat')).length;
  const shown=scoped.filter(x=>match(x,kind)&&`${x.a.name} ${people[x.user_id??'']?.display_name??''}`.toLowerCase().includes(q.toLowerCase()));
  const where=(id:string)=>{const c=channels.find(x=>x.id===id);return c?(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):`#${c.name}`):'a channel';};
+ // Keep a copy of a chat file in My Drive (it points at the same stored file).
+ async function saveToDrive(x:Item){
+  const m=/m=([0-9a-f-]{36})&i=(\d+)/.exec(x.src);if(!m)return;setError('');
+  const r=await fetch('/api/zarn/files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'from_chat',message_id:m[1],index:Number(m[2]),drive:'my'})});
+  if(!r.ok){setError((await r.json().catch(()=>({}))).error||'Could not save it to Drive.');return;}
+  setSavedKeys(k=>new Set(k).add(x.key));
+ }
  async function remove(x:Item){
   if(x.origin.type==='chat')return;
   setError('');
@@ -88,6 +95,7 @@ export default function Files(){
        :<span className="zn-file-private"><Users size={12}/>Shared with you</span>}
       <span className="zn-file-actions">
        {x.origin.type==='mine'&&<><button type="button" aria-label={`Share ${x.a.name}`} data-tip="Share with people" onClick={()=>setSharing(x)}><Share2 size={13}/></button><button type="button" aria-label={`Post ${x.a.name} in a chat`} data-tip="Post in a chat" onClick={()=>setPosting(x)}><Send size={13}/></button></>}
+       {x.origin.type==='chat'&&!me.account_type.startsWith('guest')&&<button type="button" aria-label={`Save ${x.a.name} to Drive`} data-tip={savedKeys.has(x.key)?'Saved to My Drive':'Save to My Drive'} disabled={savedKeys.has(x.key)} onClick={()=>void saveToDrive(x)}><FolderInput size={13}/></button>}
        <a href={dl} aria-label={`Download ${x.a.name}`} data-tip="Download"><Download size={13}/></a>
        {x.origin.type!=='chat'&&<button type="button" aria-label={`Remove ${x.a.name}`} data-tip={x.origin.type==='mine'?'Delete':'Remove'} onClick={()=>setRemoving(x)}><Trash2 size={13}/></button>}
       </span></div></div>
