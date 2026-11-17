@@ -3,7 +3,7 @@
  color-scheme:dark;font-family:var(--font-geist-sans),system-ui,sans-serif;font-size:14px;color:var(--z-fg);background:var(--z-bg)}
 .zarn.is-light,.zarn-auth.is-light{--z-bg:#ffffff;--z-side:#f4f4f6;--z-panel:#ffffff;--z-panel-2:#f6f6f8;--z-border:#e6e6eb;--z-fg:#0a0a0d;--z-muted:#62626c;--z-faint:#a1a1aa;--z-hover:#efeff3;--z-input:#ffffff;--z-mention:#fef3c7;--z-mention-fg:#92400e;--z-pin:#fffbeb;color-scheme:light}
 @layer base{.zarn a,.zarn-auth a{color:inherit;text-decoration:none}.zarn button,.zarn-auth button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}}
-.zarn{position:fixed;inset:0;display:flex;z-index:1}
+.zarn{position:fixed;inset:0;display:flex;z-index:1;overflow:clip}
 .zn-logo{width:28px;height:28px;border-radius:8px;background:var(--z-accent);color:#fff;font-weight:900;font-size:15px;display:grid;place-items:center;flex-shrink:0}
 .zn-logo-lg{width:56px;height:56px;border-radius:16px;font-size:30px}
 
