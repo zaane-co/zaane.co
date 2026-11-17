@@ -11,6 +11,7 @@ import DocViewer,{docKind} from './DocViewer';
 import {useCall} from './CallProvider';
 import VoicePlayer from './VoicePlayer';
 import AddToTask from './AddToTask';
+import {useConfirm} from './ConfirmProvider';
 import LinkPreview,{firstLink} from './LinkPreview';
 import {Avatar,StatusMark,renderBody,timeOf,tokensToText,textToTokens} from './format';
 
@@ -19,7 +20,7 @@ export type Receipt={pending:boolean;seen:{id:string;at:string}[];unseen:string[
 export default function Message({m,reactions,compact,inThread,onThread,receipt}:{m:ZMessage;reactions:ZReaction[];compact:boolean;inThread?:boolean;onThread?:(m:ZMessage)=>void;receipt?:Receipt}){
  const {me,people,members,db,membership,channels,emit,saved,toggleSaved}=useZarn(),{profile}=useShell(),call=useCall();
  const [viewer,setViewer]=useState<number|null>(null),[doc,setDoc]=useState<number|null>(null),[seenOpen,setSeenOpen]=useState(false);
- const [tapped,setTapped]=useState(false),[picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[confirm,setConfirm]=useState(false),[tasking,setTasking]=useState(false);
+ const [tapped,setTapped]=useState(false),[picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[tasking,setTasking]=useState(false);
  const author=m.user_id?people[m.user_id]:undefined,mine=m.user_id===me.user_id,canAct=!!membership[m.channel_id];
  const groups=reactions.reduce<Record<string,string[]>>((g,r)=>{(g[r.emoji]??=[]).push(r.user_id);return g;},{});
  async function toggle(emoji:string){
@@ -35,7 +36,8 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
   const edited_at=new Date().toISOString();emit({table:'zarn_messages',type:'UPDATE',row:{...m,body,edited_at}});
   await db.from('zarn_messages').update({body,edited_at}).eq('id',m.id);setEditing(false);
  }
- const remove=async()=>{const deleted_at=new Date().toISOString();emit({table:'zarn_messages',type:'UPDATE',row:{...m,body:'',deleted_at}});await db.from('zarn_messages').update({deleted_at,body:''}).eq('id',m.id);setConfirm(false);};
+ const ask=useConfirm();
+ const remove=async()=>{if(!await ask({title:'Delete this message?',message:'It will be removed for everyone in this conversation.',confirm:'Delete message',danger:true}))return;const deleted_at=new Date().toISOString();emit({table:'zarn_messages',type:'UPDATE',row:{...m,body:'',deleted_at}});await db.from('zarn_messages').update({deleted_at,body:''}).eq('id',m.id);};
  const pin=()=>void zarnApi('/api/zarn',{action:'pin',message_id:m.id,pinned:!m.pinned_at}).catch(()=>{});
 
  if(m.kind==='system'){
@@ -89,14 +91,13 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
    {me.account_type==='member'&&<button type="button" aria-label="Add to task" data-tip="Add to task" onClick={()=>setTasking(true)}><ListPlus size={15}/></button>}
    {!inThread&&<button type="button" aria-label={m.pinned_at?'Unpin':'Pin'} data-tip={m.pinned_at?'Unpin':'Pin to channel'} onClick={pin}><Pin size={15}/></button>}
    {mine&&<button type="button" aria-label="Edit" data-tip="Edit" onClick={()=>{setDraft(tokensToText(m.body,people));setEditing(true);}}><Pencil size={15}/></button>}
-   {mine&&<button type="button" aria-label="Delete" data-tip="Delete" className="is-danger" onClick={()=>setConfirm(true)}><Trash2 size={15}/></button>}
+   {mine&&<button type="button" aria-label="Delete" data-tip="Delete" className="is-danger" onClick={()=>void remove()}><Trash2 size={15}/></button>}
   </div>}
   {canAct&&m.kind==='crm'&&<div className="zn-actions">{quickReactions.slice(0,3).map(e=><button key={e} type="button" aria-label={`React ${e}`} onClick={()=>void toggle(e)}>{e}</button>)}{!inThread&&<button type="button" aria-label="Reply in thread" onClick={()=>onThread?.(m)}><MessageSquareText size={15}/></button>}{me.account_type==='member'&&<button type="button" aria-label="Add to task" data-tip="Add to task" onClick={()=>setTasking(true)}><ListPlus size={15}/></button>}</div>}
   {picker&&<><button type="button" className="zn-scrim" aria-label="Close" onClick={()=>setPicker(false)}/><div className="zn-picker">{quickReactions.concat(['😮','😢','💯','🚀','👏','🤝','💡','⏳']).map(e=><button key={e} type="button" onClick={()=>void toggle(e)}>{e}</button>)}</div></>}
   {doc!==null&&m.attachments[doc]&&<DocViewer messageId={m.id} index={doc} att={m.attachments[doc]!} onClose={()=>setDoc(null)}/>}
   {viewer!==null&&<Viewer m={m} index={viewer} onIndex={setViewer} onClose={()=>setViewer(null)}/>}
   {tasking&&<AddToTask m={m} onClose={()=>setTasking(false)}/>}
-  {confirm&&<div className="zn-confirm"><span>Delete this message?</span><button type="button" onClick={()=>setConfirm(false)}>Cancel</button><button type="button" className="is-danger" onClick={()=>void remove()}>Delete</button></div>}
  </div>;
 }
 
