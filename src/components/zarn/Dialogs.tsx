@@ -70,37 +70,38 @@ function Hi({text,term}:{text:string;term:string}){
  const safe=term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),parts=text.split(new RegExp(`(${safe})`,'ig'));
  return <>{parts.map((p,i)=>i%2?<mark key={i}>{p}</mark>:p)}</>;
 }
-export function SearchDialog({onClose}:{onClose:()=>void}){
+export function SearchDialog({onClose,channelId}:{onClose:()=>void;channelId?:string}){
  const {db,me,people,channels,title,openDm}=useZarn(),router=useRouter();
  const [tab,setTab]=useState<'all'|'messages'|'files'|'chats'|'people'|'docs'>('all'),[files,setFiles]=useState<{m:ZMessage;a:ZAttachment}[]>([]);
- const [q,setQ]=useState(''),[rows,setRows]=useState<ZMessage[]>([]),[busy,setBusy]=useState(false),[docs,setDocs]=useState<{id:string;title:string;snippet:string}[]>([]);
+ const [here,setHere]=useState(channelId??null),[q,setQ]=useState(''),[rows,setRows]=useState<ZMessage[]>([]),[busy,setBusy]=useState(false),[docs,setDocs]=useState<{id:string;title:string;snippet:string}[]>([]);
  // Past conversations with deactivated people are hidden everywhere else; searching their name finds them.
  const past=q.trim().length>=2?channels.filter(c=>c.kind==='dm'&&(c.dm_key??'').split(',').some(id=>id!==me.user_id&&people[id]?.deactivated_at&&people[id]!.display_name.toLowerCase().includes(q.trim().toLowerCase()))):[];
  useEffect(()=>{
   const s=q.trim();if(s.length<2)return;
-  const t=setTimeout(async()=>{setBusy(true);const term=s.replace(/[%_,()]/g,'');const {data}=await db.from('zarn_messages').select('*').ilike('body',`%${term}%`).is('deleted_at',null).order('created_at',{ascending:false}).limit(30);setRows((data??[]) as ZMessage[]);
+  const t=setTimeout(async()=>{setBusy(true);const term=s.replace(/[%_,()]/g,'');const {data}=await db.from('zarn_messages').select('*').ilike('body',`%${term}%`).match(here?{channel_id:here}:{}).is('deleted_at',null).order('created_at',{ascending:false}).limit(30);setRows((data??[]) as ZMessage[]);
    // Documents you can open, matched on title or text.
    const {data:dd}=await db.from('zarn_docs').select('id,title,content').or(`title.ilike.%${term}%,content.ilike.%${term}%`).order('updated_at',{ascending:false}).limit(8);
    setDocs(((dd??[]) as {id:string;title:string;content:string}[]).map(d=>{const text=d.content.replace(/<[^>]+>/g,' ').replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g,' ').replace(/\s+/g,' ').trim(),i=text.toLowerCase().indexOf(term.toLowerCase());return {id:d.id,title:d.title||'Untitled',snippet:i<0?text.slice(0,110):(i>40?'…':'')+text.slice(Math.max(0,i-40),i+90)};}));
    // Files shared in chats, matched on file name (recent 400 messages with attachments).
-   const {data:fm}=await db.from('zarn_messages').select('*').neq('attachments','[]').is('deleted_at',null).order('created_at',{ascending:false}).limit(400);
+   const {data:fm}=await db.from('zarn_messages').select('*').neq('attachments','[]').match(here?{channel_id:here}:{}).is('deleted_at',null).order('created_at',{ascending:false}).limit(400);
    setFiles(((fm??[]) as ZMessage[]).flatMap(m=>(m.attachments??[]).filter(x=>x.name.toLowerCase().includes(term.toLowerCase())).map(x=>({m,a:x}))).slice(0,30));
    setBusy(false);},250);
   return()=>clearTimeout(t);
- },[q,db]);
+ },[q,db,here]);
  const term=q.trim().toLowerCase(),on=term.length>=2;
- const chats=on?channels.filter(c=>!c.archived_at&&(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):c.name??'').toLowerCase().includes(term)).slice(0,20):[];
- const folks=on?Object.values(people).filter(p=>!p.deactivated_at&&p.user_id!==me.user_id&&`${p.display_name} ${p.username??''} ${p.title} ${p.email}`.toLowerCase().includes(term)).slice(0,20):[];
+ const hereCh=here?channels.find(c=>c.id===here):undefined,hereName=hereCh?(hereCh.kind==='dm'||hereCh.kind==='client'||hereCh.kind==='project'?title(hereCh):`#${hereCh.name}`):'';
+ const chats=on&&!here?channels.filter(c=>!c.archived_at&&(c.kind==='dm'||c.kind==='client'||c.kind==='project'?title(c):c.name??'').toLowerCase().includes(term)).slice(0,20):[];
+ const folks=on&&!here?Object.values(people).filter(p=>!p.deactivated_at&&p.user_id!==me.user_id&&`${p.display_name} ${p.username??''} ${p.title} ${p.email}`.toLowerCase().includes(term)).slice(0,20):[];
  const go=(href:string)=>{onClose();router.push(href);};
  // A message excerpt centred on the first match, with the match highlighted.
  const snip=(text:string)=>{const i=text.toLowerCase().indexOf(term),cut=i>60?'…'+text.slice(i-50):text;return <Hi text={cut.slice(0,220)} term={term}/>;};
- const counts={messages:rows.length,files:files.length,chats:chats.length,people:folks.length,docs:docs.length};
+ const counts={messages:rows.length,files:files.length,chats:chats.length,people:folks.length,docs:here?0:docs.length};
  const show=(k:keyof typeof counts)=>on&&(tab==='all'||tab===k)&&counts[k]>0;
  const cap=<T,>(list:T[])=>tab==='all'?list.slice(0,4):list;
  const Head=({k,label}:{k:keyof typeof counts;label:string})=>tab==='all'?<li className="zn-srch-head"><span>{label}</span>{counts[k]>4&&<button type="button" onClick={()=>setTab(k)}>See all {counts[k]}</button>}</li>:null;
- const tabs:[typeof tab,string][]=[['all','All'],['messages','Messages'],['files','Files'],['chats','Channels & DMs'],['people','People'],['docs','Docs']];
+ const tabs:[typeof tab,string][]=here?[['all','All'],['messages','Messages'],['files','Files']]:[['all','All'],['messages','Messages'],['files','Files'],['chats','Channels & DMs'],['people','People'],['docs','Docs']];
  return <div className="zn-modal-scrim zn-srch-scrim" onClick={onClose}><div className="zn-srch" role="dialog" aria-label="Search ZARN" onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Escape')onClose();}}>
-  <div className="zn-srch-bar"><SearchIcon size={18}/><input autoFocus placeholder="Search messages, files, chats, people and docs" value={q} onChange={e=>setQ(e.target.value)}/>{busy&&<small>Searching…</small>}<button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>
+  <div className="zn-srch-bar"><SearchIcon size={18}/>{here&&<span className="zn-srch-scope">In {hereName}<button type="button" aria-label="Search everywhere instead" onClick={()=>setHere(null)}><X size={12}/></button></span>}<input autoFocus placeholder={here?`Search messages and files in ${hereName}`:'Search messages, files, chats, people and docs'} value={q} onChange={e=>setQ(e.target.value)}/>{busy&&<small>Searching…</small>}<button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>
   <div className="zn-srch-tabs">{tabs.map(([k,l])=><button key={k} type="button" className={tab===k?'is-on':''} onClick={()=>setTab(k)}>{l}{on&&k!=='all'&&counts[k as keyof typeof counts]>0&&<em>{counts[k as keyof typeof counts]}</em>}</button>)}</div>
   <ul className="zn-list zn-srch-list" data-lenis-prevent>
    {!on&&<li className="zn-empty-row">Type at least 2 letters to search.</li>}

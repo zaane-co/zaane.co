@@ -3,13 +3,13 @@ import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState} from 're
 import {useRouter} from 'next/navigation';
 import {useCall} from './CallProvider';
 import {useConfirm} from './ConfirmProvider';
-import {Bell,BellOff,Briefcase,FolderKanban,Hash,Info,Lock,Phone,Pin,Star,Trash2,UserPlus,UserRound,Video,X} from 'lucide-react';
+import {Search,Bell,BellOff,Briefcase,FolderKanban,Hash,Info,Lock,Phone,Pin,Star,Trash2,UserPlus,UserRound,Video,X} from 'lucide-react';
 import {zarnApi,type ZChannel,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {useZarn,type ZEvent} from './ZarnProvider';
 import Message from './Message';
 import Composer from './Composer';
 import {Avatar,dayOf,renderBody} from './format';
-import {PeoplePicker} from './Dialogs';
+import {PeoplePicker,SearchDialog} from './Dialogs';
 import {useShell} from './nav';
 
 const PAGE=50;
@@ -21,7 +21,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  const channel=channels.find(c=>c.id===id);
  const [messages,setMessages]=useState<ZMessage[]>([]),[reactions,setReactions]=useState<ZReaction[]>([]);
  const [loading,setLoading]=useState(true),[more,setMore]=useState(false),[thread,setThread]=useState<ZMessage|null>(null);
- const [details,setDetails]=useState(false),[typing,setTyping]=useState<Record<string,{at:number;thread:string|null}>>({});
+ const [searching,setSearching]=useState(false),[details,setDetails]=useState(false),[typing,setTyping]=useState<Record<string,{at:number;thread:string|null}>>({});
  const list=useRef<HTMLDivElement>(null),stick=useRef(true),typingCh=useRef<ReturnType<typeof db.channel>|null>(null),lastTyping=useRef(0);
  const joined=!!membership[id];
  // Admins can read and post in client spaces and projects they aren't on.
@@ -126,6 +126,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
      return channel.topic?<p className="zn-topic" title={channel.topic}>{channel.topic}</p>:null;
     })()}
     <div className="zn-head-actions">
+     <button type="button" aria-label="Search this conversation" data-tip="Search here" onClick={()=>setSearching(true)}><Search size={16}/></button>
      {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined&&!!people[o[0]!]&&!people[o[0]!]?.deactivated_at?<button type="button" aria-label="Voice call" data-tip={call.busy?'You’re on a call':'Voice call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!)}><Phone size={16}/></button>:null;})()}
      {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined&&!!people[o[0]!]&&!people[o[0]!]?.deactivated_at?<button type="button" aria-label="Video call" data-tip={call.busy?'You’re on a call':'Video call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!,{video:true})}><Video size={16}/></button>:null;})()}
      {channel.kind!=='dm'&&(()=>{const ids=Object.keys(reads).filter(u=>people[u]&&!people[u]!.deactivated_at);return ids.length?<button type="button" className="zn-head-faces" aria-label={`${ids.length} members`} data-tip="Members" onClick={()=>setDetails(true)}><span>{ids.slice(0,3).map(u=><Avatar key={u} m={people[u]} size={22}/>)}</span><b>{ids.length}</b></button>:null;})()}
@@ -147,6 +148,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
     :<div className="zn-join"><p>You’re previewing <b>#{channel.name}</b>.</p><button type="button" className="zn-btn is-primary" onClick={()=>void join()}>Join channel</button></div>}
   </div>
   {thread&&<Thread parent={thread} typers={typersIn(thread.id)} onTyping={()=>onTyping(thread.id)} onClose={()=>setThread(null)}/>}
+  {searching&&<SearchDialog channelId={id} onClose={()=>setSearching(false)}/>}
   {details&&<Details c={channel} pinned={pinned} onClose={()=>setDetails(false)} onJump={mid=>{setDetails(false);document.getElementById(`m-${mid}`)?.scrollIntoView({block:'center',behavior:'smooth'});}}/>}
  </div>;
 }
