@@ -10,7 +10,10 @@ export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
  const me=await zarnMember();if(!me)return Response.json({error:'Sign in first.'},{status:401});
  if(!r2Configured())return Response.json({error:'File storage isn’t configured.'},{status:503});
- const form=await request.formData();const channel=String(form.get('channel_id')??''),file=form.get('file'),personal=form.get('scope')==='personal';
+ const form=await request.formData();const channel=String(form.get('channel_id')??''),file=form.get('file'),personal=form.get('scope')==='personal'||form.get('scope')==='drive';
+ // Drive uploads say where they go: a folder, or the root of a drive (my / team / a client's).
+ const drive=String(form.get('drive')??'my'),folder=String(form.get('folder_id')??''),lead=String(form.get('lead_id')??'');
+ if(!['my','team','client'].includes(drive)||(folder&&!uuid.test(folder))||(lead&&!uuid.test(lead))||(drive==='client'&&!lead&&!folder))return Response.json({error:'Invalid request'},{status:400});
  if(!(file instanceof File)||(!personal&&!uuid.test(channel)))return Response.json({error:'Invalid request'},{status:400});
  if(file.size>MAX)return Response.json({error:'Files must be under 4 MB.'},{status:400});
  if(blocked.test(file.name))return Response.json({error:'That file type isn’t allowed.'},{status:400});
@@ -24,9 +27,11 @@ export async function POST(request:Request){
   const type=file.type||'application/octet-stream';
   if(personal){
    // Saved to the member's own files; nobody else can open it until they share it.
-   const {data,error}=await me.db.from('zarn_files').insert({owner_id:me.user_id,name,size:file.size,type,key}).select('id').single();
-   if(error||!data){await deleteFile(key).catch(()=>{});return Response.json({error:'Could not save the file.'},{status:502});}
-   return Response.json({id:data.id,key,name,size:file.size,type});
+   // The id is picked here: reading the new row back is refused by its own access rule mid-insert.
+   const id=crypto.randomUUID();
+   const {error}=await me.db.from('zarn_files').insert({id,owner_id:me.user_id,name,size:file.size,type,key,drive,folder_id:folder||null,lead_id:drive==='client'&&!folder?lead:null});
+   if(error){await deleteFile(key).catch(()=>{});return Response.json({error:error.message.includes('cannot')||error.message.includes('not available')?error.message:'Could not save the file.'},{status:502});}
+   return Response.json({id,key,name,size:file.size,type});
   }
   return Response.json({key,name,size:file.size,type});
  }catch{return Response.json({error:'Upload failed. Try again.'},{status:502});}
@@ -58,10 +63,10 @@ export async function DELETE(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
  const me=await zarnMember();if(!me)return Response.json({error:'Sign in first.'},{status:401});
  const fid=new URL(request.url).searchParams.get('f')??'';if(!uuid.test(fid))return Response.json({error:'Invalid request'},{status:400});
- const {data:row}=await me.db.from('zarn_files').select('key').eq('id',fid).eq('owner_id',me.user_id).maybeSingle();
+ const {data:row}=await me.db.from('zarn_files').select('key').eq('id',fid).maybeSingle();
  if(!row)return Response.json({error:'File not found.'},{status:404});
- const {error}=await me.db.from('zarn_files').delete().eq('id',fid);
- if(error)return Response.json({error:'Could not delete it.'},{status:502});
+ const {error,count:gone}=await me.db.from('zarn_files').delete({count:'exact'}).eq('id',fid);
+ if(error||!gone)return Response.json({error:'Could not delete it.'},{status:502});
  // Keep the stored copy if a chat message still points at it.
  const {count}=await me.db.from('zarn_messages').select('id',{count:'exact',head:true}).contains('attachments',[{key:row.key}]);
  if(!count)await deleteFile(row.key).catch(()=>{});

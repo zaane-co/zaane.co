@@ -1,2 +1,2 @@
-import Files from '@/components/zarn/Files';
-export default function Page(){return <Files/>;}
+import {redirect} from 'next/navigation';
+export default function Page(){redirect('/zarn/drive?v=chats');}

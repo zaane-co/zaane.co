@@ -32,7 +32,7 @@ export default function DocPage({id}:{id:string}){
   return()=>{live=false;};
  },[db,id]);
  if(doc===undefined)return <div className="zn-page"><p className="zn-loading">Loading…</p></div>;
- if(!doc||!role)return <div className="zn-page"><div className="zn-empty-state"><h2>Document not found</h2><p>It may have been deleted, or it isn’t shared with you.</p><Link className="zn-btn" href="/zarn/docs">Back to Docs</Link></div></div>;
+ if(!doc||!role)return <div className="zn-page"><div className="zn-empty-state"><h2>Document not found</h2><p>It may have been deleted, or it isn’t shared with you.</p><Link className="zn-btn" href="/zarn/drive">Back to Drive</Link></div></div>;
  return <Collab doc={doc} role={role} meId={me.user_id}/>;
 }
 // Opens the live copy of the document (everyone's edits merged) before showing the editor.
@@ -81,11 +81,11 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
  useEffect(()=>()=>{if(timer.current){clearTimeout(timer.current);void save();}},[save]);
  async function remove(){
   if(!await confirm({title:'Delete this document?',message:`“${title||'Untitled'}” will be deleted for everyone, and its share links stop working.`,confirm:'Delete document',danger:true}))return;
-  await db.from('zarn_docs').delete().eq('id',doc.id);router.push('/zarn/docs');
+  await db.from('zarn_docs').update({trashed_at:new Date().toISOString()}).eq('id',doc.id);router.push("/zarn/drive");
  }
  return <div className="zn-page zd-page">
   <header className="zd-head">
-   <Link href="/zarn/docs" className="zn-icon" aria-label="Back to Docs"><ChevronLeft size={20}/></Link>
+   <Link href="/zarn/drive" className="zn-icon" aria-label="Back to Drive"><ChevronLeft size={20}/></Link>
    <input className="zd-title" value={title} readOnly={!canEdit} maxLength={200} placeholder="Untitled" aria-label="Title" onChange={e=>{setTitle(e.target.value);latest.current.title=e.target.value;queue();}}/>
    {here.length>0&&<span className="zd-here" title={here.map(u=>people[u]?.display_name??'Someone').join(', ')+' also has this open'}>{here.slice(0,4).map(u=><Avatar key={u} m={people[u]} size={24}/>)}{here.length>4&&<em>+{here.length-4}</em>}</span>}
    <span className={`zd-state${state==='error'?' is-error':''}`}>{!canEdit?'View only':state==='saving'?<><Loader2 size={13} className="zn-spin"/>Saving…</>:state==='error'?'Not saved. Retry by typing.':<><Check size={13}/>Saved</>}</span>

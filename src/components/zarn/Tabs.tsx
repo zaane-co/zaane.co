@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import {useState} from 'react';
-import {FileText,Bookmark,AtSign,TrendingUp,Bell,Files,FolderKanban,Sparkles,ListChecks,Volume2,VolumeX,Briefcase,ChevronRight,Contact,Download,LayoutDashboard,LogOut,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users} from 'lucide-react';
+import {HardDrive,FileText,Bookmark,AtSign,TrendingUp,Bell,Files,FolderKanban,Sparkles,ListChecks,Volume2,VolumeX,Briefcase,ChevronRight,Contact,Download,LayoutDashboard,LogOut,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {liveStatus} from '@/lib/zarn';
@@ -81,9 +81,8 @@ export function YouTab(){
    {!z.me.account_type.includes('guest')&&<Row icon={<Sparkles size={18}/>} label="Z-BOT" onClick={()=>open('assistant')}/>}
    <Row href="/zarn/mentions" icon={<AtSign size={18}/>} label="Mentions"/>
    <Row href="/zarn/projects" icon={<FolderKanban size={18}/>} label="Projects"/>
-   <Row href="/zarn/docs" icon={<FileText size={18}/>} label="Docs"/>
+   <Row href="/zarn/drive" icon={<HardDrive size={18}/>} label="Drive"/>
    <Row href="/zarn/saved" icon={<Bookmark size={18}/>} label="Saved"/>
-   <Row href="/zarn/files" icon={<Files size={18}/>} label="Files"/>
    <Row href="/zarn/todos" icon={<ListChecks size={18}/>} label="To-dos"/>
    <Row href="/zarn/people" icon={<Contact size={18}/>} label="People"/>
    {canBusiness&&<Row href="/zarn/business" icon={<TrendingUp size={18}/>} label="Business"/>}
