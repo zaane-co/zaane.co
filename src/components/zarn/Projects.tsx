@@ -2,8 +2,8 @@
 import {useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {Archive,FolderInput,FolderKanban,FolderPlus,Pencil,Plus,Trash2} from 'lucide-react';
-import {AddExisting,GroupDialog,GroupField,resolveGroup} from './ProjectExtras';
+import {Settings2,Archive,FolderInput,FolderKanban,FolderPlus,Pencil,Plus,Trash2} from 'lucide-react';
+import {AddExisting,GroupDialog,GroupField,ManageGroups,resolveGroup} from './ProjectExtras';
 import {useConfirm} from './ConfirmProvider';
 import {useZarn} from './ZarnProvider';
 import {Modal} from './Dialogs';
@@ -48,7 +48,7 @@ export function NewProject({onClose,onCreated,clientId,groupId}:{onClose:()=>voi
 // /zarn/projects: in-house projects you're in, by group. Archived ones are tucked away at the bottom.
 export default function Projects(){
  const {db,me,projects,projectGroups,reloadProjects}=useZarn(),confirm=useConfirm();
- const [creating,setCreating]=useState<string|true|false>(false),[showArchived,setShowArchived]=useState(false),[editing,setEditing]=useState<{id:string;name:string;color:string}|'new'|null>(null),[adding,setAdding]=useState<{id:string;name:string}|null>(null),[groupMenu,setGroupMenu]=useState<string|null>(null);
+ const [creating,setCreating]=useState<string|true|false>(false),[showArchived,setShowArchived]=useState(false),[editing,setEditing]=useState<{id:string;name:string;color:string}|'new'|null>(null),[adding,setAdding]=useState<{id:string;name:string}|null>(null),[groupMenu,setGroupMenu]=useState<string|null>(null),[managing,setManaging]=useState(false);
  const inHouse=(projects??[]).filter(p=>!p.lead_id);
  const live=inHouse.filter(p=>!p.archived_at),archived=inHouse.filter(p=>p.archived_at);
  const groups=[...projectGroups.map(g=>({...g,list:live.filter(p=>p.group_id===g.id)})),{id:'',name:'No group',color:'#52525b',position:0,created_by:null,list:live.filter(p=>!p.group_id||!projectGroups.some(g=>g.id===p.group_id))}].filter(g=>g.id||g.list.length);
@@ -60,7 +60,7 @@ export default function Projects(){
  </Link>;
  return <div className="zn-page">
   <header className="zn-page-head zpg-head-bar"><div><h1><FolderKanban size={16}/>Projects</h1><p>Our in-house projects, by group. Each has its chat, board, docs, team and vault.</p></div>
-   <span className="zpg-head-btns">{me.zarnAdmin&&<button type="button" className="zn-btn" onClick={()=>setEditing('new')}><FolderPlus size={14}/>New group</button>}<button type="button" className="zn-btn is-primary" onClick={()=>setCreating(true)}><Plus size={14}/>New project</button></span></header>
+   <span className="zpg-head-btns"><button type="button" className="zn-btn" onClick={()=>setManaging(true)}><Settings2 size={14}/>Manage groups</button>{me.zarnAdmin&&<button type="button" className="zn-btn" onClick={()=>setEditing('new')}><FolderPlus size={14}/>New group</button>}<button type="button" className="zn-btn is-primary" onClick={()=>setCreating(true)}><Plus size={14}/>New project</button></span></header>
   <div className="zn-crm-list zpg-list" data-lenis-prevent>
    {projects===null?<p className="zn-loading">Loading…</p>:inHouse.length||projectGroups.length?<>
     {groups.map(g=><section key={g.id||'none'} className="zpg-group">
@@ -82,6 +82,7 @@ export default function Projects(){
   </div>
   {creating&&<NewProject groupId={typeof creating==='string'?creating:undefined} onClose={()=>setCreating(false)}/>}
   {editing&&<GroupDialog group={editing==='new'?undefined:editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);void reloadProjects();}}/>}
+  {managing&&<ManageGroups onClose={()=>setManaging(false)}/>}
   {adding&&<AddExisting group={adding} onClose={()=>setAdding(null)} onDone={()=>{setAdding(null);void reloadProjects();}}/>}
  </div>;
 }

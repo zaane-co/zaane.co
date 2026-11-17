@@ -9,6 +9,7 @@ import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
 import {NewProject} from './Projects';
+import {ManageGroups} from './ProjectExtras';
 import Assistant from './Assistant';
 import ZBotMark from './ZBotMark';
 import {Browse,Invite,NewChannel,NewDm,Profile,SearchDialog} from './Dialogs';
@@ -42,7 +43,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  const dmWith=new Set(dms.flatMap(c=>(c.dm_key??"").split(",")));
  const newPeople=guest?[]:Object.values(z.people).filter(p=>p.user_id!==z.me.user_id&&!p.deactivated_at&&!dmWith.has(p.user_id)).sort((a,b)=>a.display_name.localeCompare(b.display_name));
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({archivedclients:true});
- const [newProject,setNewProject]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false),[meMenu,setMeMenu]=useState(false),[prefs,setPrefs]=useState<null|'availability'|'notifications'|'appearance'>(null);
+ const [newProject,setNewProject]=useState(false),[managingGroups,setManagingGroups]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false),[meMenu,setMeMenu]=useState(false),[prefs,setPrefs]=useState<null|'availability'|'notifications'|'appearance'>(null);
  const router=useRouter();
  const {mode:installMode,install}=useInstall(),sound=useSound(),soundCfg=useSoundSettings(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false),[installDone,setInstallDone]=useState(false);
  const routeArea=areaOf(pathname);
@@ -172,6 +173,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
      {area==='projects'&&<>
       {link('/zarn/projects',<FolderKanban size={15}/>,'All projects')}
       <button type="button" className="zn-nav-item zn-add-client" onClick={()=>setNewProject(true)}><Plus size={15}/><span>New project</span></button>
+      <button type="button" className="zn-nav-item zn-add-client" onClick={()=>setManagingGroups(true)}><Settings2 size={15}/><span>Manage groups</span></button>
       {(()=>{const own=(z.projects??[]).filter(p=>!p.lead_id),live=own.filter(p=>!p.archived_at),arch=own.filter(p=>p.archived_at),row=(p:typeof own[number])=><Link key={p.id} href={`/zarn/projects/${p.id}`} className={`zn-nav-item${pathname===`/zarn/projects/${p.id}`?' is-active':''}`}><i className="zp-dot" style={{background:p.color}}>{p.name.slice(0,1).toUpperCase()}</i><span>{p.name}</span>{(()=>{const c=z.channels.find(x=>x.kind==='project'&&x.project_id===p.id),n=c&&!z.membership[c.id]?.muted?z.unread[c.id]?.unread??0:0;return n?<em className="zn-badge is-soft">{n>99?'99+':n}</em>:null;})()}</Link>;
        const groups=[...z.projectGroups.map(g=>({id:g.id,name:g.name,list:live.filter(p=>p.group_id===g.id)})),{id:'none',name:'No group',list:live.filter(p=>!p.group_id||!z.projectGroups.some(g=>g.id===p.group_id))}].filter(g=>g.list.length);
        return <>{groups.length?groups.map(g=><Fragment key={g.id}>{section(`pg-${g.id}`,g.name,g.list.map(row))}</Fragment>):<p className="zn-nav-note">No projects yet.</p>}{arch.length>0&&section('pg-archived',`Archived · ${arch.length}`,arch.map(row))}</>;})()}
@@ -221,6 +223,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
   {soundOpen&&<SoundDialog onClose={()=>setSoundOpen(false)}/>}
   {dialog==='channel'&&<NewChannel onClose={()=>setDialog(null)}/>}
   {newProject&&<NewProject onClose={()=>setNewProject(false)}/>}
+  {managingGroups&&<ManageGroups onClose={()=>setManagingGroups(false)}/>}
   {dialog==='assistant'&&<Assistant onClose={()=>setDialog(null)}/>}
   {dialog==='dm'&&<NewDm onClose={()=>setDialog(null)}/>}
   {dialog==='browse'&&<Browse onClose={()=>setDialog(null)}/>}

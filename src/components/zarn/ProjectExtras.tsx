@@ -2,7 +2,8 @@
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {FileSpreadsheet,FileText,Plus,UserPlus} from 'lucide-react';
+import {ArrowDown,ArrowUp,FileSpreadsheet,FileText,Plus,Trash2,UserPlus} from 'lucide-react';
+import {useConfirm} from './ConfirmProvider';
 import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal} from './Dialogs';
 import {Avatar,dayOf} from './format';
@@ -108,5 +109,33 @@ export function AddExisting({group,onClose,onDone}:{group:{id:string;name:string
    :<p className="zn-nav-note">Every project is already in this group.</p>}
   {err&&<p className="zn-error" role="alert">{err}</p>}
   <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button type="button" className="zn-btn is-primary" disabled={busy||!picked.length} onClick={()=>void go()}>Add {picked.length||''}</button></div>
+ </div></Modal>;
+}
+
+// All groups in one place: rename, recolour, reorder, delete, or add a new one.
+export function ManageGroups({onClose}:{onClose:()=>void}){
+ const {db,me,projectGroups,projects,reloadProjects}=useZarn(),confirm=useConfirm();
+ const rows=projectGroups,[drafts,setDrafts]=useState<Record<string,string>>({});
+ const [newName,setNewName]=useState(''),[busy,setBusy]=useState(false),[err,setErr]=useState('');
+ const count=(id:string)=>(projects??[]).filter(p=>p.group_id===id&&!p.lead_id).length;
+ const canEdit=(g:{created_by:string|null})=>g.created_by===me.user_id||me.zarnAdmin;
+ async function save(id:string,patch:{name?:string;color?:string;position?:number}){setErr('');const {error}=await db.from('zarn_project_groups').update(patch).eq('id',id);if(error)setErr('Could not save that change.');await reloadProjects();}
+ async function add(e:React.FormEvent){e.preventDefault();const n=newName.trim();if(!n)return;setBusy(true);setErr('');
+  const last=rows.at(-1)?.position??0;
+  const {error}=await db.from('zarn_project_groups').insert({id:crypto.randomUUID(),name:n.slice(0,60),color:groupColors[(rows.length+1)%groupColors.length],position:last+1,created_by:me.user_id});
+  setBusy(false);if(error){setErr('Could not create the group.');return;}setNewName('');await reloadProjects();}
+ async function move(i:number,d:-1|1){const a=rows[i],b=rows[i+d];if(!a||!b)return;await Promise.all([db.from('zarn_project_groups').update({position:b.position}).eq('id',a.id),db.from('zarn_project_groups').update({position:a.position}).eq('id',b.id)]);await reloadProjects();}
+ async function remove(g:{id:string;name:string}){const n=count(g.id);if(!await confirm({title:`Delete the “${g.name}” group?`,message:n?`Its ${n} project${n===1?'':'s'} stay, under “No group”.`:'The group is empty.',confirm:'Delete group',danger:true}))return;await db.from('zarn_project_groups').delete().eq('id',g.id);await reloadProjects();}
+ return <Modal title="Manage groups" onClose={onClose} wide><div className="zn-modal-body">
+  {rows.length?<ul className="zmg-list">{rows.map((g,i)=><li key={g.id}>
+   <span className="zmg-order"><button type="button" aria-label="Move up" disabled={i===0||!canEdit(g)} onClick={()=>void move(i,-1)}><ArrowUp size={14}/></button><button type="button" aria-label="Move down" disabled={i===rows.length-1||!canEdit(g)} onClick={()=>void move(i,1)}><ArrowDown size={14}/></button></span>
+   <input className="zn-input" value={drafts[g.id]??g.name} maxLength={60} disabled={!canEdit(g)} aria-label="Group name" onChange={e=>setDrafts(d=>({...d,[g.id]:e.target.value}))} onBlur={e=>{const v=e.target.value.trim();if(v&&v!==g.name)void save(g.id,{name:v});}}/>
+   <span className="zmg-colors">{groupColors.map(c=><button key={c} type="button" aria-label={`Colour ${c}`} disabled={!canEdit(g)} className={g.color===c?'is-on':''} style={{background:c}} onClick={()=>void save(g.id,{color:c})}/>)}</span>
+   <small>{count(g.id)} project{count(g.id)===1?'':'s'}</small>
+   <button type="button" className="zmg-del" aria-label={`Delete ${g.name}`} disabled={!canEdit(g)} onClick={()=>void remove(g)}><Trash2 size={15}/></button>
+  </li>)}</ul>:<p className="zn-nav-note">No groups yet. Add your first one below.</p>}
+  <form className="zmg-new" onSubmit={add}><input className="zn-input" value={newName} maxLength={60} onChange={e=>setNewName(e.target.value)} placeholder="New group name, e.g. Products"/><button className="zn-btn is-primary" disabled={busy||!newName.trim()}><Plus size={14}/>Add group</button></form>
+  {err&&<p className="zn-error" role="alert">{err}</p>}
+  <div className="zn-modal-foot"><button type="button" className="zn-btn is-primary" onClick={onClose}>Done</button></div>
  </div></Modal>;
 }
