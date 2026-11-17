@@ -2107,3 +2107,45 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zmg-list small{font-size:12px;color:var(--z-muted);min-width:70px}
 .zmg-del{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;color:var(--z-muted)}.zmg-del:hover:not(:disabled){background:var(--z-hover);color:#ef4444}.zmg-del:disabled{opacity:.3}
 .zmg-new{display:flex;gap:8px}.zmg-new .zn-input{flex:1}
+/* Project About */
+.zab{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.zab-main,.zab-side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.zab-side{position:sticky;top:0}
+.zab-card{padding:16px 18px;border-radius:14px;background:var(--z-panel);border:1px solid var(--z-border);display:flex;flex-direction:column;gap:12px}
+.zab-head{display:flex;align-items:center;gap:10px}
+.zab-head h3{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:800;margin-right:auto}.zab-head h3 svg{color:var(--z-muted)}
+.zab-edit{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:8px;font-size:12.5px;font-weight:700;color:var(--z-muted)}.zab-edit:hover{background:var(--z-hover);color:var(--z-fg)}
+.zab-prose{white-space:pre-wrap;font-size:14px;line-height:1.6}
+.zab-none{font-size:13px;color:var(--z-faint)}
+.zab-text{min-height:140px;resize:vertical;line-height:1.55}
+.zab-actions{display:flex;justify-content:flex-end;gap:8px}
+.zab-rows{display:flex;flex-direction:column;gap:8px}
+.zab-row{display:flex;gap:8px;align-items:center}.zab-row .zn-input{flex:1;min-width:0}
+.zab-row .zab-date{flex:0 0 160px}.zab-row .zab-label{flex:0 0 180px}
+.zab-x{width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:var(--z-muted);flex-shrink:0}.zab-x:hover{background:var(--z-hover);color:#ef4444}
+.zab-more{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--z-muted)}.zab-more:hover{color:var(--z-fg)}
+.zab-goals{display:flex;flex-direction:column;gap:8px;font-size:14px}
+.zab-goals li{display:flex;gap:10px;align-items:flex-start;line-height:1.5}
+.zab-goals li>span{flex-shrink:0;width:22px;height:22px;border-radius:999px;display:grid;place-items:center;background:var(--z-panel-2);border:1px solid var(--z-border);font-size:11.5px;font-weight:800;color:var(--z-muted)}
+.zab-progress{height:6px;border-radius:999px;background:var(--z-panel-2);overflow:hidden}.zab-progress span{display:block;height:100%;background:#16a34a;border-radius:999px}
+.zab-progress-label{font-size:12px;color:var(--z-muted);margin-top:-6px}
+.zab-dels{display:flex;flex-direction:column;gap:2px}
+.zab-dels li{display:flex;align-items:center;gap:10px;padding:7px 4px;border-radius:8px;font-size:14px}
+.zab-dels li>button{display:grid;place-items:center;color:var(--z-muted)}.zab-dels li>button:hover:not(:disabled){color:#16a34a}
+.zab-dels li>span{flex:1;min-width:0}
+.zab-dels li.is-done>span{text-decoration:line-through;color:var(--z-muted)}.zab-dels li.is-done>button{color:#16a34a}
+.zab-dels em{display:inline-flex;align-items:center;gap:4px;font-style:normal;font-size:12px;color:var(--z-muted);white-space:nowrap}
+.zab-links{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.zab-links a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--z-panel-2);border:1px solid var(--z-border);color:var(--z-fg);min-width:0}
+.zab-links a:hover{background:var(--z-hover)}.zab-links a>svg{color:var(--z-muted);flex-shrink:0}
+.zab-links a>span{flex:1;min-width:0;display:flex;flex-direction:column}.zab-links b{font-size:13.5px;font-weight:700}.zab-links small{font-size:12px;color:var(--z-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zab-dl{display:flex;flex-direction:column;gap:10px}
+.zab-dl>div{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}
+.zab-dl dt{display:flex;align-items:center;gap:6px;color:var(--z-muted)}.zab-dl dd{font-weight:600;text-align:right}
+.zab-status{display:inline-block;padding:2px 10px;border-radius:999px;color:#fff;font-size:12px;font-weight:700}
+.zab-person,.zab-group{display:inline-flex;align-items:center;gap:6px}.zab-group i{width:9px;height:9px;border-radius:3px}
+.zab-status-pick{display:flex;flex-wrap:wrap;gap:6px}
+.zab-status-pick button{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-radius:999px;border:1px solid var(--z-border);font-size:12.5px;font-weight:600;color:var(--z-fg)}
+.zab-status-pick button i{width:8px;height:8px;border-radius:999px}.zab-status-pick button.is-on{border-color:var(--z-fg);background:var(--z-hover)}
+@media(max-width:1000px){.zab{grid-template-columns:1fr}.zab-side{position:static;order:-1}}
+@media(max-width:600px){.zab-row{flex-wrap:wrap}.zab-row .zab-date,.zab-row .zab-label{flex:1 1 100%}}

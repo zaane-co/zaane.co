@@ -67,7 +67,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   let taskRows:Task[]=[];
   if(id){
    const [{data:pr},{data:pm},{data:tk}]=await Promise.all([
-    db.from('zarn_projects').select('id,name,description,color,lead_id,brief,created_by,created_at,group_id,archived_at').eq('id',id).maybeSingle(),
+    db.from('zarn_projects').select('id,name,description,color,lead_id,brief,created_by,created_at,group_id,archived_at,about').eq('id',id).maybeSingle(),
     db.from('zarn_project_members').select('user_id').eq('project_id',id),
     db.from('zarn_tasks').select('*').eq('project_id',id).order('position'),
    ]);
@@ -263,7 +263,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
    </div>}
   </div>
   {view==='chat'?<div className="zn-client-body">{chatId?<ChannelView id={chatId} embedded/>:<p className="zn-loading">Setting up the project chat…</p>}</div>
-  :<div className="zp-body" data-lenis-prevent>{view==='saved'?<SavedMessages/>:view==='team'&&project?<ProjectTeam project={project} members={members} canManage={canManage} onInvite={()=>setInviting(true)} onRemove={u=>void removeMember(u)}/>:view==='docs'&&id?<ProjectDocs projectId={id}/>:view==='vault'&&id?<div className="zpx-wrap"><ClientVault projectId={id}/></div>:view==='brief'&&project?<ProjectBrief project={project} canEdit={canManage} onSaved={b=>setProject(p=>p&&{...p,brief:b})} clientName={project.lead_id?(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project.lead_id);return c?z.title(c):'';})():''}/>:empty??(view==='list'?listView:view==='kanban'?kanbanView:timelineView)}</div>}
+  :<div className="zp-body" data-lenis-prevent>{view==='saved'?<SavedMessages/>:view==='team'&&project?<ProjectTeam project={project} members={members} canManage={canManage} onInvite={()=>setInviting(true)} onRemove={u=>void removeMember(u)}/>:view==='docs'&&id?<ProjectDocs projectId={id}/>:view==='vault'&&id?<div className="zpx-wrap"><ClientVault projectId={id}/></div>:view==='brief'&&project?<ProjectBrief project={project} canEdit={canManage} members={members} onSaved={(b,ab)=>setProject(p=>p&&{...p,brief:b,about:ab as Record<string,unknown>|undefined})} clientName={project.lead_id?(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project.lead_id);return c?z.title(c):'';})():''}/>:empty??(view==='list'?listView:view==='kanban'?kanbanView:timelineView)}</div>}
 
   {form&&<Modal title="New task" onClose={()=>setForm(null)} wide><form className="zn-modal-body" onSubmit={create}>
    <label className="zn-label">Task name<input className="zn-input" autoFocus maxLength={200} value={form.title} onChange={e=>setForm(f=>f&&{...f,title:e.target.value})} placeholder="What needs doing?"/></label>

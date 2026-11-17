@@ -11,7 +11,7 @@ import {subscribePush} from '@/lib/zarn-push-client';
 
 export type ZEvent={table:'zarn_messages';type:'INSERT'|'UPDATE'|'DELETE';row:ZMessage}|{table:'zarn_reactions';type:'INSERT'|'DELETE';row:ZReaction};
 type Unread=Record<string,{unread:number;mentions:number}>;
-export type ZProject={id:string;name:string;description:string;color:string;lead_id:string|null;brief:string;created_by:string|null;created_at:string;group_id:string|null;archived_at:string|null};
+export type ZProject={id:string;name:string;description:string;color:string;lead_id:string|null;brief:string;created_by:string|null;created_at:string;group_id:string|null;archived_at:string|null;about?:Record<string,unknown>};
 export type ZProjectGroup={id:string;name:string;color:string;position:number;created_by:string|null};
 export type ZStatus={key:string;label:string;color:string;position:number;builtin:boolean;created_by:string|null};
 const DEFAULT_STATUSES:ZStatus[]=[{key:'todo',label:'To-do',color:'#71717a',position:0,builtin:true,created_by:null},{key:'in_progress',label:'On progress',color:'#2563eb',position:1,builtin:true,created_by:null},{key:'in_review',label:'In review',color:'#d97706',position:2,builtin:true,created_by:null},{key:'done',label:'Done',color:'#16a34a',position:3,builtin:true,created_by:null}];
