@@ -55,11 +55,14 @@ export default function Projects(){
  const canEditGroup=(g:{created_by:string|null})=>g.created_by===me.user_id||me.zarnAdmin;
  async function renameGroup(id:string,name:string){setRenaming(null);const n=name.trim();if(n)await db.from('zarn_project_groups').update({name:n.slice(0,60)}).eq('id',id);void reloadProjects();}
  async function deleteGroup(id:string,n:number){if(!await confirm({title:'Delete this group?',message:n?`Its ${n} project${n===1?'':'s'} stay, under “No group”.`:'The group is empty.',confirm:'Delete group',danger:true}))return;await db.from('zarn_project_groups').delete().eq('id',id);void reloadProjects();}
- const card=(p:typeof inHouse[number])=><Link key={p.id} href={`/zarn/projects/${p.id}`} className={`zp-project-card${p.archived_at?' is-archived':''}`}><span className="zp-badge" style={{background:p.color}}>{p.name.slice(0,1).toUpperCase()}</span><b>{p.name}</b>{p.description&&<p>{p.description}</p>}</Link>;
+ const card=(p:typeof inHouse[number])=><Link key={p.id} href={`/zarn/projects/${p.id}`} className={`zp-project-card${p.archived_at?' is-archived':''}`}>
+  <span className="zpc-top"><span className="zp-badge" style={{background:p.color}}>{p.name.slice(0,1).toUpperCase()}</span><b>{p.name}</b>{p.archived_at&&<em className="zpc-tag">Archived</em>}</span>
+  <p className="zpc-desc">{p.description||'No description yet.'}</p>
+ </Link>;
  return <div className="zn-page">
   <header className="zn-page-head"><div><h1><FolderKanban size={20}/>Projects</h1><p>Our in-house projects, by group. Each has its chat, board, docs, team and vault.</p></div>
    <button type="button" className="zn-btn is-primary" onClick={()=>setCreating(true)}><Plus size={15}/>New project</button></header>
-  <div className="zn-crm-list" data-lenis-prevent>
+  <div className="zn-crm-list zpg-list" data-lenis-prevent>
    {projects===null?<p className="zn-loading">Loading…</p>:inHouse.length||projectGroups.length?<>
     {groups.map(g=><section key={g.id||'none'} className="zpg-group">
      <header className="zpg-head"><i style={{background:g.color}}/>

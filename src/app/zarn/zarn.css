@@ -869,7 +869,7 @@ html:has(.zarn.is-light),body:has(.zarn.is-light),html:has(.zarn-auth.is-light),
 .zp-colors button{width:28px;height:28px;border-radius:8px;border:2px solid transparent}
 .zp-colors button.is-on{border-color:var(--z-fg)}
 .zp-project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding-top:16px}
-.zp-project-card{display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:var(--z-panel);border:1px solid var(--z-border);color:inherit}
+.zp-project-card{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:14px;background:var(--z-panel);border:1px solid var(--z-border);color:inherit;min-width:0}
 .zp-project-card:hover{border-color:var(--z-muted)}
 .zp-project-card b{display:block;font-size:15px}.zp-project-card small{display:block;margin-top:2px;font-size:12.5px;color:var(--z-muted)}
 @media(max-width:760px){.zp-hide-sm{display:none}.zp-head,.zp-bar,.zp-body{padding-left:16px;padding-right:16px}}
@@ -2082,3 +2082,11 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zpx-doc{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:var(--z-panel-2);border:1px solid var(--z-border);min-width:0}
 .zpx-doc:hover{background:var(--z-hover)}
 .zpx-doc>span{display:flex;flex-direction:column;min-width:0}.zpx-doc b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.zpx-doc small{font-size:12px;color:var(--z-muted)}
+
+.zpg-list{padding-top:20px;gap:0}
+.zpg-list .zp-project-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));padding-top:0}
+.zpc-top{display:flex;align-items:center;gap:12px;min-width:0}
+.zpc-top .zp-badge{width:36px;height:36px;border-radius:10px;font-size:15px;flex-shrink:0}
+.zpc-top b{flex:1;min-width:0;font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zpc-tag{font-style:normal;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--z-border);color:var(--z-fg)}
+.zpc-desc{font-size:13px;line-height:1.45;color:var(--z-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.9em}
