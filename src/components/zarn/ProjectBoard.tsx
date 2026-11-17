@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,LayoutTemplate,List,ListChecks,ListFilter,MessageSquare,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
+import {Archive,ArchiveRestore,BookOpen,FolderInput,KeyRound,Users as UsersIcon,FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,LayoutTemplate,List,ListChecks,ListFilter,MessageSquare,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
 import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal,PeoplePicker} from './Dialogs';
 import AddStatusDialog from './AddStatusDialog';
@@ -13,6 +13,8 @@ import TemplateDialog from './Templates';
 import {Avatar,dayOf,timeOf} from './format';
 import SavedMessages from './SavedMessages';
 import ChannelView from './ChannelView';
+import ClientVault from './ClientVault';
+import {MoveToGroup,ProjectDocs,ProjectTeam} from './ProjectExtras';
 import Dropdown from '@/components/ui/Dropdown';
 import {useConfirm} from './ConfirmProvider';
 
@@ -20,7 +22,7 @@ export type TaskStatus=string;
 type Priority='low'|'medium'|'high';
 type Task={id:string;project_id:string|null;lead_id?:string|null;title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string|null;due_at:string|null;position:number;created_by:string|null;created_at:string};
 type Comment={id:string;task_id:string;user_id:string|null;body:string;created_at:string};
-type View='kanban'|'timeline'|'list'|'saved'|'brief'|'chat';
+type View='kanban'|'timeline'|'list'|'saved'|'brief'|'chat'|'team'|'docs'|'vault';
 type Form={title:string;description:string;status:TaskStatus;type:string;priority:Priority;start_at:string;due_at:string;project_id:string;assignees:string[]};
 
 const BASE_STATUSES:{key:TaskStatus;label:string;color:string}[]=[{key:'todo',label:'To-do',color:'#71717a'},{key:'in_progress',label:'On progress',color:'#2563eb'},{key:'in_review',label:'In review',color:'#d97706'},{key:'done',label:'Done',color:'#16a34a'}];
@@ -54,10 +56,10 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  // Deactivated people stay in the database (their messages too) but drop off the member list.
  const members=useMemo(()=>allMembers.filter(u=>!people[u]?.deactivated_at),[allMembers,people]);
  const [view,setView]=useState<View>(id?'chat':'list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
- const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
+ const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[movingGroup,setMovingGroup]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
  const [formMembers,setFormMembers]=useState<string[]|null>(null),[templates,setTemplates]=useState<{save?:boolean}|null>(null);
 
- useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!multi&&(v==='brief'||v==='chat')))setView(v);},[mine,multi]);
+ useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!multi&&(v==='brief'||v==='chat'||v==='team'||v==='docs'||v==='vault')))setView(v);},[mine,multi]);
  const pick=(v:View)=>{setView(v);window.history.replaceState(null,'',`?view=${v}`);};
  const everyone=useMemo(()=>team.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member').map(m=>m.user_id),[team]);
 
@@ -65,7 +67,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   let taskRows:Task[]=[];
   if(id){
    const [{data:pr},{data:pm},{data:tk}]=await Promise.all([
-    db.from('zarn_projects').select('id,name,description,color,lead_id,brief,created_by,created_at').eq('id',id).maybeSingle(),
+    db.from('zarn_projects').select('id,name,description,color,lead_id,brief,created_by,created_at,group_id,archived_at').eq('id',id).maybeSingle(),
     db.from('zarn_project_members').select('user_id').eq('project_id',id),
     db.from('zarn_tasks').select('*').eq('project_id',id).order('position'),
    ]);
@@ -158,6 +160,14 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   void refreshDue();
   if(self){await reloadProjects();router.push('/zarn/projects');}
  }
+ // Archived projects leave the sidebar and the main list but keep everything; restore any time.
+ async function archiveProject(){
+  if(!project)return;const on=!project.archived_at;
+  if(on&&!await confirm({title:'Archive this project?',message:`“${project.name}” moves to Archived. Its chat, tasks, docs and vault are kept, and you can restore it any time.`,confirm:'Archive'}))return;
+  const archived_at=on?new Date().toISOString():null;
+  const {error}=await db.from('zarn_projects').update({archived_at}).eq('id',project.id);
+  if(!error){setProject(p=>p&&{...p,archived_at});await reloadProjects();}
+ }
  async function deleteProject(){
   if(!await confirm({title:'Delete this project?',message:`“${project?.name}” and all its tasks will be deleted. This can’t be undone.`,confirm:'Delete project',danger:true}))return;
   await db.from('zarn_projects').delete().eq('id',id!);await reloadProjects();router.push('/zarn/projects');
@@ -225,7 +235,11 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  })();
 
  const openTask=tasks.find(t=>t.id===open);
- const views:[View,string,React.ReactNode][]=[...(multi?[]:[['chat','Chat',<MessageSquare key="c" size={15}/>] as [View,string,React.ReactNode]]),['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(leadId?[]:mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as [View,string,React.ReactNode]]:[['brief','Brief',<FileText key="b" size={15}/>] as [View,string,React.ReactNode]])];
+ type Tab=[View,string,React.ReactNode];
+ // A project: Chat, About, the board (list / kanban / timeline), Team, Documentation and Vault.
+ const views:Tab[]=multi?[['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],...(mine?[['saved','Saved',<Bookmark key="s" size={15}/>] as Tab]:[])]
+  :[['chat','Chat',<MessageSquare key="c" size={15}/>],['brief','About',<FileText key="b" size={15}/>],['list','List',<List key="l" size={15}/>],['kanban','Kanban',<Kanban key="k" size={15}/>],['timeline','Timeline',<ChartGantt key="t" size={15}/>],
+   ...(leadId?[]:[['team','Team',<UsersIcon key="tm" size={15}/>] as Tab,['docs','Docs',<BookOpen key="d" size={15}/>] as Tab,['vault','Vault',<KeyRound key="v" size={15}/>] as Tab])];
  // Every project has its own chat, shared by the project's members.
  const chatId=id?z.channels.find(c=>c.kind==='project'&&c.project_id===id)?.id:undefined,chatUnread=chatId&&view!=='chat'?z.unread[chatId]?.unread??0:0;
  return <div className="zn-page zp-page">
@@ -235,12 +249,12 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
    {!mine&&<div className="zp-head-right">
     <button type="button" className="zp-members" aria-label="Project members" data-tip="Members" onClick={()=>setShowMembers(true)}><Stack ids={members} max={4}/></button>
     <button type="button" className="zp-btn" onClick={()=>setInviting(true)}><UserPlus size={15}/>Invite</button>
-    {canManage&&<div className="zp-menu"><button type="button" className="zp-icon-btn" aria-label="Project menu" onClick={()=>setMenu(v=>!v)}><Ellipsis size={17}/></button>{menu&&<div className="zp-menu-pop"><button type="button" disabled={!tasks.length} onClick={()=>{setMenu(false);setTemplates({save:true});}}><LayoutTemplate size={14}/>Save as template</button><button type="button" onClick={()=>{setMenu(false);void deleteProject();}}><Trash2 size={14}/>Delete project</button></div>}</div>}
+    {canManage&&<div className="zp-menu"><button type="button" className="zp-icon-btn" aria-label="Project menu" onClick={()=>setMenu(v=>!v)}><Ellipsis size={17}/></button>{menu&&<div className="zp-menu-pop"><button type="button" disabled={!tasks.length} onClick={()=>{setMenu(false);setTemplates({save:true});}}><LayoutTemplate size={14}/>Save as template</button>{!project!.lead_id&&<button type="button" onClick={()=>{setMenu(false);setMovingGroup(true);}}><FolderInput size={14}/>Move to group</button>}<button type="button" onClick={()=>{setMenu(false);void archiveProject();}}>{project!.archived_at?<><ArchiveRestore size={14}/>Restore from archive</>:<><Archive size={14}/>Archive project</>}</button><button type="button" onClick={()=>{setMenu(false);void deleteProject();}}><Trash2 size={14}/>Delete project</button></div>}</div>}
    </div>}
   </header>}
   <div className="zp-bar">
    <div className="zp-tabs" role="tablist" aria-label="View">{views.map(([k,l,i])=><button key={k} type="button" role="tab" aria-selected={view===k} className={view===k?'is-on':''} onClick={()=>pick(k)}>{i}{l}{k==='chat'&&chatUnread>0&&<span className="zp-tab-count">{chatUnread>99?'99+':chatUnread}</span>}</button>)}</div>
-   {view!=='saved'&&view!=='chat'&&<div className="zp-tools">
+   {view!=='saved'&&view!=='chat'&&view!=='team'&&view!=='docs'&&view!=='vault'&&view!=='brief'&&<div className="zp-tools">
     <label className="zp-search"><Search size={14}/><input placeholder="Search" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search tasks"/></label>
     <Dropdown variant="toolbar" label="Priority" icon={<ListFilter size={14}/>} value={prio} onChange={v=>setPrio(v as 'all'|Priority)} options={[{value:'all',label:'All priorities'},...priorities.map(p=>({value:p.key,label:p.label}))]}/>
     <Dropdown variant="toolbar" label="Assignee" value={who} onChange={setWho} options={[{value:'all',label:'Everyone'},{value:'me',label:'Assigned to me'},...filterPeople.map(m=>({value:m,label:people[m]?.display_name??'Member'}))]}/>
@@ -249,7 +263,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
    </div>}
   </div>
   {view==='chat'?<div className="zn-client-body">{chatId?<ChannelView id={chatId} embedded/>:<p className="zn-loading">Setting up the project chat…</p>}</div>
-  :<div className="zp-body" data-lenis-prevent>{view==='saved'?<SavedMessages/>:view==='brief'&&project?<ProjectBrief project={project} canEdit={canManage} onSaved={b=>setProject(p=>p&&{...p,brief:b})} clientName={project.lead_id?(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project.lead_id);return c?z.title(c):'';})():''}/>:empty??(view==='list'?listView:view==='kanban'?kanbanView:timelineView)}</div>}
+  :<div className="zp-body" data-lenis-prevent>{view==='saved'?<SavedMessages/>:view==='team'&&project?<ProjectTeam project={project} members={members} canManage={canManage} onInvite={()=>setInviting(true)} onRemove={u=>void removeMember(u)}/>:view==='docs'&&id?<ProjectDocs projectId={id}/>:view==='vault'&&id?<div className="zpx-wrap"><ClientVault projectId={id}/></div>:view==='brief'&&project?<ProjectBrief project={project} canEdit={canManage} onSaved={b=>setProject(p=>p&&{...p,brief:b})} clientName={project.lead_id?(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project.lead_id);return c?z.title(c):'';})():''}/>:empty??(view==='list'?listView:view==='kanban'?kanbanView:timelineView)}</div>}
 
   {form&&<Modal title="New task" onClose={()=>setForm(null)} wide><form className="zn-modal-body" onSubmit={create}>
    <label className="zn-label">Task name<input className="zn-input" autoFocus maxLength={200} value={form.title} onChange={e=>setForm(f=>f&&{...f,title:e.target.value})} placeholder="What needs doing?"/></label>
@@ -273,6 +287,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   {showMembers&&<Modal title={`Members · ${members.length}`} onClose={()=>setShowMembers(false)}><ul className="zn-list zn-list-scroll zn-member-list">{members.map(u=>{const owner=project?.created_by===u,self=u===me.user_id;return <li key={u}><div className="zn-person"><Avatar m={people[u]} size={32}/><span><b>{people[u]?.display_name??'Member'}{self&&' (you)'}</b><small>{owner?'Owner':people[u]?.title||people[u]?.email||''}</small></span>{!owner&&(canManage||self)&&<button type="button" className="zn-remove" onClick={()=>void removeMember(u)}>{self?'Leave':'Remove'}</button>}</div></li>;})}</ul><div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={()=>{setShowMembers(false);setInviting(true);}}><UserPlus size={14}/>Invite</button><button type="button" className="zn-btn is-primary" onClick={()=>setShowMembers(false)}>Done</button></div></Modal>}
   {templates&&<TemplateDialog target={{projectId:id??null,leadId:leadId??null}} candidates={id?members:leadId?clientTeam:everyone} onClose={()=>setTemplates(null)} onApplied={()=>{void load();void refreshDue();}}
    start={templates.save?{name:`${project?.name??'Project'} template`,items:[...tasks].sort((a,b)=>a.position-b.position).map(t=>({title:t.title,...(t.type?{phase:t.type}:{}),...(t.description?{description:t.description.slice(0,1000)}:{}),...(t.priority==='high'?{priority:'high' as const}:{})}))}:undefined}/>}
+  {movingGroup&&project&&<MoveToGroup project={project} onClose={()=>setMovingGroup(false)} onMoved={()=>{setMovingGroup(false);void reloadProjects();}}/>}
   {addingStatus&&<AddStatusDialog onClose={()=>setAddingStatus(null)} onAdded={k=>addingStatus.then?.(k)}/>}
   {newProject&&<NewProject clientId={leadId} onClose={()=>setNewProject(null)} onCreated={pid=>newProject.then?.(pid)}/>}
   {inviting&&<PeoplePicker title="Invite to project" confirm="Invite" exclude={members} onClose={()=>setInviting(false)} onPick={invite}/>}

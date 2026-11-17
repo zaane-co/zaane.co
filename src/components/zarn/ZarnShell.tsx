@@ -1,4 +1,5 @@
 'use client';
+import {Fragment} from 'react';
 import {useEffect,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
@@ -171,7 +172,9 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
      {area==='projects'&&<>
       {link('/zarn/projects',<FolderKanban size={15}/>,'All projects')}
       <button type="button" className="zn-nav-item zn-add-client" onClick={()=>setNewProject(true)}><Plus size={15}/><span>New project</span></button>
-      {section('myprojects','My projects',(z.projects??[]).length?(z.projects??[]).map(p=><Link key={p.id} href={`/zarn/projects/${p.id}`} className={`zn-nav-item${pathname===`/zarn/projects/${p.id}`?' is-active':''}`}><i className="zp-dot" style={{background:p.color}}>{p.name.slice(0,1).toUpperCase()}</i><span>{p.name}</span>{(()=>{const c=z.channels.find(x=>x.kind==='project'&&x.project_id===p.id),n=c&&!z.membership[c.id]?.muted?z.unread[c.id]?.unread??0:0;return n?<em className="zn-badge is-soft">{n>99?'99+':n}</em>:null;})()}</Link>):<p className="zn-nav-note">No projects yet.</p>)}
+      {(()=>{const own=(z.projects??[]).filter(p=>!p.lead_id),live=own.filter(p=>!p.archived_at),arch=own.filter(p=>p.archived_at),row=(p:typeof own[number])=><Link key={p.id} href={`/zarn/projects/${p.id}`} className={`zn-nav-item${pathname===`/zarn/projects/${p.id}`?' is-active':''}`}><i className="zp-dot" style={{background:p.color}}>{p.name.slice(0,1).toUpperCase()}</i><span>{p.name}</span>{(()=>{const c=z.channels.find(x=>x.kind==='project'&&x.project_id===p.id),n=c&&!z.membership[c.id]?.muted?z.unread[c.id]?.unread??0:0;return n?<em className="zn-badge is-soft">{n>99?'99+':n}</em>:null;})()}</Link>;
+       const groups=[...z.projectGroups.map(g=>({id:g.id,name:g.name,list:live.filter(p=>p.group_id===g.id)})),{id:'none',name:'No group',list:live.filter(p=>!p.group_id||!z.projectGroups.some(g=>g.id===p.group_id))}].filter(g=>g.list.length);
+       return <>{groups.length?groups.map(g=><Fragment key={g.id}>{section(`pg-${g.id}`,g.name,g.list.map(row))}</Fragment>):<p className="zn-nav-note">No projects yet.</p>}{arch.length>0&&section('pg-archived',`Archived · ${arch.length}`,arch.map(row))}</>;})()}
      </>}
      {area==='clients'&&<>
       {clients.length>6&&<label className="zn-client-search"><Search size={14}/><input placeholder="Find a client" value={clientQ} onChange={e=>setClientQ(e.target.value)}/></label>}

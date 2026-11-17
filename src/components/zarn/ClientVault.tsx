@@ -14,15 +14,17 @@ const strong=()=>{const set='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23
 const verb:Record<string,string>={create:'added',update:'changed',delete:'deleted',reveal:'viewed',copy:'copied',download:'downloaded',share_create:'made a client link for',share_revoke:'turned off the client link',share_open:'opened the link',share_reveal:'viewed',share_download:'downloaded'};
 const kindMeta:Record<Kind,{label:string;icon:React.ReactNode}>={login:{label:'Login',icon:<KeyRound size={14}/>},api:{label:'API key',icon:<Braces size={14}/>},env:{label:'Env settings',icon:<Terminal size={14}/>},file:{label:'Secret file',icon:<FileText size={14}/>}};
 // Logins for a client, kept encrypted. Passwords stay hidden until someone chooses to reveal or copy them, and that is logged.
-export default function ClientVault({leadId}:{leadId:string}){
+// Used by client spaces (leadId) and in-house projects (projectId); client links only exist for clients.
+export default function ClientVault({leadId,projectId}:{leadId?:string;projectId?:string}){
+ const owner=leadId?{lead_id:leadId}:{project_id:projectId!};
  const {me,people}=useZarn(),confirm=useConfirm();
  const [items,setItems]=useState<Item[]|null>(null),[admin,setAdmin]=useState(false),[err,setErr]=useState(''),[editing,setEditing]=useState<Item|'new'|null>(null),[log,setLog]=useState<Log[]|null>(null),[sharing,setSharing]=useState(false);
  const [shown,setShown]=useState<{id:string;secret:string}|null>(null),[copied,setCopied]=useState('');
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
  const load=useCallback(async()=>{
-  try{const d=await api({action:'list',lead_id:leadId});setItems(d.items);setAdmin(!!d.admin);setErr('');if(d.admin){try{setLog((await api({action:'log',lead_id:leadId})).log);}catch{}}}
+  try{const d=await api({action:'list',...owner});setItems(d.items);setAdmin(!!d.admin);setErr('');if(d.admin){try{setLog((await api({action:'log',...owner})).log);}catch{}}}
   catch(e){setErr(e instanceof Error?e.message:'Could not load the vault.');setItems([]);}
- },[leadId]);
+ },[leadId,projectId]);
  // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
  useEffect(()=>{void load();return()=>{if(timer.current)clearTimeout(timer.current);};},[load]);
  const hide=()=>{setShown(null);if(timer.current)clearTimeout(timer.current);};
@@ -43,7 +45,7 @@ export default function ClientVault({leadId}:{leadId:string}){
   try{await api({action:'delete',id:i.id});setItems(x=>(x??[]).filter(y=>y.id!==i.id));void load();}catch(e){setErr(e instanceof Error?e.message:'Could not delete it.');}
  }
  return <div className="zn-pane"><div className="zn-pane-inner">
-  <div className="zn-card-head"><h3><KeyRound size={15}/> Vault</h3><span className="zv-head-actions">{items&&items.length>0&&<button type="button" className="zn-btn" onClick={()=>setSharing(true)}><Send size={14}/>Share with client</button>}<button type="button" className="zn-btn is-primary" onClick={()=>setEditing('new')}><Plus size={14}/>Add</button></span></div>
+  <div className="zn-card-head"><h3><KeyRound size={15}/> Vault</h3><span className="zv-head-actions">{leadId&&items&&items.length>0&&<button type="button" className="zn-btn" onClick={()=>setSharing(true)}><Send size={14}/>Share with client</button>}<button type="button" className="zn-btn is-primary" onClick={()=>setEditing('new')}><Plus size={14}/>Add</button></span></div>
   <p className="zv-note"><ShieldCheck size={14}/>Logins, API keys, env settings and files are encrypted before they are saved and stay hidden until you reveal or copy them. Only this client’s team and admins can open the vault, and every reveal is logged. Don’t put secrets in chat or tasks. To give something to the client, use Share with client.</p>
   {err&&<p className="zn-error" role="alert">{err}</p>}
   {items===null?<p className="zn-loading">Loading…</p>:items.length?<ul className="zv-list">{items.map(i=><li key={i.id} className="zv-item">
@@ -60,21 +62,21 @@ export default function ClientVault({leadId}:{leadId:string}){
    </div></li>)}</ul>
    :<div className="zn-empty-state"><KeyRound size={26}/><h2>Nothing saved yet</h2><p>Keep this client’s logins, API keys, env settings and secret files here instead of in tasks or chat.</p></div>}
   {admin&&log&&log.length>0&&<section className="zv-log"><h4>Recent activity</h4><ul>{log.map(l=><li key={l.id}><b>{l.user_id===me.user_id?'You':l.user_id?people[l.user_id]?.display_name??'Someone':'The client'}</b> {verb[l.action]??l.action} <i>{l.item_label}</i><time>{dayOf(l.at)} {timeOf(l.at)}</time></li>)}</ul></section>}
-  {sharing&&items&&<ShareVault leadId={leadId} items={items} onClose={()=>setSharing(false)} onChanged={()=>void load()}/>}
-  {editing&&<VaultForm leadId={leadId} item={editing==='new'?null:editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);void load();}}/>}
+  {sharing&&items&&leadId&&<ShareVault leadId={leadId} items={items} onClose={()=>setSharing(false)} onChanged={()=>void load()}/>}
+  {editing&&<VaultForm owner={owner} item={editing==='new'?null:editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);void load();}}/>}
  </div></div>;
 }
-function VaultForm({leadId,item,onClose,onSaved}:{leadId:string;item:Item|null;onClose:()=>void;onSaved:()=>void}){
+function VaultForm({owner,item,onClose,onSaved}:{owner:{lead_id:string}|{project_id:string};item:Item|null;onClose:()=>void;onSaved:()=>void}){
  const [kind,setKind]=useState<Kind>(item?.kind??'login'),[label,setLabel]=useState(item?.label??''),[url,setUrl]=useState(item?.url??''),[username,setUsername]=useState(item?.username??''),[secret,setSecret]=useState(''),[note,setNote]=useState(item?.note??''),[file,setFile]=useState<File|null>(null),[show,setShow]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
  async function save(e:React.FormEvent){
   e.preventDefault();setBusy(true);setError('');
   try{
    if(kind==='file'){
     if(!file)throw new Error('Choose a file.');
-    const form=new FormData();form.set('lead_id',leadId);form.set('label',label);form.set('note',note);form.set('file',file);
+    const form=new FormData();for(const [k,v] of Object.entries(owner))form.set(k,v);form.set('label',label);form.set('note',note);form.set('file',file);
     const r=await fetch('/api/zarn/vault/file',{method:'POST',body:form});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Could not save the file.');
    }else if(item)await api({action:'update',id:item.id,label,url,username,note,...(secret?{secret}:{})});
-   else await api({action:'create',lead_id:leadId,kind,label,url,username,note,secret});
+   else await api({action:'create',...owner,kind,label,url,username,note,secret});
    onSaved();
   }catch(err){setError(err instanceof Error?err.message:'Could not save.');setBusy(false);}
  }

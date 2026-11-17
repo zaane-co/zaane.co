@@ -9,17 +9,19 @@ import {siteUrl} from '@/lib/newsletter';
 // and every reveal, copy, edit and delete is logged. Passwords are never returned in a list.
 const id=z.uuid();
 const kinds=z.enum(['login','api','env']);
+// A vault belongs to a client (lead_id) or an in-house project (project_id).
+const scope={lead_id:id.optional(),project_id:id.optional()};
 const field={label:z.string().trim().min(1).max(120),url:z.string().trim().max(500).default(''),username:z.string().trim().max(300).default(''),note:z.string().trim().max(2000).default('')};
 const actions=z.discriminatedUnion('action',[
- z.object({action:z.literal('list'),lead_id:id}),
- z.object({action:z.literal('create'),lead_id:id,kind:kinds.default('login'),...field,secret:z.string().max(20000).default('')}),
+ z.object({action:z.literal('list'),...scope}),
+ z.object({action:z.literal('create'),...scope,kind:kinds.default('login'),...field,secret:z.string().max(20000).default('')}),
  z.object({action:z.literal('update'),id,...field,secret:z.string().max(20000).optional()}),
  z.object({action:z.literal('share_create'),lead_id:id,item_ids:z.array(id).min(1).max(40),label:z.string().trim().max(120).default(''),password:z.string().min(6).max(100),hours:z.number().int().min(1).max(720),view_once:z.boolean().default(false)}),
  z.object({action:z.literal('share_list'),lead_id:id}),
  z.object({action:z.literal('share_revoke'),id}),
  z.object({action:z.literal('delete'),id}),
  z.object({action:z.literal('reveal'),id,purpose:z.enum(['view','copy']).default('view')}),
- z.object({action:z.literal('log'),lead_id:id}),
+ z.object({action:z.literal('log'),...scope}),
 ]);
 const fail=(error:string,status=400)=>Response.json({error},{status});
 export async function POST(request:Request){
@@ -30,20 +32,26 @@ export async function POST(request:Request){
  const parsed=actions.safeParse(await request.json().catch(()=>null));if(!parsed.success)return fail(parsed.error.issues[0]?.message||'Invalid request');
  const b=parsed.data,db=serviceClient();
  const admin=me.zarnAdmin;
- const log=(lead_id:string,item_id:string|null,item_label:string,action:'create'|'update'|'delete'|'reveal'|'copy'|'share_create'|'share_revoke')=>db.from('zarn_vault_log').insert({lead_id,item_id,item_label,user_id:me.user_id,action});
+ type Where={lead_id:string}|{project_id:string};
+ const where=(x:{lead_id?:string|null;project_id?:string|null}):Where|null=>x.lead_id&&!x.project_id?{lead_id:x.lead_id}:x.project_id&&!x.lead_id?{project_id:x.project_id}:null;
+ // Clients: that client's team and admins. Projects: the project's members and ZARN admins.
+ const allowedFor=async(w:Where|null)=>{if(!w)return false;if('lead_id' in w)return (await clientAccess(me,w.lead_id)).allowed;
+  if(admin)return true;const {data}=await db.from('zarn_project_members').select('user_id').eq('project_id',w.project_id).eq('user_id',me.user_id).maybeSingle();return !!data;};
+ const log=(w:Where,item_id:string|null,item_label:string,action:'create'|'update'|'delete'|'reveal'|'copy'|'share_create'|'share_revoke')=>db.from('zarn_vault_log').insert({...w,item_id,item_label,user_id:me.user_id,action});
  // Items are always checked against the client they belong to, not just the id.
- const load=async(itemId:string)=>{const {data}=await db.from('zarn_vault_items').select('*').eq('id',itemId).maybeSingle();if(!data)return null;const {allowed}=await clientAccess(me,data.lead_id);return allowed?data:null;};
+ const load=async(itemId:string)=>{const {data}=await db.from('zarn_vault_items').select('*').eq('id',itemId).maybeSingle();if(!data)return null;return (await allowedFor(where(data)))?data:null;};
  const safe=(r:Record<string,unknown>)=>({id:r.id,kind:r.kind,file_name:r.file_name,file_size:r.file_size,label:r.label,url:r.url,username:r.username,note:r.note,has_secret:!!r.secret_enc,created_by:r.created_by,updated_at:r.updated_at});
 
  if(b.action==='list'||b.action==='log'||b.action==='create'||b.action==='share_create'||b.action==='share_list'){
-  const {allowed}=await clientAccess(me,b.lead_id);if(!allowed)return fail('You don’t have access to this client.',403);
+  const w=where(b);if(!w||!(await allowedFor(w)))return fail('You don’t have access to this vault.',403);
+  if((b.action==='share_create'||b.action==='share_list')&&!('lead_id' in w))return fail('Links are only for client vaults.');
   if(b.action==='list'){
-   const {data}=await db.from('zarn_vault_items').select('*').eq('lead_id',b.lead_id).order('label');
+   const {data}=await db.from('zarn_vault_items').select('*').match(w).order('label');
    return Response.json({items:(data??[]).map(safe),admin});
   }
   if(b.action==='log'){
    if(!admin)return fail('Only admins can see the activity.',403);
-   const {data}=await db.from('zarn_vault_log').select('id,item_label,user_id,action,at').eq('lead_id',b.lead_id).order('at',{ascending:false}).limit(30);
+   const {data}=await db.from('zarn_vault_log').select('id,item_label,user_id,action,at').match(w).order('at',{ascending:false}).limit(30);
    return Response.json({log:data??[]});
   }
   if(b.action==='share_list'){
@@ -58,26 +66,26 @@ export async function POST(request:Request){
    const {data:sh,error:e}=await db.from('zarn_vault_shares').insert({lead_id:b.lead_id,token,label:b.label,password_hash:hashPassword(b.password),expires_at,view_once:b.view_once,created_by:me.user_id}).select('id').single();
    if(e||!sh)return fail('Could not create the link.');
    await db.from('zarn_vault_share_items').insert(its.map(i=>({share_id:sh.id,item_id:i.id})));
-   await log(b.lead_id,null,`${its.length} item${its.length===1?'':'s'} for the client`,'share_create');
+   await log(w,null,`${its.length} item${its.length===1?'':'s'} for the client`,'share_create');
    return Response.json({share:{id:sh.id,url:`${siteUrl()}/vault/${token}`,expires_at}});
   }
-  const {data,error}=await db.from('zarn_vault_items').insert({lead_id:b.lead_id,kind:b.kind,label:b.label,url:b.url,username:b.username,note:b.note,secret_enc:b.secret?encrypt(b.secret):'',created_by:me.user_id}).select('*').single();
+  const {data,error}=await db.from('zarn_vault_items').insert({...w,kind:b.kind,label:b.label,url:b.url,username:b.username,note:b.note,secret_enc:b.secret?encrypt(b.secret):'',created_by:me.user_id}).select('*').single();
   if(error||!data)return fail('Could not save the login.');
-  await log(b.lead_id,data.id,data.label,'create');
+  await log(w,data.id,data.label,'create');
   return Response.json({item:safe(data)});
  }
  if(b.action==='share_revoke'){
   const {data:sh}=await db.from('zarn_vault_shares').select('id,lead_id,label').eq('id',b.id).maybeSingle();
   if(!sh||!(await clientAccess(me,sh.lead_id)).allowed)return fail('Not found.',404);
   await db.from('zarn_vault_shares').update({revoked_at:new Date().toISOString()}).eq('id',sh.id);
-  await log(sh.lead_id,null,sh.label||'a client link','share_revoke');
+  await log({lead_id:sh.lead_id},null,sh.label||'a client link','share_revoke');
   return Response.json({ok:true});
  }
  const item=await load(b.id);if(!item)return fail('That login isn’t available.',404);
  if(b.action==='reveal'){
   if(!item.secret_enc)return Response.json({secret:''});
   let secret='';try{secret=decrypt(item.secret_enc);}catch{return fail('This password can’t be decrypted. The vault key may have changed.',500);}
-  await log(item.lead_id,item.id,item.label,b.purpose==='copy'?'copy':'reveal');
+  await log(where(item)!,item.id,item.label,b.purpose==='copy'?'copy':'reveal');
   return Response.json({secret},{headers:{'Cache-Control':'no-store'}});
  }
  if(b.action==='update'){
@@ -86,12 +94,12 @@ export async function POST(request:Request){
   if(b.secret!==undefined)patch.secret_enc=b.secret?encrypt(b.secret):'';
   const {data,error}=await db.from('zarn_vault_items').update(patch).eq('id',item.id).select('*').single();
   if(error||!data)return fail('Could not save the login.');
-  await log(item.lead_id,item.id,b.label,'update');
+  await log(where(item)!,item.id,b.label,'update');
   return Response.json({item:safe(data)});
  }
  // delete
  if(item.created_by!==me.user_id&&!admin)return fail('Only the person who added this login, or an admin, can delete it.',403);
  await db.from('zarn_vault_items').delete().eq('id',item.id);
- await log(item.lead_id,null,item.label,'delete');
+ await log(where(item)!,null,item.label,'delete');
  return Response.json({ok:true});
 }
