@@ -163,7 +163,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  // Archived projects leave the sidebar and the main list but keep everything; restore any time.
  async function archiveProject(){
   if(!project)return;const on=!project.archived_at;
-  if(on&&!await confirm({title:'Archive this project?',message:`“${project.name}” moves to Archived. Its chat, tasks, docs and vault are kept, and you can restore it any time.`,confirm:'Archive'}))return;
+  if(on&&!await confirm({danger:false,title:'Archive this project?',message:`“${project.name}” moves to Archived. Its chat, tasks, docs and vault are kept, and you can restore it any time.`,confirm:'Archive'}))return;
   const archived_at=on?new Date().toISOString():null;
   const {error}=await db.from('zarn_projects').update({archived_at}).eq('id',project.id);
   if(!error){setProject(p=>p&&{...p,archived_at});await reloadProjects();}

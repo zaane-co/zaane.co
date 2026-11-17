@@ -79,3 +79,34 @@ export function ProjectDocs({projectId}:{projectId:string}){
   :<div className="zn-empty-state"><h2>No documentation yet</h2><p>Write specs, notes, how-tos and decisions here. Everyone on the project can open and edit them.</p></div>}
  </div>;
 }
+
+// Create or edit a group: name and colour. Groups can exist empty; projects are added to them later.
+export function GroupDialog({group,onClose,onSaved}:{group?:{id:string;name:string;color:string};onClose:()=>void;onSaved:()=>void}){
+ const {db,me}=useZarn();
+ const [name,setName]=useState(group?.name??''),[color,setColor]=useState(group?.color??groupColors[1]),[busy,setBusy]=useState(false),[err,setErr]=useState('');
+ async function go(e:React.FormEvent){e.preventDefault();const n=name.trim();if(!n)return;setBusy(true);setErr('');
+  const {error}=group?await db.from('zarn_project_groups').update({name:n.slice(0,60),color}).eq('id',group.id)
+   :await db.from('zarn_project_groups').insert({id:crypto.randomUUID(),name:n.slice(0,60),color,created_by:me.user_id});
+  if(error){setErr(group?'Could not save the group.':'Could not create the group.');setBusy(false);return;}
+  onSaved();}
+ return <Modal title={group?'Edit group':'New group'} onClose={onClose}><form className="zn-modal-body" onSubmit={go}>
+  <label className="zn-label">Name<input className="zn-input" autoFocus maxLength={60} value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Products, Internal tools"/></label>
+  <div className="zn-label">Colour<div className="zp-colors">{groupColors.map(c=><button key={c} type="button" aria-label={c} aria-pressed={color===c} className={color===c?'is-on':''} style={{background:c}} onClick={()=>setColor(c)}/>)}</div></div>
+  {err&&<p className="zn-error" role="alert">{err}</p>}
+  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary" disabled={busy||!name.trim()}>{group?'Save':'Create group'}</button></div>
+ </form></Modal>;
+}
+
+// Put projects that are already made into a group.
+export function AddExisting({group,onClose,onDone}:{group:{id:string;name:string};onClose:()=>void;onDone:()=>void}){
+ const {db,projects}=useZarn();
+ const options=(projects??[]).filter(p=>!p.lead_id&&p.group_id!==group.id);
+ const [picked,setPicked]=useState<string[]>([]),[busy,setBusy]=useState(false),[err,setErr]=useState('');
+ async function go(){setBusy(true);setErr('');const {error}=await db.from('zarn_projects').update({group_id:group.id}).in('id',picked);if(error){setErr('Some projects could not be moved. Only a project’s owner or an admin can move it.');setBusy(false);return;}onDone();}
+ return <Modal title={`Add projects to ${group.name}`} onClose={onClose}><div className="zn-modal-body">
+  {options.length?<ul className="zpx-pick">{options.map(p=><li key={p.id}><label><input type="checkbox" checked={picked.includes(p.id)} onChange={e=>setPicked(x=>e.target.checked?[...x,p.id]:x.filter(i=>i!==p.id))}/><span className="zp-badge" style={{background:p.color,width:24,height:24,fontSize:12,borderRadius:7}}>{p.name.slice(0,1).toUpperCase()}</span><b>{p.name}</b>{p.archived_at&&<em className="zpc-tag">Archived</em>}</label></li>)}</ul>
+   :<p className="zn-nav-note">Every project is already in this group.</p>}
+  {err&&<p className="zn-error" role="alert">{err}</p>}
+  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button type="button" className="zn-btn is-primary" disabled={busy||!picked.length} onClick={()=>void go()}>Add {picked.length||''}</button></div>
+ </div></Modal>;
+}
