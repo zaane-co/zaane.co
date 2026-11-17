@@ -2006,3 +2006,18 @@ a.zn-act-row:hover{background:var(--z-hover)}
 }
 
 @media(min-width:861px){.zarn.is-drive .zn-sidebar{display:none}}
+.zdr-check{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--z-faint);display:grid;place-items:center;flex-shrink:0;opacity:0;color:#fff}
+.zdr-folder:hover .zdr-check,.zdr-card:hover .zdr-check,.zdr-table tr:hover .zdr-check,.zdr-check.is-on,.zdr-main:has(.zdr-selbar) .zdr-check{opacity:1}
+.zdr-check.is-on{background:var(--z-accent);border-color:var(--z-accent)}
+.zdr-folder.is-sel,.zdr-card.is-sel,.zdr-table tr.is-sel{background:var(--z-hover);box-shadow:inset 0 0 0 2px var(--z-accent)}
+.zdr-selbar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:10px 24px 0;padding:6px 10px;border-radius:999px;background:var(--z-panel-2);border:1px solid var(--z-border)}
+.zdr-selbar b{margin:0 10px 0 2px;font-size:14px}
+.zdr-selbar>button{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:999px;font-size:13px;font-weight:600;color:var(--z-fg)}
+.zdr-selbar>button:hover{background:var(--z-hover)}
+.zdr-selbar .zdr-selx{width:32px;padding:0;justify-content:center}
+.zdr-selbar .zdr-danger,.zdr-selbar .zdr-danger svg{color:#ef4444}
+.zdr-people{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.zdr-person{display:flex;align-items:center;gap:10px}
+.zdr-person b{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zdr-person .zn-btn{height:32px;padding:0 12px}
+@media(hover:none){.zdr-check{opacity:1}}

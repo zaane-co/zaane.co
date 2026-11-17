@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useRouter,useSearchParams} from 'next/navigation';
-import {Briefcase,ChevronRight,Clock,Download,File as FileIcon,FileText,Folder,FolderInput,FolderPlus,HardDrive,LayoutGrid,List,Loader2,MessageSquare,MoreVertical,Pencil,Plus,RotateCcw,Search,Share2,Star,Trash2,Upload,Users} from 'lucide-react';
+import {Briefcase,Check,CheckSquare,ChevronRight,X,Clock,Download,File as FileIcon,FileText,Folder,FolderInput,FolderPlus,HardDrive,LayoutGrid,List,Loader2,MessageSquare,MoreVertical,Pencil,Plus,RotateCcw,Search,Share2,Star,Trash2,Upload,Users} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import {Modal,PeoplePicker} from './Dialogs';
@@ -29,8 +29,8 @@ export default function Drive(){
  const {db,me,people,channels,title}=useZarn(),confirm=useConfirm(),router=useRouter(),params=useSearchParams();
  const [items,setItems]=useState<Item[]|null>(null),[stars,setStars]=useState<Set<string>>(new Set()),[err,setErr]=useState('');
  const [q,setQ]=useState(''),[layout,setLayout]=useState<'grid'|'list'>('grid'),[sort,setSort]=useState<'name'|'updated'>('updated');
- const [menu,setMenu]=useState<{item:Item;x:number;y:number}|null>(null),[newMenu,setNewMenu]=useState(false),[bgMenu,setBgMenu]=useState<{x:number;y:number}|null>(null);
- const [renaming,setRenaming]=useState<Item|null>(null),[naming,setNaming]=useState(false),[moving,setMoving]=useState<Item|null>(null),[sharingDoc,setSharingDoc]=useState<string|null>(null),[sharingFile,setSharingFile]=useState<Item|null>(null),[viewing,setViewing]=useState<Item|null>(null);
+ const [menu,setMenu]=useState<{item:Item;x:number;y:number}|null>(null),[newMenu,setNewMenu]=useState(false),[bgMenu,setBgMenu]=useState<{x:number;y:number}|null>(null),[sel,setSel]=useState<Set<string>>(new Set());
+ const [renaming,setRenaming]=useState<Item|null>(null),[naming,setNaming]=useState(false),[moving,setMoving]=useState<Item[]|null>(null),[sharingDoc,setSharingDoc]=useState<string|null>(null),[sharingItem,setSharingItem]=useState<Item|null>(null),[viewing,setViewing]=useState<Item|null>(null);
  const [uploads,setUploads]=useState<{name:string;done:boolean;err?:string}[]>([]),[dragOver,setDragOver]=useState<string|null>(null);
  const pick=useRef<HTMLInputElement>(null);
  const guest=me.account_type==='guest';
@@ -43,19 +43,20 @@ export default function Drive(){
  const clientName=useCallback((l:string|null)=>clients.find(c=>c.lead===l)?.name??'Client',[clients]);
 
  const load=useCallback(async()=>{
-  const [f,d,fl,s,fs,dm]=await Promise.all([
+  const [f,d,fl,s,fs,dm,fm]=await Promise.all([
    db.from('zarn_drive_folders').select('id,name,owner_id,drive,lead_id,parent_id,trashed_at,updated_at').limit(2000),
    db.from('zarn_docs').select('id,title,owner_id,drive,lead_id,folder_id,trashed_at,updated_at,visibility').limit(2000),
    db.from('zarn_files').select('id,name,owner_id,drive,lead_id,folder_id,trashed_at,updated_at,size,type').limit(2000),
    db.from('zarn_drive_stars').select('kind,item_id').eq('user_id',me.user_id),
    db.from('zarn_file_shares').select('file_id').eq('user_id',me.user_id),
    db.from('zarn_doc_members').select('doc_id').eq('user_id',me.user_id),
+   db.from('zarn_drive_folder_members').select('folder_id'),
   ]);
   if(f.error||d.error||fl.error){setErr('Drive could not load. If this keeps happening, the Drive update may not be installed yet.');setItems([]);return;}
-  const sharedFiles=new Set(((fs.data??[]) as {file_id:string}[]).map(x=>x.file_id)),sharedDocs=new Set(((dm.data??[]) as {doc_id:string}[]).map(x=>x.doc_id));
+  const sharedFolders=new Set(((fm.data??[]) as {folder_id:string}[]).map(x=>x.folder_id)),sharedFiles=new Set(((fs.data??[]) as {file_id:string}[]).map(x=>x.file_id)),sharedDocs=new Set(((dm.data??[]) as {doc_id:string}[]).map(x=>x.doc_id));
   type R=Record<string,unknown>;
   const all:Item[]=[
-   ...((f.data??[]) as R[]).map(x=>({kind:'folder' as const,id:x.id as string,name:x.name as string,owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.parent_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string})),
+   ...((f.data??[]) as R[]).map(x=>({kind:'folder' as const,id:x.id as string,name:x.name as string,owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.parent_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,shared:sharedFolders.has(x.id as string)})),
    ...((d.data??[]) as R[]).map(x=>({kind:'doc' as const,id:x.id as string,name:(x.title as string)||'Untitled',owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.folder_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,shared:sharedDocs.has(x.id as string)||x.visibility==='team'})),
    ...((fl.data??[]) as R[]).map(x=>({kind:'file' as const,id:x.id as string,name:x.name as string,owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.folder_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,size:x.size as number,type:x.type as string,shared:sharedFiles.has(x.id as string)})),
   ];
@@ -83,12 +84,12 @@ export default function Drive(){
   else if(list==='trash')r=items.filter(i=>i.trashed_at&&!buried(i));
   else if(list==='recent')r=items.filter(i=>i.kind!=='folder'&&alive(i)).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)).slice(0,60);
   else if(list==='starred')r=items.filter(i=>stars.has(`${i.kind}:${i.id}`)&&alive(i));
-  else if(list==='shared')r=items.filter(i=>i.owner_id!==me.user_id&&i.drive==='my'&&alive(i));
+  else if(list==='shared')r=items.filter(i=>i.owner_id!==me.user_id&&i.drive==='my'&&(!i.folder_id||!byId.has(i.folder_id))&&alive(i));
   else if(place)r=items.filter(i=>alive(i)&&i.folder_id===place.folder&&i.drive===place.drive&&(place.drive!=='my'||place.folder||i.owner_id===me.user_id)&&(place.drive!=='client'||i.lead_id===place.lead));
   else r=[];
   if(list==='recent'&&!q.trim())return r;
   return [...r].sort((a,b)=>(a.kind==='folder'?0:1)-(b.kind==='folder'?0:1)||(sort==='name'?a.name.localeCompare(b.name):b.updated_at.localeCompare(a.updated_at)));
- },[items,q,list,place,stars,alive,buried,me.user_id,sort]);
+ },[items,q,list,place,stars,alive,buried,me.user_id,sort,byId]);
 
  // Writes ------------------------------------------------------------------------------------------
  const table=(k:Kind)=>k==='folder'?'zarn_drive_folders':k==='doc'?'zarn_docs':'zarn_files';
@@ -133,14 +134,14 @@ export default function Drive(){
  }
  async function move(it:Item,to:Place){
   setErr('');
-  if(it.kind!=='folder'&&it.folder_id===to.folder&&it.drive===to.drive&&(to.drive!=='client'||it.lead_id===to.lead)){setMoving(null);return;}
+  if(it.kind!=='folder'&&it.folder_id===to.folder&&it.drive===to.drive&&(to.drive!=='client'||it.lead_id===to.lead))return true;
   const body:Record<string,unknown>={[parentCol(it.kind)]:to.folder};
   if(!to.folder){body.drive=to.drive;if(to.drive==='client'||it.kind!=='doc')body.lead_id=to.drive==='client'?to.lead:null;}
   if(it.kind==='doc'&&!to.folder&&to.drive!=='client')delete body.lead_id;
   const {error}=await db.from(table(it.kind)).update(body).eq('id',it.id);
-  if(fail(error,'Could not move it there.'))return;
-  setMoving(null);void load();
+  return !fail(error,'Could not move it there.');
  }
+ async function moveAll(list:Item[],to:Place){for(const it of list)if(!await move(it,to))break;setMoving(null);setSel(new Set());void load();}
  async function toggleStar(it:Item){
   const k=`${it.kind}:${it.id}`,on=stars.has(k);
   setStars(s=>{const n=new Set(s);if(on)n.delete(k);else n.add(k);return n;});
@@ -154,29 +155,45 @@ export default function Drive(){
   if(fail(error,back?'Could not restore it.':'Could not move it to the trash.'))return;
   patchLocal(it,{trashed_at:back?null:new Date().toISOString()});
  }
+ // Every file stored anywhere under a folder (any depth), so their stored copies can be removed too.
+ const filesUnder=(folderId:string)=>{const ids=new Set([folderId]);let grew=true;while(grew){grew=false;for(const x of items??[])if(x.kind==='folder'&&x.folder_id&&ids.has(x.folder_id)&&!ids.has(x.id)){ids.add(x.id);grew=true;}}
+  return (items??[]).filter(x=>x.kind==='file'&&x.folder_id&&ids.has(x.folder_id));};
  // Delete forever. Folders take everything inside with them; stored file copies are removed too.
- async function destroy(it:Item){
-  if(!await confirm({title:`Delete “${it.name}” forever?`,message:it.kind==='folder'?'Everything inside this folder is deleted too. This cannot be undone.':'This cannot be undone.',confirm:'Delete forever',danger:true}))return;
+ async function wipe(it:Item){
+  const files=it.kind==='folder'?filesUnder(it.id):it.kind==='file'?[it]:[];
+  for(const f of files){const r=await fetch(`/api/zarn/files?f=${f.id}`,{method:'DELETE'});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||'Could not delete a file inside.');}
+  if(it.kind!=='file'){const {error,count}=await db.from(table(it.kind)).delete({count:'exact'}).eq('id',it.id);if(error||!count)throw new Error('Only the owner or a ZARN admin can delete this for good.');}
+ }
+ async function destroy(list:Item[]){
+  if(!list.length)return;
+  const one=list.length===1?list[0]:null;
+  if(!await confirm({title:one?`Delete “${one.name}” forever?`:`Delete ${list.length} items forever?`,message:list.some(i=>i.kind==='folder')?'Everything inside folders is deleted too. This cannot be undone.':'This cannot be undone.',confirm:'Delete forever',danger:true}))return;
   setErr('');
-  try{
-   const files:Item[]=[];
-   if(it.kind==='folder'){const ids=new Set([it.id]);let grew=true;while(grew){grew=false;for(const x of items??[])if(x.kind==='folder'&&x.folder_id&&ids.has(x.folder_id)&&!ids.has(x.id)){ids.add(x.id);grew=true;}}
-    for(const x of items??[])if(x.kind==='file'&&x.folder_id&&ids.has(x.folder_id))files.push(x);}
-   else if(it.kind==='file')files.push(it);
-   for(const f of files){const r=await fetch(`/api/zarn/files?f=${f.id}`,{method:'DELETE'});if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||'Could not delete a file inside.');}
-   if(it.kind!=='file'){const {error,count}=await db.from(table(it.kind)).delete({count:'exact'}).eq('id',it.id);if(error||!count)throw new Error('Only the owner or a ZARN admin can delete this for good.');}
-   void load();
-  }catch(e){setErr(e instanceof Error?e.message:'Could not delete it.');void load();}
+  try{for(const it of list)await wipe(it);}catch(e){setErr(e instanceof Error?e.message:'Could not delete it.');}
+  setSel(new Set());void load();
  }
  async function emptyTrash(){
-  const mine=(items??[]).filter(i=>i.trashed_at&&!buried(i)&&(i.owner_id===me.user_id));
+  const mine=(items??[]).filter(i=>i.trashed_at&&!buried(i)&&i.owner_id===me.user_id);
   if(!mine.length||!await confirm({title:'Empty the trash?',message:`${mine.length} item${mine.length===1?'':'s'} you own will be deleted forever.`,confirm:'Empty trash',danger:true}))return;
-  for(const it of mine){
-   if(it.kind==='file')await fetch(`/api/zarn/files?f=${it.id}`,{method:'DELETE'});
-   else{if(it.kind==='folder')for(const x of items??[])if(x.kind==='file'&&x.folder_id===it.id)await fetch(`/api/zarn/files?f=${x.id}`,{method:'DELETE'});
-    await db.from(table(it.kind)).delete().eq('id',it.id);}
-  }
+  setErr('');
+  try{for(const it of mine)await wipe(it);}catch(e){setErr(e instanceof Error?e.message:'Some items could not be deleted.');}
   void load();
+ }
+ // Selection: Ctrl/Cmd/Shift-click or the tick box picks items; once something is picked, a plain click adds to it.
+ const keyOf=(it:Item)=>`${it.kind}:${it.id}`;
+ const toggle=(it:Item)=>setSel(s=>{const n=new Set(s);const k=keyOf(it);if(n.has(k))n.delete(k);else n.add(k);return n;});
+ const picked=(items??[]).filter(i=>sel.has(keyOf(i)));
+ const click=(e:React.MouseEvent,it:Item)=>{if(e.metaKey||e.ctrlKey||e.shiftKey||sel.size){e.preventDefault();toggle(it);}else open(it);};
+ useEffect(()=>{setSel(new Set());},[v,folderParam,leadParam]);
+ useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')setSel(new Set());};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[]);
+ const checkBox=(it:Item)=><button type="button" className={`zdr-check${sel.has(keyOf(it))?' is-on':''}`} aria-label={`Select ${it.name}`} aria-pressed={sel.has(keyOf(it))} onClick={e=>{e.stopPropagation();toggle(it);}}>{sel.has(keyOf(it))&&<Check size={12} strokeWidth={3}/>}</button>;
+ async function bulk(kind:'trash'|'restore'|'star'){
+  setErr('');
+  for(const it of picked){
+   if(kind==='star'){if(!stars.has(keyOf(it)))await toggleStar(it);}
+   else{const {error}=await db.from(table(it.kind)).update({trashed_at:kind==='restore'?null:new Date().toISOString()}).eq('id',it.id);if(error){setErr('Some items could not be changed.');}}
+  }
+  setSel(new Set());void load();
  }
 
  const open=(it:Item)=>{
@@ -196,7 +213,7 @@ export default function Drive(){
   onDragOver:(e:React.DragEvent)=>{if(to&&(e.dataTransfer.types.includes('application/x-zarn-drive')||e.dataTransfer.types.includes('Files'))){e.preventDefault();e.stopPropagation();setDragOver(key);}},
   onDragLeave:()=>setDragOver(d=>d===key?null:d),
   onDrop:(e:React.DragEvent)=>{setDragOver(null);if(!to)return;const raw=e.dataTransfer.getData('application/x-zarn-drive');e.preventDefault();e.stopPropagation();
-   if(raw){const [k,id]=raw.split(':');const it=items?.find(x=>x.kind===k&&x.id===id);if(it&&!(it.kind==='folder'&&it.id===to.folder))void move(it,to);}
+   if(raw){const [k,id]=raw.split(':');const it=items?.find(x=>x.kind===k&&x.id===id);if(it){const group=sel.has(keyOf(it))?picked:[it];void moveAll(group.filter(x=>!(x.kind==='folder'&&x.id===to.folder)),to);}}
    else if(e.dataTransfer.files.length&&place&&to.folder===place.folder&&to.drive===place.drive)void upload(Array.from(e.dataTransfer.files));},
  });
  const asPlace=(f:Item):Place=>({drive:f.drive,lead:f.lead_id,folder:f.id});
@@ -245,24 +262,30 @@ export default function Drive(){
      </div>
     </div>
    </header>
+   {sel.size>0&&<div className="zdr-selbar" role="toolbar" aria-label="Selected items">
+    <button type="button" className="zdr-selx" aria-label="Clear selection" onClick={()=>setSel(new Set())}><X size={16}/></button><b>{sel.size} selected</b>
+    {list==='trash'?<><button type="button" onClick={()=>void bulk('restore')}><RotateCcw size={15}/>Restore</button><button type="button" className="zdr-danger" onClick={()=>void destroy(picked)}><Trash2 size={15}/>Delete forever</button></>
+    :<><button type="button" onClick={()=>setMoving(picked)}><FolderInput size={15}/>Move</button><button type="button" onClick={()=>void bulk('star')}><Star size={15}/>Star</button><button type="button" className="zdr-danger" onClick={()=>void bulk('trash')}><Trash2 size={15}/>Trash</button></>}
+    <button type="button" onClick={()=>setSel(new Set(shown.map(keyOf)))}><CheckSquare size={15}/>Select all</button>
+   </div>}
    {list==='trash'&&<p className="zdr-note">Items in the trash can be restored. Only the owner or a ZARN admin can delete things for good.</p>}
    {err&&<p className="zn-error zdr-err" role="alert">{err}</p>}
    <div className="zdr-body" data-lenis-prevent>
     {items===null?<p className="zn-loading">Loading…</p>:!shown.length?<div className="zn-empty-state"><h2>{q?'Nothing matches':list==='trash'?'Trash is empty':list==='starred'?'No starred items':list==='shared'?'Nothing shared with you yet':place?.folder?'This folder is empty':'Nothing here yet'}</h2><p>{q?'Try another name.':canAdd?'Use New to add a folder, a doc or files, or drop files here.':'Items will show up here.'}</p></div>
     :layout==='grid'?<>
-     {shown.some(i=>i.kind==='folder')&&<><p className="zdr-group">Folders</p><div className="zdr-folders">{shown.filter(i=>i.kind==='folder').map(f=><div key={f.id} role="button" tabIndex={0} className="zdr-folder" {...dragProps(f)} {...(f.trashed_at?{}:dropOn(asPlace(f),`f:${f.id}`))} data-over={dragOver===`f:${f.id}`||undefined} onClick={()=>open(f)} onKeyDown={e=>{if(e.key==='Enter')open(f);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:f,x:e.clientX,y:e.clientY});}}>
-      {icon(f)}<span>{f.name}</span>{stars.has(`folder:${f.id}`)&&<Star size={12} className="zdr-star" fill="currentColor"/>}
+     {shown.some(i=>i.kind==='folder')&&<><p className="zdr-group">Folders</p><div className="zdr-folders">{shown.filter(i=>i.kind==='folder').map(f=><div key={f.id} role="button" tabIndex={0} className={`zdr-folder${sel.has(keyOf(f))?' is-sel':''}`} {...dragProps(f)} {...(f.trashed_at?{}:dropOn(asPlace(f),`f:${f.id}`))} data-over={dragOver===`f:${f.id}`||undefined} onClick={e=>click(e,f)} onKeyDown={e=>{if(e.key==='Enter')open(f);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:f,x:e.clientX,y:e.clientY});}}>
+      {checkBox(f)}{icon(f)}<span>{f.name}</span>{f.shared&&<Users size={13} className="zdr-faint"/>}{stars.has(`folder:${f.id}`)&&<Star size={12} className="zdr-star" fill="currentColor"/>}
       <button type="button" className="zdr-dots" aria-label={`More for ${f.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({item:f,x:r.right,y:r.bottom});}}><MoreVertical size={16}/></button>
      </div>)}</div></>}
-     {shown.some(i=>i.kind!=='folder')&&<><p className="zdr-group">Files</p><div className="zdr-grid">{shown.filter(i=>i.kind!=='folder').map(it=><div key={`${it.kind}:${it.id}`} role="button" tabIndex={0} className="zdr-card" {...dragProps(it)} onClick={()=>open(it)} onKeyDown={e=>{if(e.key==='Enter')open(it);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:it,x:e.clientX,y:e.clientY});}}>
-      <div className="zdr-card-top">{icon(it,16)}<b title={it.name}>{it.name}</b><button type="button" className="zdr-dots" aria-label={`More for ${it.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({item:it,x:r.right,y:r.bottom});}}><MoreVertical size={16}/></button></div>
+     {shown.some(i=>i.kind!=='folder')&&<><p className="zdr-group">Files</p><div className="zdr-grid">{shown.filter(i=>i.kind!=='folder').map(it=><div key={`${it.kind}:${it.id}`} role="button" tabIndex={0} className={`zdr-card${sel.has(keyOf(it))?' is-sel':''}`} {...dragProps(it)} onClick={e=>click(e,it)} onKeyDown={e=>{if(e.key==='Enter')open(it);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:it,x:e.clientX,y:e.clientY});}}>
+      <div className="zdr-card-top">{checkBox(it)}{icon(it,16)}<b title={it.name}>{it.name}</b><button type="button" className="zdr-dots" aria-label={`More for ${it.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({item:it,x:r.right,y:r.bottom});}}><MoreVertical size={16}/></button></div>
       <div className={`zdr-thumb is-${it.kind}`}>{it.kind==='file'&&isImage(it.type)?<img src={`/api/zarn/files?f=${it.id}`} alt="" loading="lazy"/>:it.kind==='doc'?<FileText size={42}/>:<em>{ext(it.name)}</em>}</div>
       <small><Avatar m={people[it.owner_id]} size={18}/>{list==='recent'||q?where(it):`${it.owner_id===me.user_id?'You':ownerName(it.owner_id)}`} · {dayOf(it.updated_at)}{stars.has(`${it.kind}:${it.id}`)&&<Star size={11} className="zdr-star" fill="currentColor"/>}</small>
      </div>)}</div></>}
     </>
     :<table className="zdr-table"><thead><tr><th>Name</th><th>Owner</th><th className="zdr-hide-sm">{list==='recent'||list==='starred'||q?'Location':'Last modified'}</th><th className="zdr-hide-sm">Size</th><th aria-label="Actions"/></tr></thead><tbody>
-     {shown.map(it=><tr key={`${it.kind}:${it.id}`} {...dragProps(it)} {...(it.kind==='folder'&&!it.trashed_at?dropOn(asPlace(it),`f:${it.id}`):{})} data-over={dragOver===`f:${it.id}`||undefined} onClick={()=>open(it)} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:it,x:e.clientX,y:e.clientY});}}>
-      <td><span className="zdr-name">{icon(it,18)}<b>{it.name}</b>{stars.has(`${it.kind}:${it.id}`)&&<Star size={12} className="zdr-star" fill="currentColor"/>}{it.shared&&<Users size={12} className="zdr-faint"/>}</span></td>
+     {shown.map(it=><tr key={`${it.kind}:${it.id}`} className={sel.has(keyOf(it))?'is-sel':''} {...dragProps(it)} {...(it.kind==='folder'&&!it.trashed_at?dropOn(asPlace(it),`f:${it.id}`):{})} data-over={dragOver===`f:${it.id}`||undefined} onClick={e=>click(e,it)} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:it,x:e.clientX,y:e.clientY});}}>
+      <td><span className="zdr-name">{checkBox(it)}{icon(it,18)}<b>{it.name}</b>{stars.has(`${it.kind}:${it.id}`)&&<Star size={12} className="zdr-star" fill="currentColor"/>}{it.shared&&<Users size={12} className="zdr-faint"/>}</span></td>
       <td><span className="zdr-owner"><Avatar m={people[it.owner_id]} size={20}/>{ownerName(it.owner_id)}</span></td>
       <td className="zdr-hide-sm">{list==='recent'||list==='starred'||q?where(it):dayOf(it.updated_at)}</td>
       <td className="zdr-hide-sm">{it.kind==='file'?size(it.size):'—'}</td>
@@ -274,8 +297,8 @@ export default function Drive(){
   </section>}
 
   {menu&&<ItemMenu item={menu.item} x={menu.x} y={menu.y} starred={stars.has(`${menu.item.kind}:${menu.item.id}`)} mine={menu.item.owner_id===me.user_id}
-   onOpen={()=>open(menu.item)} onRename={()=>setRenaming(menu.item)} onMove={()=>setMoving(menu.item)} onStar={()=>void toggleStar(menu.item)}
-   onShare={()=>menu.item.kind==='doc'?setSharingDoc(menu.item.id):setSharingFile(menu.item)} onTrash={()=>void trash(menu.item)} onRestore={()=>void trash(menu.item,true)} onDestroy={()=>void destroy(menu.item)} close={()=>setMenu(null)}/>}
+   onOpen={()=>open(menu.item)} onRename={()=>setRenaming(menu.item)} onMove={()=>setMoving([menu.item])} onStar={()=>void toggleStar(menu.item)}
+   onShare={()=>menu.item.kind==='doc'?setSharingDoc(menu.item.id):setSharingItem(menu.item)} onTrash={()=>void trash(menu.item)} onRestore={()=>void trash(menu.item,true)} onDestroy={()=>void destroy([menu.item])} close={()=>setMenu(null)}/>}
   {bgMenu&&<div className="zn-menu zdr-ctx" style={{left:Math.min(bgMenu.x,window.innerWidth-240),top:Math.min(bgMenu.y,window.innerHeight-140)}} onClick={e=>e.stopPropagation()} role="menu">
    <button type="button" onClick={()=>{setBgMenu(null);setNaming(true);}}><FolderPlus size={15}/>New folder</button>
    <button type="button" onClick={()=>{setBgMenu(null);void newDoc();}}><FileText size={15}/>New doc</button>
@@ -283,11 +306,9 @@ export default function Drive(){
   </div>}
   {naming&&<NameDialog title="New folder" initial="Untitled folder" confirm="Create" onClose={()=>setNaming(false)} onSave={n=>newFolder(n)}/>}
   {renaming&&<NameDialog title="Rename" initial={renaming.name} confirm="Rename" onClose={()=>setRenaming(null)} onSave={n=>rename(renaming,n)}/>}
-  {moving&&<MoveDialog item={moving} items={items??[]} clients={clients} guest={guest} onClose={()=>setMoving(null)} onMove={to=>move(moving,to)}/>}
+  {moving&&<MoveDialog picked={moving} items={items??[]} clients={clients} guest={guest} onClose={()=>setMoving(null)} onMove={to=>moveAll(moving,to)}/>}
   {sharingDoc&&<ShareDoc docId={sharingDoc} onClose={()=>{setSharingDoc(null);void load();}}/>}
-  {sharingFile&&<PeoplePicker title={`Share “${sharingFile.name}”`} confirm="Share" onClose={()=>setSharingFile(null)} onPick={async ids=>{
-   const {error}=await db.from('zarn_file_shares').upsert(ids.map(u=>({file_id:sharingFile.id,user_id:u})),{onConflict:'file_id,user_id',ignoreDuplicates:true});
-   if(error)throw new Error('Could not share it.');setSharingFile(null);void load();}}/>}
+  {sharingItem&&<ShareItem item={sharingItem} onClose={()=>{setSharingItem(null);void load();}}/>}
   {viewing&&viewing.kind==='file'&&(isImage(viewing.type)?<Modal title={viewing.name} wide onClose={()=>setViewing(null)}><div className="zdr-preview"><img src={`/api/zarn/files?f=${viewing.id}`} alt={viewing.name}/><a className="zn-btn" href={`/api/zarn/files?f=${viewing.id}&download=1`}><Download size={14}/>Download</a></div></Modal>
    :<DocViewer att={{name:viewing.name,type:viewing.type??''}} src={`/api/zarn/files?f=${viewing.id}`} dl={`/api/zarn/files?f=${viewing.id}&download=1`} onClose={()=>setViewing(null)}/>)}
  </div>;
@@ -298,7 +319,7 @@ function ItemMenu({item,x,y,starred,mine,onOpen,onRename,onMove,onStar,onShare,o
  useEffect(()=>{const el=ref.current;if(!el)return;const w=el.offsetWidth,h=el.offsetHeight;setPos({left:Math.max(8,Math.min(x-w,window.innerWidth-w-8)),top:Math.max(8,Math.min(y,window.innerHeight-h-8))});},[x,y]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')close();};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[close]);
  const act=(f:()=>void)=>()=>{close();f();};
- const canShare=item.drive==='my'&&mine&&item.kind!=='folder';
+ const canShare=item.drive==='my'&&mine;
  return <div ref={ref} className="zn-menu zdr-ctx" style={pos} onClick={e=>e.stopPropagation()} role="menu">
   {item.trashed_at?<>
    <button type="button" onClick={act(onRestore)}><RotateCcw size={15}/>Restore</button>
@@ -327,24 +348,50 @@ function NameDialog({title,initial,confirm,onClose,onSave}:{title:string;initial
 }
 
 // Pick a destination: any drive's root, or any folder you can reach (never the item itself or a folder inside it).
-function MoveDialog({item,items,clients,guest,onClose,onMove}:{item:Item;items:Item[];clients:{lead:string;name:string}[];guest:boolean;onClose:()=>void;onMove:(to:Place)=>Promise<void>|void}){
+function MoveDialog({picked,items,clients,guest,onClose,onMove}:{picked:Item[];items:Item[];clients:{lead:string;name:string}[];guest:boolean;onClose:()=>void;onMove:(to:Place)=>Promise<void>|void}){
  const {me}=useZarn();
  const [at,setAt]=useState<Place|null>(null),[sel,setSel]=useState<Place|null>(null),[busy,setBusy]=useState(false);
  const folders=items.filter(i=>i.kind==='folder'&&!i.trashed_at);
- const banned=useMemo(()=>{const s=new Set<string>();if(item.kind!=='folder')return s;s.add(item.id);let grew=true;while(grew){grew=false;for(const f of folders)if(f.folder_id&&s.has(f.folder_id)&&!s.has(f.id)){s.add(f.id);grew=true;}}return s;},[item,folders]);
+ const banned=useMemo(()=>{const s=new Set<string>(picked.filter(i=>i.kind==='folder').map(i=>i.id));if(!s.size)return s;let grew=true;while(grew){grew=false;for(const f of folders)if(f.folder_id&&s.has(f.folder_id)&&!s.has(f.id)){s.add(f.id);grew=true;}}return s;},[picked,folders]);
  const roots:{p:Place;label:string}[]=[{p:{drive:'my',lead:null,folder:null},label:'My Drive'},...(!guest?[{p:{drive:'team' as const,lead:null,folder:null},label:'Team drive'}]:[]),...clients.map(c=>({p:{drive:'client' as const,lead:c.lead,folder:null},label:c.name}))];
  const kids=at?folders.filter(f=>f.folder_id===at.folder&&f.drive===at.drive&&(at.drive!=='client'||f.lead_id===at.lead)&&(at.drive!=='my'||at.folder||f.owner_id===me.user_id)&&!banned.has(f.id)):[];
  const crumbs=useMemo(()=>{const t:Item[]=[];let f=at?.folder?folders.find(x=>x.id===at.folder):undefined,h=0;while(f&&h<50){t.unshift(f);f=f.folder_id?folders.find(x=>x.id===f!.folder_id):undefined;h++;}return t;},[at,folders]);
  const dest=sel??at;
  const label=(p:Place)=>p.folder?folders.find(f=>f.id===p.folder)?.name??'folder':roots.find(r=>r.p.drive===p.drive&&r.p.lead===p.lead)?.label??'Drive';
- return <Modal title={`Move “${item.name}”`} onClose={onClose}><div className="zn-modal-body">
+ return <Modal title={picked.length===1?`Move “${picked[0].name}”`:`Move ${picked.length} items`} onClose={onClose}><div className="zn-modal-body">
   <div className="zdr-move-crumbs">{at?<><button type="button" onClick={()=>{setAt(null);setSel(null);}}>All drives</button><ChevronRight size={14}/><button type="button" onClick={()=>{setAt({...at,folder:null});setSel(null);}}>{roots.find(r=>r.p.drive===at.drive&&r.p.lead===at.lead)?.label}</button>{crumbs.map(c=><span key={c.id}><ChevronRight size={14}/><button type="button" onClick={()=>{setAt({...at,folder:c.id});setSel(null);}}>{c.name}</button></span>)}</>:<b>All drives</b>}</div>
   <div className="zdr-move-list">
    {!at?roots.map(r=><button key={`${r.p.drive}:${r.p.lead}`} type="button" onClick={()=>{setAt(r.p);setSel(null);}}>{r.p.drive==='my'?<HardDrive size={16}/>:r.p.drive==='team'?<Users size={16}/>:<Briefcase size={16}/>}<span>{r.label}</span><ChevronRight size={15}/></button>)
    :kids.length?kids.map(f=><button key={f.id} type="button" className={sel?.folder===f.id?'is-on':''} onClick={()=>setSel({drive:f.drive,lead:f.lead_id,folder:f.id})} onDoubleClick={()=>{setAt({drive:f.drive,lead:f.lead_id,folder:f.id});setSel(null);}}><Folder size={16}/><span>{f.name}</span><ChevronRight size={15} onClick={e=>{e.stopPropagation();setAt({drive:f.drive,lead:f.lead_id,folder:f.id});setSel(null);}}/></button>)
    :<p className="zdr-faint">No folders here.</p>}
   </div>
-  {item.drive==='my'&&dest&&dest.drive!=='my'&&<p className="zn-upload-note">Everyone with access to {dest.drive==='team'?'the team drive':'this client drive'} will be able to open and edit it.</p>}
+  {picked.some(i=>i.drive==='my')&&dest&&dest.drive!=='my'&&<p className="zn-upload-note">Everyone with access to {dest.drive==='team'?'the team drive':'this client drive'} will be able to open and edit it.</p>}
   <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button type="button" className="zn-btn is-primary" disabled={!dest||busy} onClick={async()=>{if(!dest)return;setBusy(true);await onMove(dest);setBusy(false);}}>{dest?`Move to ${label(dest)}`:'Pick a place'}</button></div>
+ </div></Modal>;
+}
+
+// Who can open a file or folder in My Drive, with a way to add people and stop sharing. Folders also have view/edit.
+function ShareItem({item,onClose}:{item:Item;onClose:()=>void}){
+ const {db,people}=useZarn();
+ const folder=item.kind==='folder';
+ const [rows,setRows]=useState<{user_id:string;role:'view'|'edit'}[]|null>(null),[adding,setAdding]=useState(false),[err,setErr]=useState('');
+ const load=useCallback(async()=>{
+  const {data}=folder?await db.from('zarn_drive_folder_members').select('user_id,role').eq('folder_id',item.id):await db.from('zarn_file_shares').select('user_id').eq('file_id',item.id);
+  setRows(((data??[]) as {user_id:string;role?:'view'|'edit'}[]).map(r=>({user_id:r.user_id,role:r.role??'view'})));
+ },[db,folder,item.id]);
+ // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
+ useEffect(()=>{void load();},[load]);
+ async function remove(u:string){setErr('');const {error}=folder?await db.from('zarn_drive_folder_members').delete().eq('folder_id',item.id).eq('user_id',u):await db.from('zarn_file_shares').delete().eq('file_id',item.id).eq('user_id',u);if(error)setErr('Could not remove them.');void load();}
+ async function setRole(u:string,role:string){setErr('');const {error}=await db.from('zarn_drive_folder_members').update({role}).eq('folder_id',item.id).eq('user_id',u);if(error)setErr('Could not change access.');void load();}
+ if(adding)return <PeoplePicker title={`Share “${item.name}”`} confirm="Share" exclude={(rows??[]).map(r=>r.user_id)} onClose={()=>setAdding(false)} onPick={async ids=>{
+  const {error}=folder?await db.from('zarn_drive_folder_members').insert(ids.map(u=>({folder_id:item.id,user_id:u,role:'edit'}))):await db.from('zarn_file_shares').insert(ids.map(u=>({file_id:item.id,user_id:u})));
+  if(error)throw new Error('Could not share it.');setAdding(false);void load();}}/>;
+ return <Modal title={`Share “${item.name}”`} onClose={onClose}><div className="zn-modal-body">
+  <p className="zn-upload-note">{folder?'People you add can open everything inside this folder. Editors can also add, rename and move things in it.':'People you add can open and download this file.'}</p>
+  <div className="zdr-people">{rows===null?<p className="zn-loading">Loading…</p>:rows.length?rows.map(r=><div key={r.user_id} className="zdr-person"><Avatar m={people[r.user_id]} size={28}/><b>{people[r.user_id]?.display_name??'Someone'}</b>
+   {folder&&<select className="zdr-sort" value={r.role} aria-label="Access" onChange={e=>void setRole(r.user_id,e.target.value)}><option value="view">Can view</option><option value="edit">Can edit</option></select>}
+   <button type="button" className="zn-btn" onClick={()=>void remove(r.user_id)}>Remove</button></div>):<p className="zdr-faint">Only you have access.</p>}</div>
+  {err&&<p className="zn-error" role="alert">{err}</p>}
+  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Done</button><button type="button" className="zn-btn is-primary" onClick={()=>setAdding(true)}><Users size={14}/>Add people</button></div>
  </div></Modal>;
 }

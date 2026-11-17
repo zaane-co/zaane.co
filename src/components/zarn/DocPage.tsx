@@ -94,7 +94,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
  // Save anything pending when leaving the page.
  useEffect(()=>()=>{if(timer.current){clearTimeout(timer.current);void save();}},[save]);
  async function remove(){
-  if(!await confirm({title:'Delete this document?',message:`“${title||'Untitled'}” will be deleted for everyone, and its share links stop working.`,confirm:'Delete document',danger:true}))return;
+  if(!await confirm({title:'Move this document to the trash?',message:`“${title||'Untitled'}” goes to the Drive trash. You can restore it from there.`,confirm:'Move to trash',danger:true}))return;
   await db.from('zarn_docs').update({trashed_at:new Date().toISOString()}).eq('id',doc.id);router.push("/zarn/drive");
  }
  return <div className="zn-page zd-page">
