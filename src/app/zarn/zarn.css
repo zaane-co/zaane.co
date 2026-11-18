@@ -2481,3 +2481,21 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zn-modal-page .zn-modal-foot .zn-btn{flex:1;height:48px;border-radius:14px}
  .zn-modal-page .zn-modal-body>.zn-modal-foot,.zn-modal-page form.zn-modal-body .zn-modal-foot{background:var(--z-bg)}
 }
+/* Phones: Kanban swipes one column at a time (the next one peeks in) and columns grow with their cards, so the page
+   scrolls instead of each column. Filter chips stay on one line. */
+@media(max-width:760px){
+ .zp-tools .dd-toolbar,.zp-tools .zp-btn:not(.is-dark){padding:0 12px;font-size:13px;gap:5px}
+ .zp-tools .dd-toolbar>svg:first-child,.zp-tools .zp-btn:not(.is-dark)>svg{display:none}
+ .zp-body:has(>.zp-kanban){overflow-x:hidden}
+ .zp-kanban{display:flex!important;min-width:0!important;height:auto;gap:12px;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 16px;margin:0 -16px;padding:0 16px 8px;scrollbar-width:none;overscroll-behavior-x:contain}
+ .zp-kanban::-webkit-scrollbar{display:none}
+ .zp-kanban>.zp-col{flex:0 0 84%;max-height:none;min-height:120px;scroll-snap-align:start;padding:12px;border-radius:18px}
+ .zp-kanban>.zp-addcol{flex:0 0 60%;scroll-snap-align:start}
+ .zp-col>header{font-size:15px;padding:2px 4px 4px}
+ .zp-col .zp-cards{overflow:visible;flex:none;gap:8px}
+ .zp-card{padding:12px 14px;border:0;border-radius:14px;background:var(--z-panel-2);gap:6px;cursor:default}
+ .zp-card b{font-size:15px;line-height:1.35}
+ .zp-card .zp-pill{padding:1px 8px;border-radius:6px;font-size:11px}
+ .zp-card footer{margin-top:2px;font-size:12.5px;color:var(--z-muted)}
+ .zp-card .zp-stack .zn-avatar{border-radius:50%!important;box-shadow:0 0 0 2px var(--z-panel-2)}
+}
