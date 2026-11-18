@@ -15,8 +15,8 @@ import {usePushState} from '@/lib/zarn-push-client';
 import {signOut} from './ZarnShell';
 
 // Phone tab screens (Slack-style). They also work on a computer as plain list pages.
-function Screen({title,action,children}:{title:string;action?:React.ReactNode;children:React.ReactNode}){
- return <div className="zn-page zn-tabscreen"><header className="zn-tab-head"><h1>{title}</h1>{action}</header><div className="zn-tab-body" data-lenis-prevent>{children}</div></div>;
+function Screen({title,action,lead,children}:{title:string;action?:React.ReactNode;lead?:React.ReactNode;children:React.ReactNode}){
+ return <div className="zn-page zn-tabscreen"><header className="zn-tab-head">{lead}<h1>{title}</h1>{action}</header><div className="zn-tab-body" data-lenis-prevent>{children}</div></div>;
 }
 const Group=({label,children,add}:{label:string;children:React.ReactNode;add?:()=>void})=><section className="zn-group"><div className="zn-group-head"><h2>{label}</h2>{add&&<button type="button" aria-label={`Add to ${label}`} onClick={add}><Plus size={18}/></button>}</div>{children}</section>;
 const Row=({href,icon,label,sub,onClick,badge}:{href?:string;icon:React.ReactNode;label:string;sub?:string;onClick?:()=>void;badge?:number})=>{
@@ -25,8 +25,11 @@ const Row=({href,icon,label,sub,onClick,badge}:{href?:string;icon:React.ReactNod
 };
 
 export function HomeTab(){
- const {open}=useShell(),{starred,rooms,guest,canCreate,canBusiness}=useNav();
- return <Screen title="Home" action={<button type="button" className="zn-tab-action" aria-label="Search" onClick={()=>open('search')}><Search size={20}/></button>}>
+ const {open}=useShell(),{starred,rooms,dms,guest,canCreate,canBusiness,badges}=useNav(),{me}=useZarn();
+ // iOS-style top bar: your photo (opens You) on the left, Activity and New message on the right.
+ return <Screen title="Home" lead={<Link href="/zarn/you" className="zn-tab-me" aria-label="You"><Avatar m={me} size={32}/></Link>} action={<span className="zn-tab-actions">
+   <Link href="/zarn/activity" className="zn-tab-action" aria-label="Activity"><Bell size={20}/></Link>
+   <button type="button" className="zn-tab-action" aria-label="New message" onClick={()=>open('dm')}><MessageSquarePlus size={20}/>{badges.dms>0&&<i className="zn-ping"/>}</button></span>}>
   <Invites/>
   <button type="button" className="zn-search-bar" onClick={()=>open('search')}><Search size={16}/>Search messages</button>
   {canBusiness&&<Group label="Business">
@@ -38,6 +41,9 @@ export function HomeTab(){
   <Group label="Channels" add={canCreate?()=>open('channel'):undefined}>
    {rooms.map(c=><ChannelRow key={c.id} c={c} big/>)}
    {!guest&&<Row icon={<Plus size={18}/>} label="Browse channels" onClick={()=>open('browse')}/>}
+  </Group>
+  <Group label="Direct messages" add={()=>open('dm')}>
+   {dms.length?dms.map(c=><ChannelRow key={c.id} c={c} big/>):<p className="zn-nav-note">No conversations yet. Tap + to message someone.</p>}
   </Group>
  </Screen>;
 }

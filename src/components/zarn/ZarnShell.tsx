@@ -32,7 +32,7 @@ import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 type Area='chat'|'business'|'clients'|'projects'|'drive';
 const areaOf=(p:string):Area=>p.startsWith('/zarn/drive')||p.startsWith('/zarn/docs')||p.startsWith('/zarn/sheets')?'drive':p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')?'clients':p.startsWith('/zarn/business')||p.startsWith('/zarn/crm')?'business':'chat';
 // Phone tab roots (tab bar visible). Inside a conversation the tab bar hides and a back arrow shows instead.
-const tabs=['/zarn/home','/zarn/dms','/zarn/clients','/zarn/activity','/zarn/you'];
+const tabs=['/zarn/home','/zarn/todos','/zarn/drive','/zarn/projects','/zarn/clients'];
 
 // ZARN layout. Computers: a rail switches between Chat, Business and Clients, with that area's sidebar.
 // Phones: Slack-style bottom tabs (Home, DMs, Clients, Activity, You), full-screen lists, back arrows in conversations.
@@ -90,7 +90,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  // Home on a computer opens #general (or the first open channel), like it does on sign-in.
  const homeHref=()=>{const c=channels.find(x=>x.name==='general'&&!x.archived_at&&z.membership[x.id])??channels.find(x=>x.kind!=='dm'&&!x.archived_at&&z.membership[x.id]);return c?`/zarn/c/${c.id}`:'/zarn';};
  const railBtn=(a:Area,icon:React.ReactNode,label:string,badge:number)=><button type="button" className={`zn-rail-btn${area===a?' is-on':''}`} aria-pressed={area===a} onClick={()=>{setArea(a);if(a==='projects'&&pathname!=='/zarn/projects')router.push('/zarn/projects');else if(routeArea==='drive')router.push(a==='chat'?homeHref():`/zarn/${a}`);}}><span className="zn-rail-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small>{label}</small></button>;
- const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span></Link>;};
+ const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small className="zn-tab-label">{label}</small></Link>;};
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
  return <ConfirmProvider><CallProvider><ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
@@ -205,13 +205,12 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
      {staffAdmin&&quickAction(<UserPlus size={24}/>,'Invite',()=>setDialog('invite'))}
     </div></>}
    <nav className="zn-tabbar" aria-label="ZARN">
-    {tab('/zarn/home',<Home size={23}/>,'Home',badges.home)}
-    {tab('/zarn/dms',<MessageSquare size={23}/>,'DMs',badges.dms)}
-    {!guest&&tab('/zarn/clients',<Briefcase size={23}/>,'Clients',badges.clients)}
-    {tab('/zarn/activity',<Bell size={23}/>,'Activity',0)}
-    {tab('/zarn/you',<Avatar m={me} size={26}/>,'You',0)}
+    {tab('/zarn/home',<Home size={24}/>,'Home',badges.home+badges.dms)}
+    {!guest&&tab('/zarn/todos',<ListChecks size={24}/>,'To-do',z.dueTasks)}
+    {tab('/zarn/drive',<HardDrive size={24}/>,'Drive',0)}
+    {!guest&&tab('/zarn/projects',<FolderKanban size={24}/>,'Projects',badges.projects)}
+    {!guest&&tab('/zarn/clients',<Briefcase size={24}/>,'Clients',badges.clients)}
    </nav>
-   <button type="button" className={`zn-fab${quick?' is-open':''}`} aria-label={quick?'Close quick actions':'Quick actions'} aria-expanded={quick} onClick={()=>setQuick(v=>!v)}><Plus size={26}/></button>
   </div>
   {profileId&&<ProfileSheet userId={profileId} onClose={()=>setProfileId(null)} onEdit={()=>{setProfileId(null);setDialog('profile');}}/>}
   <InstallPrompt onDone={()=>setInstallDone(true)} onHelp={()=>setDialog('install')}/>

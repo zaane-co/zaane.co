@@ -2292,3 +2292,19 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zdr-seg button{height:34px;width:40px}
 .zdr-seg button.is-on{background:var(--z-hover);color:var(--z-fg)}
 .zarn.is-light .zdr-seg button.is-on{background:#e4e4e9}
+/* Phone: iOS-style tab bar (icon + label, frosted, full width) */
+.zn-tab-label{display:none}
+@media(max-width:860px){
+ .zn-dock{padding:0!important;gap:0;border-top:.5px solid var(--z-border);background:color-mix(in srgb,var(--z-side) 82%,transparent);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+ .zn-dock .zn-tabbar{height:auto;padding:6px 4px max(6px,calc(env(safe-area-inset-bottom) - 4px));border:0;border-radius:0;background:transparent;box-shadow:none;justify-content:space-around}
+ .zn-dock .zn-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:auto;padding:2px 0;border-radius:0;color:var(--z-faint);background:none!important;box-shadow:none!important}
+ .zn-dock .zn-tab.is-on{color:var(--z-accent)}
+ .zn-dock .zn-tab-icon{height:28px}
+ .zn-dock .zn-tab-icon em{top:-3px;left:calc(50% + 6px)}
+ .zn-tab-label{display:block;font-size:10.5px;font-weight:600;letter-spacing:.01em}
+ .zn-tab-head{display:flex;align-items:center;justify-content:flex-start;gap:10px}
+ .zn-tab-me{display:inline-flex;border-radius:999px;flex-shrink:0}
+ .zn-tab-actions{display:flex;align-items:center;gap:4px;margin-left:auto}
+ .zn-tab-actions .zn-tab-action{position:relative}
+ .zn-tab-actions .zn-ping{position:absolute;top:6px;right:6px}
+}
