@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useMemo,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {Archive,ArchiveRestore,BookOpen,FolderInput,KeyRound,Users as UsersIcon,FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,LayoutTemplate,List,ListChecks,ListFilter,MessageSquare,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
@@ -57,6 +57,13 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  const members=useMemo(()=>allMembers.filter(u=>!people[u]?.deactivated_at),[allMembers,people]);
  const [view,setView]=useState<View>(id?'chat':'list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[movingGroup,setMovingGroup]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
+ // Phones: long-press a Kanban card to move it (drag and drop doesn't work with touch).
+ const [moving,setMoving]=useState<string|null>(null),press=useRef<{t:number;x:number;y:number}|null>(null),pressed=useRef(false);
+ const cardTouch={
+  onTouchStart:(id:string,e:React.TouchEvent)=>{const p=e.touches[0]!;pressed.current=false;press.current={x:p.clientX,y:p.clientY,t:window.setTimeout(()=>{press.current=null;pressed.current=true;setMoving(id);try{navigator.vibrate?.(10);}catch{}},420)};},
+  onTouchMove:(e:React.TouchEvent)=>{const p=e.touches[0]!,s0=press.current;if(s0&&Math.hypot(p.clientX-s0.x,p.clientY-s0.y)>8){clearTimeout(s0.t);press.current=null;}},
+  onTouchEnd:()=>{if(press.current){clearTimeout(press.current.t);press.current=null;}},
+ };
  const [formMembers,setFormMembers]=useState<string[]|null>(null),[templates,setTemplates]=useState<{save?:boolean}|null>(null);
 
  useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!multi&&(v==='brief'||v==='chat'||v==='team'||v==='docs'||v==='vault')))setView(v);},[mine,multi]);
@@ -208,7 +215,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  };
  const kanbanView=<div className="zp-kanban" style={{gridTemplateColumns:`repeat(${statuses.length},minmax(250px,1fr)) 190px`,minWidth:statuses.length*264+204}}>{statuses.map(g=>{const rows=shown.filter(t=>t.status===g.key).sort((a,b)=>a.position-b.position);return <section key={g.key} className="zp-col" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();const tid=e.dataTransfer.getData('text/plain');setDragging(null);if(tid)void patch(tid,{status:g.key});}}>
   <header><i style={{background:g.color}}/><b>{g.label}</b><span className="zp-count">{rows.length}</span>{!g.builtin&&(g.created_by===me.user_id||me.zarnAdmin)&&<button type="button" className="zp-icon-btn zp-del-status" aria-label={`Delete status ${g.label}`} data-tip="Delete status" onClick={()=>void deleteStatus(g)}><Trash2 size={13}/></button>}<button type="button" className="zp-icon-btn" aria-label={`Add task to ${g.label}`} data-tip="Add task" onClick={()=>add(g.key)}><Plus size={15}/></button></header>
-  <div className="zp-cards">{rows.map(t=><article key={t.id} className={`zp-card${t.status==='done'?' is-done':''}${dragging===t.id?' is-dragging':''}`} draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',t.id);setDragging(t.id);}} onDragEnd={()=>setDragging(null)} onClick={()=>setOpen(t.id)}>
+  <div className="zp-cards">{rows.map(t=><article key={t.id} className={`zp-card${t.status==='done'?' is-done':''}${dragging===t.id?' is-dragging':''}`} draggable onDragStart={e=>{e.dataTransfer.setData('text/plain',t.id);setDragging(t.id);}} onDragEnd={()=>setDragging(null)} onClick={()=>{if(pressed.current){pressed.current=false;return;}setOpen(t.id);}} onTouchStart={e=>cardTouch.onTouchStart(t.id,e)} onTouchMove={cardTouch.onTouchMove} onTouchEnd={cardTouch.onTouchEnd} onTouchCancel={cardTouch.onTouchEnd} onContextMenu={e=>{if(window.matchMedia('(hover: none)').matches)e.preventDefault();}}>
    <div className="zp-card-top">{multi&&t.project_id&&projectPill(t.project_id)}{typePill(t.type)}{pill(t.priority)}</div>
    <b>{t.title}</b>{t.description&&<p>{t.description}</p>}
    <footer><span className={`zp-est${overdue(t)?' is-overdue':''}`}><CalendarDays size={13}/>{estimate(t)}</span><Stack ids={assign[t.id]??[]}/></footer>
@@ -268,6 +275,12 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   {view==='chat'?<div className="zn-client-body">{chatId?<ChannelView id={chatId} embedded/>:<p className="zn-loading">Setting up the project chat…</p>}</div>
   :<div className="zp-body" data-lenis-prevent>{view==='saved'?<SavedMessages/>:view==='team'&&project?<ProjectTeam project={project} members={members} canManage={canManage} onInvite={()=>setInviting(true)} onRemove={u=>void removeMember(u)}/>:view==='docs'&&id?<ProjectDocs projectId={id}/>:view==='vault'&&id?<div className="zpx-wrap"><ClientVault projectId={id}/></div>:view==='brief'&&project?<ProjectBrief project={project} canEdit={canManage} members={members} onSaved={(b,ab)=>setProject(p=>p&&{...p,brief:b,about:ab as Record<string,unknown>|undefined})} clientName={project.lead_id?(()=>{const c=z.channels.find(x=>x.kind==='client'&&x.lead_id===project.lead_id);return c?z.title(c):'';})():''}/>:empty??(view==='list'?listView:view==='kanban'?kanbanView:timelineView)}</div>}
 
+  {moving&&(()=>{const t=tasks.find(x=>x.id===moving);if(!t)return null;return <div className="zp-move-scrim" onClick={()=>setMoving(null)}><div className="zp-move" role="dialog" aria-label="Move task" onClick={e=>e.stopPropagation()}>
+   <div className="zp-move-list"><p className="zp-move-title"><small>Move to</small><b>{t.title}</b></p>
+    {statuses.map(g=><button key={g.key} type="button" className={t.status===g.key?'is-on':''} onClick={()=>{setMoving(null);if(t.status!==g.key)void patch(t.id,{status:g.key});}}><i style={{background:g.color}}/>{g.label}{t.status===g.key&&<em>Current</em>}</button>)}
+    <button type="button" onClick={()=>{setMoving(null);setOpen(t.id);}}>Open task</button></div>
+   <button type="button" className="zp-move-cancel" onClick={()=>setMoving(null)}>Cancel</button>
+  </div></div>;})()}
   {form&&<Modal title="New task" onClose={()=>setForm(null)} wide page><form className="zn-modal-body" onSubmit={create}>
    <label className="zn-label">Task name<input className="zn-input" autoFocus maxLength={200} value={form.title} onChange={e=>setForm(f=>f&&{...f,title:e.target.value})} placeholder="What needs doing?"/></label>
    <label className="zn-label">Description (optional)<textarea className="zn-input" rows={3} maxLength={4000} value={form.description} onChange={e=>setForm(f=>f&&{...f,description:e.target.value})}/></label>

@@ -2499,3 +2499,18 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zp-card footer{margin-top:2px;font-size:12.5px;color:var(--z-muted)}
  .zp-card .zp-stack .zn-avatar{border-radius:50%!important;box-shadow:0 0 0 2px var(--z-panel-2)}
 }
+/* Long-press "Move to" menu for Kanban cards: an iOS-style action sheet */
+.zp-move-scrim{position:fixed;inset:0;z-index:160;background:rgba(0,0,0,.5);display:flex;flex-direction:column;justify-content:flex-end;padding:0 10px calc(10px + env(safe-area-inset-bottom));animation:zn-fade .15s}
+.zp-move{display:flex;flex-direction:column;gap:8px;width:100%;max-width:480px;margin:0 auto;animation:zn-sheet-up .28s cubic-bezier(.32,.72,0,1)}
+.zp-move-list{display:flex;flex-direction:column;border-radius:16px;background:var(--z-panel);overflow:hidden;max-height:70vh;overflow-y:auto}
+.zp-move-title{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 16px;text-align:center;border-bottom:1px solid var(--z-border)}
+.zp-move-title small{font-size:12.5px;color:var(--z-muted)}
+.zp-move-title b{font-size:13.5px;font-weight:600;color:var(--z-muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zp-move-list>button{display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;padding:0 16px;font-size:17px;color:var(--z-fg);border-top:1px solid var(--z-border)}
+.zp-move-list>button:first-of-type{border-top:0}
+.zp-move-list>button i{width:10px;height:10px;border-radius:50%}
+.zp-move-list>button em{font-style:normal;font-size:12px;color:var(--z-muted)}
+.zp-move-list>button.is-on{font-weight:600}
+.zp-move-list>button:active,.zp-move-cancel:active{background:var(--z-hover)}
+.zp-move-cancel{min-height:56px;border-radius:16px;background:var(--z-panel);font-size:17px;font-weight:700;color:var(--z-fg)}
+.zp-card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
