@@ -3,7 +3,7 @@ import {notFound} from 'next/navigation';
 import {cookies} from 'next/headers';
 import type {Metadata} from 'next';
 import {serviceClient} from '@/lib/supabase/server';
-import {cleanHtml} from '@/lib/blog-html';
+import {cleanDocHtml as cleanHtml} from '@/lib/blog-html';
 import {cookieName,verifyUnlock} from '@/lib/doc-share';
 import DocUnlock from './DocUnlock';
 export const dynamic='force-dynamic';

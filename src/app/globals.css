@@ -2844,3 +2844,9 @@ body:has(.za-admin,.admin-login,.za-invoice-page,.zarn,.zarn-auth) [data-edge-bl
 .vs-btn{background:#c40a3a;color:#fff;text-decoration:none;padding:0 12px;grid-column:3/-1}
 .vs-note{font-size:13px;color:#52525b;line-height:1.5;white-space:pre-wrap}
 .docpub-sheet{margin:16px 0}.docpub-sheet h2{font-size:16px;margin:0 0 8px}.docpub-sheet-scroll{overflow-x:auto}.docpub-sheet table{border-collapse:collapse;font-size:14px}.docpub-sheet td{border:1px solid #e4e4e7;padding:4px 8px;white-space:nowrap;min-width:80px}
+/* Shared ZARN docs: tables and checklists made in the docs editor */
+.docpub-body table{border-collapse:collapse;width:100%;margin:1em 0}
+.docpub-body td,.docpub-body th{border:1px solid #d4d4d8;padding:6px 8px;vertical-align:top}.docpub-body th{background:#f4f4f5;text-align:left}
+.docpub-body td p,.docpub-body th p{margin:0}
+.docpub-body ul[data-type=taskList]{list-style:none;padding-left:.2em}.docpub-body ul[data-type=taskList] li{display:flex;gap:8px}
+.docpub-body ul[data-type=taskList] li[data-checked=true]>div{text-decoration:line-through;color:#71717a}
