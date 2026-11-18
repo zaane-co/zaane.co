@@ -128,7 +128,8 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${name}.${kind}`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
  }
  const ed=editor;
- const c=()=>ed!.chain().focus();
+ // While the formatting sheet is open the keyboard stays down: commands apply to the kept selection without refocusing.
+ const c=()=>sheet?ed!.chain():ed!.chain().focus();
  const headings:{level:number;text:string;pos:number}[]=[];
  ed?.state.doc.descendants((n,pos)=>{if(n.type.name==='heading'&&n.textContent.trim())headings.push({level:n.attrs.level as number,text:n.textContent,pos});});
  const words=ed?(ed.getText().trim().match(/\S+/g)?.length??0):0;
@@ -215,7 +216,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
    {btn('Undo',<Undo2 size={19}/>,false,()=>c().undo().run())}{btn('Redo',<Redo2 size={19}/>,false,()=>c().redo().run())}<i/>
    {btn('Bold',<Bold size={19}/>,ed.isActive('bold'),()=>c().toggleBold().run())}{btn('Italic',<Italic size={19}/>,ed.isActive('italic'),()=>c().toggleItalic().run())}{btn('Underline',<UnderlineIcon size={19}/>,ed.isActive('underline'),()=>c().toggleUnderline().run())}
    {btn('Bulleted list',<List size={19}/>,ed.isActive('bulletList'),()=>c().toggleBulletList().run())}{btn('Checklist',<ListChecks size={19}/>,ed.isActive('taskList'),()=>c().toggleTaskList().run())}<i/>
-   <button type="button" className={`zg-aa${sheet?' is-open':''}`} aria-label="All formatting tools" aria-expanded={!!sheet} onMouseDown={e=>e.preventDefault()} onClick={()=>setSheet(v=>v?null:'text')}><b>Aa</b>{sheet?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button>
+   <button type="button" className={`zg-aa${sheet?' is-open':''}`} aria-label="All formatting tools" aria-expanded={!!sheet} onMouseDown={e=>e.preventDefault()} onClick={()=>{if(!sheet)(document.activeElement as HTMLElement|null)?.blur();setSheet(v=>v?null:'text');}}><b>Aa</b>{sheet?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button>
   </div>}
   {canEdit&&ed&&sheet&&<div className="zg-sheet" role="dialog" aria-label="Formatting" onClick={e=>e.stopPropagation()} onMouseDown={e=>{if((e.target as HTMLElement).tagName!=='SELECT')e.preventDefault();}}>
    <header><nav>{([['text','Text'],['para','Paragraph'],['insert','Insert']] as const).map(([k,l])=><button key={k} type="button" className={sheet===k?'is-on':''} onClick={()=>setSheet(k)}>{l}</button>)}</nav><button type="button" className="zg-sheet-x" aria-label="Close" onClick={()=>setSheet(null)}><X size={18}/></button></header>

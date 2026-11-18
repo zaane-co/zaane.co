@@ -2790,3 +2790,8 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zg-mbar>.zg-aa.is-open{background:var(--z-fg);color:var(--z-bg)}
  .zg-mbar>i:last-of-type{display:none}
 }
+@media(max-width:760px){
+ .zg-sheet{max-height:72%}
+ .zg-sheet-body>*{flex-shrink:0}
+ .zg-dots button{flex-shrink:0}
+}
