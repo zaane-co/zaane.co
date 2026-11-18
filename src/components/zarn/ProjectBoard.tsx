@@ -71,7 +71,10 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
     db.from('zarn_project_members').select('user_id').eq('project_id',id),
     db.from('zarn_tasks').select('*').eq('project_id',id).order('position'),
    ]);
-   setProject((pr as ZProject|null)??null);setMembers(((pm??[]) as {user_id:string}[]).map(x=>x.user_id));taskRows=(tk??[]) as Task[];
+   let proj=pr as ZProject|null;
+   // If the About fields can't be read (e.g. right after a database update), still open the project.
+   if(!proj){const {data:basic}=await db.from('zarn_projects').select('id,name,description,color,lead_id,brief,created_by,created_at,group_id,archived_at').eq('id',id).maybeSingle();proj=(basic as ZProject|null)??null;}
+   setProject(proj);setMembers(((pm??[]) as {user_id:string}[]).map(x=>x.user_id));taskRows=(tk??[]) as Task[];
   }else if(leadId){
    const {data}=await db.from('zarn_tasks').select('*').eq('lead_id',leadId).order('position');taskRows=(data??[]) as Task[];
   }else{
