@@ -2319,5 +2319,17 @@ a.zn-act-row:hover{background:var(--z-hover)}
 }
 @keyframes zn-sheet-up{from{transform:translateY(100%)}to{transform:none}}
 @media(prefers-reduced-motion:reduce){.zn-modal-scrim>.zn-modal{animation:none!important}}
-/* Phones: a clean channel header (name + actions). The topic lives in channel details. */
-@media(max-width:760px){.zn-chan-head .zn-topic.is-topic{display:none}}
+/* Phones: iOS-style chat header. Name on top with the topic / typing / online as a small line under it,
+   then plain round icons. Members and pins live in Details (the i button). */
+@media(max-width:760px){
+ .zn-chan-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;align-content:center;column-gap:8px;height:56px;padding-right:8px}
+ .zn-chan-head .zn-chan-title{grid-column:1;grid-row:1;margin:0;padding:0;gap:6px;background:none!important;align-self:end}
+ .zn-chan-head .zn-chan-title svg{width:15px;height:15px;color:var(--z-muted);flex:none}
+ .zn-chan-head .zn-chan-title h1{font-size:17px;font-weight:700;letter-spacing:-.01em}
+ .zn-chan-head .zn-topic{grid-column:1;grid-row:2;display:block!important;flex:none;margin:1px 0 0;font-size:12px;line-height:1.3;color:var(--z-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;align-self:start}
+ .zn-chan-head .zn-head-actions{grid-column:2;grid-row:1/3;margin:0;gap:0;flex-wrap:nowrap}
+ .zn-chan-head .zn-head-actions button{width:40px;height:40px;min-width:40px;padding:0;justify-content:center;border-radius:50%;color:var(--z-fg)}
+ .zn-chan-head .zn-head-actions button svg{width:20px;height:20px}
+ .zn-chan-head .zn-head-actions button.is-on{color:#f59e0b}
+ .zn-chan-head .zn-head-actions .zn-head-faces,.zn-chan-head .zn-head-actions button[data-tip="Pinned messages"]{display:none}
+}
