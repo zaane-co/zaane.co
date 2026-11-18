@@ -3,7 +3,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Underline,Undo2,WrapText,X,Eraser} from 'lucide-react';
+import {AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Folder,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Underline,Undo2,WrapText,X,Eraser} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import ShareDoc from './ShareDoc';
@@ -315,8 +315,8 @@ export default function SheetPage({id}:{id:string}){
   <header className="zs2-top">
    <Link href={crumbs.at(-1)?.href??'/zarn/drive'} className="zs2-logo" aria-label="Back to Drive" data-tip="Back to Drive"><FileSpreadsheet size={26}/></Link>
    <div className="zs2-titles">
-    <div className="zs2-titlerow"><input ref={titleIn} className="zs2-title" value={title} readOnly={!canEdit} maxLength={200} placeholder="Untitled sheet" aria-label="Title" onChange={e=>{setTitle(e.target.value);latest.current.title=e.target.value;queue();}} size={Math.max(8,title.length)}/>
-     <span className="zs2-crumbs">{crumbs.map((c,i)=><span key={c.href}>{i>0&&<ChevronRight size={12}/>}<Link href={c.href}>{c.name}</Link></span>)}</span>
+    <div className="zs2-titlerow"><input ref={titleIn} className="zs2-title" value={title} readOnly={!canEdit} maxLength={200} placeholder="Untitled sheet" aria-label="Title" onChange={e=>{setTitle(e.target.value);latest.current.title=e.target.value;queue();}} size={Math.max(6,(title||"Untitled sheet").length)}/>
+     <span className="zs2-crumbs" title="Location in Drive"><Folder size={13}/>{crumbs.map((c,i)=><span key={c.href}>{i>0&&<ChevronRight size={12}/>}<Link href={c.href}>{c.name}</Link></span>)}</span>
      <span className={`zs2-state${state==='error'?' is-error':''}`}>{!canEdit?'View only':state==='saving'?<><Loader2 size={12} className="zn-spin"/>Saving…</>:state==='error'?'Not saved':<><Check size={12}/>Saved to Drive</>}</span></div>
     <nav className="zs2-menubar" onClick={e=>e.stopPropagation()}>{Object.keys(menus).map(m=><span key={m} className="zs2-mwrap"><button type="button" className={menu===m?'is-on':''} onClick={()=>setMenu(x=>x===m?null:m)} onMouseEnter={()=>{if(menu&&menu!==m)setMenu(m);}}>{m}</button>
      {menu===m&&<div className="zs2-menu" role="menu">{renderItems(menus[m])}</div>}</span>)}</nav>
