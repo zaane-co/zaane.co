@@ -2416,3 +2416,51 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zn-suggest li.is-on{background:none;color:inherit}.zn-suggest li.is-on small{color:var(--z-faint)}
  .zn-suggest li:active{background:var(--z-hover)}
 }
+/* Phones: To-dos / project boards like an iOS app. Large title, segmented views, one search row, scrollable filter chips,
+   a round + button, and each task as a list row (circle check, title, dates + priority, people) in rounded groups. */
+@media(max-width:760px){
+ .zp-head{min-height:0;padding:10px 16px 4px!important;border:0}
+ .zp-title h1{font-size:30px;font-weight:800;letter-spacing:-.025em}
+ .zp-title>div>p{display:none}
+ .zp-title .zp-badge.is-ink{display:none}
+ .zp-bar{display:block;padding:0 16px!important;border:0}
+ .zp-tabs{display:flex;gap:2px;padding:3px;margin:8px 0 4px;border-radius:12px;background:var(--z-panel-2);overflow-x:auto;scrollbar-width:none}
+ .zp-tabs::-webkit-scrollbar{display:none}
+ .zp-tabs button{flex:1 0 auto;justify-content:center;padding:7px 12px;border:0;margin:0;border-radius:9px;font-size:13.5px;white-space:nowrap}
+ .zp-tabs button svg{display:none}
+ .zp-tabs button.is-on{background:var(--z-panel);color:var(--z-fg);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+ .zp-tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:8px;padding:6px 0 10px;margin:0 -16px;padding-left:16px;padding-right:16px}
+ .zp-tools::-webkit-scrollbar{display:none}
+ .zp-tools>*{flex:none}
+ .zp-tools .zp-search{flex:0 0 100%;order:-1}
+ .zp-tools:has(.zp-search){flex-wrap:wrap;overflow:visible}
+ .zp-search{height:40px;border:0;border-radius:12px;background:var(--z-panel-2)}
+ .zp-search input{width:100%;font-size:16px}
+ .zp-tools .dd-toolbar,.zp-tools .zp-btn:not(.is-dark){height:34px;border-radius:999px;border:0;background:var(--z-panel-2);font-size:13.5px}
+ .zp-tools .zp-btn.is-dark{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom) + 84px);z-index:40;width:56px;height:56px;padding:0;justify-content:center;border-radius:50%;font-size:0;gap:0;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+ .zarn.is-deep .zp-tools .zp-btn.is-dark{bottom:calc(env(safe-area-inset-bottom) + 20px)}
+ .zp-tools .zp-btn.is-dark svg{width:24px;height:24px}
+ .zp-body{padding:4px 16px calc(96px + env(safe-area-inset-bottom))!important}
+ .zp-list{gap:20px}
+ .zp-group-head{padding:0 4px 6px;background:none;border-radius:0}
+ .zp-group-head .zp-group-toggle{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--z-muted)}
+ .zp-table-wrap{overflow:visible;border-radius:16px;background:var(--z-panel)}
+ .zp-table,.zp-table tbody{display:block;width:100%}
+ .zp-table thead{display:none}
+ .zp-table tr{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:center;column-gap:10px;row-gap:3px;padding:12px 14px}
+ .zp-table tr+tr{border-top:1px solid var(--z-border)}
+ .zp-table td{display:block;padding:0!important;border:0!important;min-width:0}
+ .zp-table td:nth-child(1){grid-row:1/3;grid-column:1}
+ .zp-table td.zp-name{grid-column:2/4;grid-row:1;font-size:15.5px;font-weight:600;line-height:1.3;white-space:normal}
+ .zp-table td.zp-est{grid-column:2;grid-row:2;font-size:12.5px;color:var(--z-muted);white-space:nowrap}
+ .zp-table td.zp-est.is-none{display:none}
+ .zp-table tr:has(td.zp-est.is-none) td:nth-child(7){grid-column:2/4}
+ .zp-table td:nth-child(6) .zn-avatar{border-radius:50%!important}
+ .zp-table td:nth-child(7){grid-column:3;grid-row:2;justify-self:start}
+ .zp-table td:nth-child(6){grid-column:4;grid-row:1/3}
+ .zp-table td:nth-child(8),.zp-table td.zp-hide-sm{display:none}
+ .zp-table .zp-pill{padding:1px 8px;border-radius:6px;font-size:11px}
+ .zp-check{width:24px;height:24px;border-radius:50%}
+ .zp-table tr.is-done td.zp-name{color:var(--z-muted);text-decoration:line-through}
+ .zp-empty-row{padding:16px;border-radius:16px;background:var(--z-panel);text-align:center}
+}

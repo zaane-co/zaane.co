@@ -194,7 +194,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
    <tbody>{rows.map(t=><tr key={t.id} className={t.status==='done'?'is-done':''} onClick={()=>setOpen(t.id)}>
     <td onClick={e=>e.stopPropagation()}><button type="button" className="zp-check" aria-pressed={t.status==='done'} aria-label={t.status==='done'?'Mark as not done':'Mark as done'} onClick={()=>void patch(t.id,{status:t.status==='done'?'todo':'done'})}>{t.status==='done'&&'✓'}</button></td>
     <td className="zp-name">{t.title}</td><td className="zp-hide-sm zp-desc">{t.description||'-'}</td>
-    <td className={`zp-est${overdue(t)?' is-overdue':''}`}>{estimate(t)}</td>
+    <td className={`zp-est${overdue(t)?' is-overdue':''}${estimate(t)==='-'?' is-none':''}`}>{estimate(t)}</td>
     <td className="zp-hide-sm">{multi?projectPill(t.project_id):typePill(t.type)}</td><td><Stack ids={assign[t.id]??[]}/></td><td>{pill(t.priority)}</td>
     <td onClick={e=>e.stopPropagation()}><button type="button" className="zp-icon-btn" aria-label="Open details" data-tip="Open details" onClick={()=>setOpen(t.id)}><Ellipsis size={16}/></button></td>
    </tr>)}</tbody></table></div>:<p className="zp-empty-row">{q||prio!=='all'||who!=='all'?'Nothing matches.':'No tasks here.'}</p>)}
