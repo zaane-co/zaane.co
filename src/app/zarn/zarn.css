@@ -2524,3 +2524,25 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zp-picker-input input::-webkit-search-cancel-button{display:none}
  .zp-picker-list{max-height:260px}
 }
+/* Phones: task details are a full page above the tab bar. Fields stack (label over value) in one rounded card,
+   assignees are small grey chips, and every field uses the full width. */
+@media(max-width:760px){
+ .zp-scrim{z-index:69;background:var(--z-bg)}
+ .zp-drawer{z-index:70;width:100%;border:0;box-shadow:none;padding-top:env(safe-area-inset-top);animation:zn-push .3s cubic-bezier(.32,.72,0,1)}
+ .zp-drawer>header{padding:8px 14px;border:0}
+ .zp-drawer>header .zp-icon-btn{width:40px;height:40px;border-radius:50%;background:var(--z-panel-2);color:var(--z-fg)}
+ .zp-drawer-body{padding:4px 16px calc(28px + env(safe-area-inset-bottom));gap:14px}
+ .zp-title-input{font-size:24px;margin:0 -8px}
+ .zp-fields{grid-template-columns:1fr;gap:0;padding:2px 14px;border-radius:16px;background:var(--z-panel);font-size:15px}
+ .zp-fields dt{padding-top:12px;font-size:12.5px;font-weight:600;color:var(--z-muted)}
+ .zp-fields dd{padding:6px 0 12px;border-bottom:1px solid var(--z-border)}
+ .zp-fields dd:last-of-type{border-bottom:0}
+ .zp-fields dd>*{flex:1 1 100%;min-width:0}
+ .zp-fields dd .zp-input,.zp-fields dd .dd-field,.zp-fields dd input{width:100%;max-width:100%}
+ .zp-drawer input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-height:42px;text-align:left}
+ .zp-assign{gap:6px;margin:0 0 8px}
+ .zp-assign button,.zp-assign button.is-on{height:30px;padding:0 10px 0 4px;gap:6px;border:0;background:var(--z-panel-2);color:var(--z-fg);font-size:13px}
+ .zp-assign button .zn-avatar{border-radius:50%!important}
+ .zp-block{font-size:12.5px}
+ .zp-block .zp-input{font-size:15px}
+}
