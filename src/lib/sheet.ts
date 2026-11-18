@@ -1,5 +1,8 @@
 // ZARN sheets: the stored shape, cell formatting, and a formula engine. Used by the editor and the read-only link page.
-export type Style={b?:1;i?:1;u?:1;s?:1;color?:string;bg?:string;h?:'l'|'c'|'r';v?:'t'|'m'|'b';wrap?:1;fmt?:'auto'|'num'|'cur'|'pct'|'date'|'text';cur?:string;dec?:number;size?:number};
+export type Style={b?:1;i?:1;u?:1;s?:1;color?:string;bg?:string;h?:'l'|'c'|'r';v?:'t'|'m'|'b';wrap?:1;fmt?:'auto'|'num'|'cur'|'pct'|'date'|'text';cur?:string;dec?:number;size?:number;/** borders, each a CSS border like '1px solid #000' */ bd?:{t?:string;r?:string;b?:string;l?:string}};
+// Conditional formatting: a style when a condition holds, or a colour scale across the range.
+export type CfCond='empty'|'notEmpty'|'contains'|'notContains'|'startsWith'|'endsWith'|'is'|'gt'|'gte'|'lt'|'lte'|'eq'|'neq'|'between'|'notBetween'|'before'|'after'|'onDate'|'checked'|'formula';
+export type CfRule={id:string;range:string;cond:CfCond;a?:string;b?:string;fmt?:{bg?:string;color?:string;b?:1;i?:1;s?:1;u?:1};scale?:{min:string;mid?:string;max:string}};
 // Data validation, like Google Sheets: tick boxes, or a dropdown of options shown as coloured chips.
 export type Opt={v:string;c?:string};
 export type Rule={id:string;range:string;t:'check'|'list';opts?:Opt[];strict?:1};
@@ -9,6 +12,7 @@ export const parseRange=(s:string)=>{const [a,b]=s.toUpperCase().replace(/\$/g,'
 export function ruleAt(rules:Rule[]|undefined,c:number,r:number):Rule|undefined{if(!rules)return;for(let i=rules.length-1;i>=0;i--){const b=parseRange(rules[i].range);if(b&&c>=b.c0&&c<=b.c1&&r>=b.r0&&r<=b.r1)return rules[i];}}
 export type Tab={id:string;name:string;cells:Record<string,string>;style?:Record<string,Style>;widths?:Record<string,number>;freeze?:{r:number;c:number};color?:string;valid?:Rule[];
  /** filter: the range (header row first) and, per column index, the values hidden */ filter?:{range:string;hide:Record<string,string[]>};hRows?:number[];hCols?:number[];
+ /** merged ranges like 'A1:C2' */ merges?:string[];cf?:CfRule[];
  /** legacy */ bold?:Record<string,boolean>;/** legacy */ align?:Record<string,'l'|'c'|'r'>};
 export type SheetData={tabs:Tab[]};
 export const COLS=52,ROWS=1000,COL_W=104,ROW_H=24;
@@ -93,6 +97,7 @@ export const FUNCTIONS:Record<string,{fn:(a:V[])=>V;help:string}>={
  SUBSTITUTE:{fn:a=>text(a[0]).split(text(a[1])).join(text(a[2])),help:'SUBSTITUTE(text, search_for, replace_with)'},
  FIND:{fn:a=>{const i=text(a[1]).indexOf(text(a[0]));if(i<0)throw new Err('#VALUE!');return i+1;},help:'FIND(search_for, text_to_search)'},
  TODAY:{fn:()=>serial(new Date()),help:'TODAY()'},
+ HYPERLINK:{fn:a=>text(a[1]??a[0]??''),help:'HYPERLINK(url, [link_label])'},
  NOW:{fn:()=>{const d=new Date();return serial(d)+(d.getHours()*3600+d.getMinutes()*60+d.getSeconds())/86400;},help:'NOW()'},
  DATE:{fn:a=>serial(new Date(num(a[0]),num(a[1])-1,num(a[2]))),help:'DATE(year, month, day)'},
  YEAR:{fn:a=>toDate(a[0]).getUTCFullYear(),help:'YEAR(date)'},MONTH:{fn:a=>toDate(a[0]).getUTCMonth()+1,help:'MONTH(date)'},DAY:{fn:a=>toDate(a[0]).getUTCDate(),help:'DAY(date)'},
@@ -194,3 +199,28 @@ export function adjustRefs(src:string,axis:'r'|'c',at:number,delta:number){
   return `${tab??''}${ac}${colName(c)}${ar}${r+1}`;
  });
 }
+
+// Works out a one-off formula against a tab (conditional formatting's custom formulas use it).
+export function exprEval(tab:Tab,tabs:Tab[]=[tab]){
+ const cache=new Map<string,V>(),busy=new Set<string>();
+ const byName=(n:string)=>tabs.find(t=>t.name.toLowerCase()===n.toLowerCase());
+ const cell=(t:Tab,k:string):V=>{const key=`${t.id}!${k}`;if(cache.has(key))return cache.get(key)!;if(busy.has(key))throw new Err('#CYCLE!');
+  const src=t.cells[k]??'';let v:V;
+  if(/^(true|false)$/i.test(src))v=src.toUpperCase()==='TRUE';
+  else if(!src.startsWith('=')||src.length<2){v=src!==''&&/^\s*-?[\d,]*\.?\d+(e[-+]?\d+)?\s*%?\s*$/i.test(src)?(src.trim().endsWith('%')?Number(src.replace(/[%,\s]/g,''))/100:Number(src.replace(/[,\s]/g,''))):src;}
+  else{busy.add(key);try{v=formula(src.slice(1),(tn,k2)=>{const tt=tn?byName(tn):t;if(!tt)throw new Err('#REF!');return cell(tt,k2);});}catch(e){v=e instanceof Err?e.message:'#ERROR!';}finally{busy.delete(key);}}
+  cache.set(key,v);return v;};
+ return (src:string):V=>{try{return formula(src.replace(/^=/,''),(tn,k2)=>{const tt=tn?byName(tn):tab;if(!tt)throw new Err('#REF!');return cell(tt,k2);});}catch(e){return e instanceof Err?e.message:'#ERROR!';}};
+}
+// Dates as sheet serial numbers (days since 30 Dec 1899), the same as Google Sheets and Excel.
+export const dateToSerial=(y:number,m:number,d:number)=>Math.round((Date.UTC(y,m,d)-Date.UTC(1899,11,30))/864e5);
+export const serialToDate=(n:number)=>{const d=new Date(Date.UTC(1899,11,30));d.setUTCDate(d.getUTCDate()+Math.floor(n));return d;};
+// Reads typed dates like 18/11/2026, 2026-11-18, 18 Nov 2026 or Nov 18, 2026 (day first for slashes).
+export function parseDateText(s:string):number|null{const t=s.trim();if(!t||/^-?\d+(\.\d+)?$/.test(t))return null;
+ let m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);if(m)return dateToSerial(+m[1],+m[2]-1,+m[3]);
+ m=/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/.exec(t);if(m){const y=+m[3]<100?2000+ +m[3]:+m[3];return dateToSerial(y,+m[2]-1,+m[1]);}
+ const d=new Date(/\d{4}/.test(t)?t:`${t} ${new Date().getFullYear()}`);return Number.isNaN(d.getTime())?null:dateToSerial(d.getFullYear(),d.getMonth(),d.getDate());}
+// The link a cell points to: a HYPERLINK formula, or text that is a web address.
+export function linkOf(raw:string|undefined,shown:string):string|null{
+ const m=raw?/^=HYPERLINK\(\s*"([^"]+)"/i.exec(raw):null;const u=m?m[1]:/^(https?:\/\/|www\.)\S+$/i.test(shown.trim())?shown.trim():null;
+ if(!u)return null;const full=/^https?:\/\//i.test(u)?u:`https://${u}`;try{const x=new URL(full);return x.protocol==='http:'||x.protocol==='https:'?x.href:null;}catch{return null;}}

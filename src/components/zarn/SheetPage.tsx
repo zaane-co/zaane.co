@@ -3,13 +3,13 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {ChevronUp,CloudCheck,CloudOff,AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Folder,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Pencil,Underline,Undo2,WrapText,X,Eraser,SquareCheckBig,SquareChevronDown,Trash2,Filter,ListFilter,ArrowDownAZ,ArrowUpZA} from 'lucide-react';
+import {ChevronUp,CloudCheck,CloudOff,AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Folder,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Pencil,Underline,Undo2,WrapText,X,Eraser,SquareCheckBig,SquareChevronDown,Trash2,Filter,ListFilter,ArrowDownAZ,ArrowUpZA,TableCellsMerge,Highlighter,Link as LinkIcon,CalendarDays,ExternalLink,Unlink,ChevronLeft,Grid2x2} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import ShareDoc from './ShareDoc';
 import {Modal} from './Dialogs';
 import {Avatar} from './format';
-import {CHIP_COLORS,COLS,COL_W,FUNCTIONS,FUNCTION_NAMES,ROWS,ROW_H,adjustRefs,blankTab,chipInk,colName,evaluate,isError,parseRange,parseRef,readSheet,ref,shiftRefs,show,type Rule,type SheetData,type Style,type Tab} from '@/lib/sheet';
+import {CHIP_COLORS,COLS,COL_W,FUNCTIONS,FUNCTION_NAMES,ROWS,ROW_H,adjustRefs,blankTab,chipInk,colName,dateToSerial,evaluate,exprEval,linkOf,parseDateText,serialToDate,isError,parseRange,parseRef,readSheet,ref,shiftRefs,show,type CfRule,type Rule,type SheetData,type Style,type Tab} from '@/lib/sheet';
 
 type Row={id:string;title:string;content:string;owner_id:string;kind:string;drive:'my'|'team'|'client';folder_id:string|null;lead_id:string|null};
 type Role='owner'|'edit'|'view';
@@ -23,6 +23,8 @@ const colorOf=(id:string)=>peerColors[[...id].reduce((a,ch)=>a+ch.charCodeAt(0),
 const fontSizes=[8,9,10,11,12,13,14,16,18,20,24,28,36];
 const zooms=[0.5,0.75,0.9,1,1.25,1.5,2];
 const newId=()=>Math.random().toString(36).slice(2,10);
+// Toolbar menus open under their button; nudge one left if it would run off the right edge of the screen.
+const fitMenu=(el:HTMLElement|null)=>{if(!el)return;el.style.marginLeft='';const r=el.getBoundingClientRect();if(r.right>window.innerWidth-8)el.style.marginLeft=`${Math.round(window.innerWidth-8-r.right)}px`;};
 
 // A spreadsheet in Drive, built to feel like Google Sheets: menus, a full toolbar, the name box and formula bar,
 // a fast grid with frozen rows/columns, fill handle and resizable columns, formulas with suggestions, and live co-editing.
@@ -33,7 +35,7 @@ export default function SheetPage({id}:{id:string}){
  const [sel,setSel]=useState<[number,number]>([0,0]),[anchor,setAnchor]=useState<[number,number]|null>(null);
  const [editing,setEditing]=useState<string|null>(null),[editMode,setEditMode]=useState<'type'|'edit'>('edit'),[editIn,setEditIn]=useState<'cell'|'bar'>('cell'),[pick,setPick]=useState(0);
  const [state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[crumbs,setCrumbs]=useState<{name:string;href:string}[]>([]);
- const [toolSheet,setToolSheet]=useState(false),[dd,setDd]=useState<string|null>(null),[ruleEdit,setRuleEdit]=useState<Rule|null>(null),[warn,setWarn]=useState(''),[fpop,setFpop]=useState<{c:number;x:number;y:number}|null>(null);
+ const [toolSheet,setToolSheet]=useState(false),[dd,setDd]=useState<string|null>(null),[ruleEdit,setRuleEdit]=useState<Rule|null>(null),[warn,setWarn]=useState(''),[fpop,setFpop]=useState<{c:number;x:number;y:number}|null>(null),[bdLine,setBdLine]=useState('1px solid'),[bdColor,setBdColor]=useState('currentColor'),[cfOpen,setCfOpen]=useState(false),[linkEdit,setLinkEdit]=useState<{text:string;url:string}|null>(null);
  const [menu,setMenu]=useState<string|null>(null),[pop,setPop]=useState<string|null>(null),[ctx,setCtx]=useState<{x:number;y:number}|null>(null),[tabMenu,setTabMenu]=useState<string|null>(null),[renamingTab,setRenamingTab]=useState<string|null>(null);
  const [zoom,setZoom]=useState(1),[grid,setGrid]=useState(true),[find,setFind]=useState<{q:string;rep:string;at:number}|null>(null),[help,setHelp]=useState<'keys'|'fx'|null>(null);
  const [scroll,setScroll]=useState({top:0,h:800}),[drafts,setDrafts]=useState<Record<string,number>>({}),[fill,setFill]=useState<[number,number]|null>(null),[peers,setPeers]=useState<Record<string,Peer>>({}),[hl,setHl]=useState({u:0,r:0});
@@ -118,6 +120,55 @@ export default function SheetPage({id}:{id:string}){
  function hideCols(){if(!canEdit)return;const add:number[]=[];for(let c=box.c0;c<=box.c1;c++)add.push(c);setTab(tab.id,t=>({...t,hCols:[...new Set([...(t.hCols??[]),...add])].sort((a,b)=>a-b)}));setAnchor(null);setSel([stepC(box.c1,1),box.r0]);}
  const unhide=(axis:'r'|'c',from:number,to:number)=>setTab(tab.id,t=>axis==='r'?{...t,hRows:(t.hRows??[]).filter(n=>n<from||n>to)}:{...t,hCols:(t.hCols??[]).filter(n=>n<from||n>to)});
  const runOf=(set:Set<number>,at:number,dir:1|-1)=>{let n=at;while(set.has(n+dir))n+=dir;return n;};
+ // ---------- Merged cells ----------
+ const merges=useMemo(()=>(tab.merges??[]).map(parseRange).filter((b):b is Box=>!!b),[tab.merges]);
+ const mergeAt=(c:number,r:number)=>merges.find(m=>c>=m.c0&&c<=m.c1&&r>=m.r0&&r<=m.r1);
+ async function mergeCells(kind:'all'|'h'|'v'|'un'){
+  if(!canEdit)return;const b={...box,r1:box.r0===0&&box.r1===ROWS-1?Math.max(used.mr,0):box.r1,c1:box.c0===0&&box.c1===COLS-1?Math.max(used.mc,0):box.c1};
+  const keep=(t:Tab)=>(t.merges??[]).filter(x=>{const m=parseRange(x);return m&&(m.c1<b.c0||m.c0>b.c1||m.r1<b.r0||m.r0>b.r1);});
+  if(kind==='un'){setTab(tab.id,t=>({...t,merges:keep(t)}));return;}
+  const groups:Box[]=[];
+  if(kind==='all'){if(b.c0<b.c1||b.r0<b.r1)groups.push(b);}
+  else if(kind==='h'){if(b.c0<b.c1)for(let r=b.r0;r<=b.r1;r++)groups.push({c0:b.c0,c1:b.c1,r0:r,r1:r});}
+  else if(b.r0<b.r1)for(let c=b.c0;c<=b.c1;c++)groups.push({c0:c,c1:c,r0:b.r0,r1:b.r1});
+  if(!groups.length)return;
+  const lose:string[]=[];for(const g of groups)for(const x of keysIn(g))if(x!==ref(g.c0,g.r0)&&tab.cells[x])lose.push(x);
+  if(lose.length&&!await confirm({title:'Merge cells?',message:'Merging keeps only the upper-left value of each merged group. The other values are removed.',confirm:'Merge',danger:false}))return;
+  setTab(tab.id,t=>{const cells={...t.cells};for(const x of lose)delete cells[x];return {...t,cells,merges:[...keep(t),...groups.map(g=>`${ref(g.c0,g.r0)}:${ref(g.c1,g.r1)}`)]};});
+  setAnchor([b.c1,b.r1]);setSel([b.c0,b.r0]);
+ }
+ // ---------- Borders ----------
+ function applyBorders(mode:'all'|'inner'|'horizontal'|'vertical'|'outer'|'left'|'top'|'right'|'bottom'|'clear'){
+  if(!canEdit)return;const line=`${bdLine} ${bdColor}`;
+  const b={...box,r1:box.r1-box.r0>=ROWS-1||box.r1===ROWS-1&&box.r0===0?Math.max(used.mr,box.r0):box.r1,c1:box.c0===0&&box.c1===COLS-1?Math.max(used.mc,box.c0):box.c1};
+  setTab(tab.id,t=>{const st={...(t.style??{})};
+   const put=(x:string,fn:(bd:NonNullable<Style['bd']>)=>void)=>{const bd={...(st[x]?.bd??{})};fn(bd);const ns:Style={...(st[x]??{}),bd};if(!Object.keys(bd).length)delete ns.bd;if(Object.keys(ns).length)st[x]=ns;else delete st[x];};
+   for(let r=b.r0;r<=b.r1;r++)for(let c=b.c0;c<=b.c1;c++)put(ref(c,r),bd=>{
+    if(mode==='clear'){delete bd.t;delete bd.r;delete bd.b;delete bd.l;return;}
+    const top=r===b.r0?['all','outer','top'].includes(mode):['all','inner','horizontal'].includes(mode);
+    const left=c===b.c0?['all','outer','left'].includes(mode):['all','inner','vertical'].includes(mode);
+    if(top)bd.t=line;if(left)bd.l=line;if(r===b.r1&&['all','outer','bottom'].includes(mode))bd.b=line;if(c===b.c1&&['all','outer','right'].includes(mode))bd.r=line;});
+   if(mode==='clear'){if(b.r0>0)for(let c=b.c0;c<=b.c1;c++)put(ref(c,b.r0-1),bd=>{delete bd.b;});if(b.r1<ROWS-1)for(let c=b.c0;c<=b.c1;c++)put(ref(c,b.r1+1),bd=>{delete bd.t;});
+    if(b.c0>0)for(let r=b.r0;r<=b.r1;r++)put(ref(b.c0-1,r),bd=>{delete bd.r;});if(b.c1<COLS-1)for(let r=b.r0;r<=b.r1;r++)put(ref(b.c1+1,r),bd=>{delete bd.l;});}
+   return {...t,style:st};});
+ }
+ // ---------- Conditional formatting ----------
+ const cfs=useMemo(()=>(tab.cf??[]).map(x=>({x,b:parseRange(x.range)})).filter((y):y is {x:CfRule;b:Box}=>!!y.b),[tab.cf]);
+ const cfEval=useMemo(()=>cfs.some(y=>y.x.cond==='formula')?exprEval(tab,data.tabs):null,[cfs,tab,data.tabs]);
+ const cfScale=useMemo(()=>{const out:Record<string,{lo:number;hi:number}>={};for(const {x,b} of cfs){if(!x.scale)continue;let lo=Infinity,hi=-Infinity;
+   for(let r=b.r0;r<=Math.min(b.r1,used.mr);r++)for(let c=b.c0;c<=Math.min(b.c1,used.mc);c++){const v=values[ref(c,r)];if(typeof v==='number'){lo=Math.min(lo,v);hi=Math.max(hi,v);}}
+   if(lo<=hi)out[x.id]={lo,hi};}return out;},[cfs,values,used.mr,used.mc]);
+ function cfFor(c:number,r:number,x:string,v:unknown):React.CSSProperties|undefined{
+  for(const {x:rule,b} of cfs){if(c<b.c0||c>b.c1||r<b.r0||r>b.r1)continue;
+   if(rule.scale){const st2=cfScale[rule.id];if(typeof v!=='number'||!st2)continue;const f=st2.hi===st2.lo?1:(v-st2.lo)/(st2.hi-st2.lo);
+    const bg=rule.scale.mid?(f<.5?mix(rule.scale.min,rule.scale.mid,f*2):mix(rule.scale.mid,rule.scale.max,(f-.5)*2)):mix(rule.scale.min,rule.scale.max,f);return {background:bg,color:chipInk(bg)};}
+   if(cfTest(rule,v,tab.style?.[x],()=>cfEval?cfEval(shiftRefs(`=${(rule.a??'').replace(/^=/,'')}`,c-b.c0,r-b.r0)):false)){const f=rule.fmt??{};
+    return {...(f.bg?{background:f.bg}:{}),...(f.color?{color:f.color}:f.bg?{color:chipInk(f.bg)}:{}),...(f.b?{fontWeight:700}:{}),...(f.i?{fontStyle:'italic'}:{}),...(f.s||f.u?{textDecoration:[f.u?'underline':'',f.s?'line-through':''].join(' ').trim()}:{})};}}
+  return undefined;}
+ // ---------- Links ----------
+ function saveLink(text:string,url:string){setLinkEdit(null);if(!canEdit)return;const u=url.trim(),t2=text.trim();
+  const v=!u?t2:t2&&t2!==u?`=HYPERLINK("${u.replace(/"/g,'""')}","${t2.replace(/"/g,'""')}")`:u;setCells([{tab:tab.id,k,v}]);gridRef.current?.focus();}
+ function openLinkEditor(){if(!canEdit)return;const raw=tab.cells[k]??'',shown=show(values[k],st);const u=linkOf(raw,shown);setLinkEdit({text:shown,url:u??''});}
  // ---------- Checkboxes and dropdowns (data validation) ----------
  const rules=useMemo(()=>(tab.valid??[]).map(x=>({x,b:parseRange(x.range)})).filter((y):y is {x:Rule;b:Box}=>!!y.b),[tab.valid]);
  const ruleOf=(c:number,r:number)=>{for(let i=rules.length-1;i>=0;i--){const {x,b}=rules[i];if(c>=b.c0&&c<=b.c1&&r>=b.r0&&r<=b.r1)return x;}return undefined;};
@@ -139,12 +190,17 @@ export default function SheetPage({id}:{id:string}){
  const pickOpt=(x:string,v:string)=>{setDd(null);if(canEdit&&(tab.cells[x]??'')!==v)setCells([{tab:tab.id,k:x,v}]);gridRef.current?.focus();};
 
  // ---------- Editing ----------
- const startEdit=(v:string,mode:'type'|'edit',where:'cell'|'bar'='cell')=>{if(!canEdit)return;setEditing(v);setEditMode(mode);setEditIn(where);setPick(0);};
+ const startEdit=(v:string,mode:'type'|'edit',where:'cell'|'bar'='cell')=>{if(!canEdit)return;if(mode==='edit'&&(tab.style?.[k]?.fmt==='date')&&/^\d+(\.\d+)?$/.test(v))v=show(Number(v),{fmt:'date'});setEditing(v);setEditMode(mode);setEditIn(where);setPick(0);};
  const commitEdit=(raw:string|null=editing)=>{if(raw===null)return;let v=raw;const typed=raw.trim().toLowerCase();
+  // Dates: a date-formatted cell takes any readable date; elsewhere a clearly typed date (18/11/2026, 2026-11-18, 18 Nov 2026) becomes one.
+  if(!v.startsWith('=')&&v.trim()){const isDate=tab.style?.[k]?.fmt==='date',clear=/^(\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[/.]\d{1,2}[/.]\d{2,4}|\d{1,2}\s+[a-z]{3,9}\.?\s+\d{4}|[a-z]{3,9}\.?\s+\d{1,2},?\s+\d{4})$/i.test(v.trim());
+   if((isDate||(clear&&!tab.style?.[k]?.fmt))&&!ruleOf(sel[0],sel[1])){const n=parseDateText(v);if(n!==null){v=String(n);if(!isDate&&canEdit)styleKeys([k],s2=>({...s2,fmt:'date'}));}}}
   const rl=ruleOf(sel[0],sel[1]);
   if(rl?.t==='list'&&typed&&!v.startsWith('=')){const hit=rl.opts?.find(o=>o.v.toLowerCase()===typed);if(hit)v=hit.v;else if(rl.strict){flash(`“${v.trim()}” isn't one of the options for this cell.`);setEditing(null);gridRef.current?.focus();return;}}
   if(canEdit&&(tab.cells[k]??'')!==v)setCells([{tab:tab.id,k,v}]);setEditing(null);gridRef.current?.focus();};
- const move=(dc:number,dr:number,extend=false)=>{if(extend&&!anchor)setAnchor(sel);if(!extend)setAnchor(null);setSel([stepC(sel[0],dc),stepR(sel[1],dr)]);};
+ const move=(dc:number,dr:number,extend=false)=>{if(extend&&!anchor)setAnchor(sel);if(!extend)setAnchor(null);
+  const cm=mergeAt(sel[0],sel[1]);const t=[stepC(dc>0&&cm?cm.c1:sel[0],dc),stepR(dr>0&&cm?cm.r1:sel[1],dr)] as [number,number];
+  const tm=extend?undefined:mergeAt(t[0],t[1]);if(tm){setSel([tm.c0,tm.r0]);setAnchor([tm.c1,tm.r1]);}else setSel(t);};
  useEffect(()=>{if(editing!==null)(editIn==='cell'?cellIn:barIn).current?.focus();},[editing===null,editIn]); // eslint-disable-line react-hooks/exhaustive-deps
  // Formula help: suggestions while typing a function name, and the signature of the function you're inside.
  const fx=useMemo(()=>{
@@ -216,7 +272,8 @@ export default function SheetPage({id}:{id:string}){
    const valid=t.valid?.map(x=>({...x,range:adjustRefs(`=${x.range}`,axis,at,delta).slice(1)})).filter(x=>!x.range.includes('#REF!'));
    const mv=(arr:number[]|undefined,ax:'r'|'c')=>arr?.flatMap(n=>ax!==axis?[n]:delta<0&&n>=at&&n<at-delta?[]:[n>=at?n+delta:n]);
    let filter=t.filter;if(filter){const range=adjustRefs(`=${filter.range}`,axis,at,delta).slice(1);if(range.includes('#REF!'))filter=undefined;else{let hide=filter.hide;if(axis==='c'){hide={};for(const [c,v] of Object.entries(filter.hide)){let n=Number(c);if(delta<0&&n>=at&&n<at-delta)continue;if(n>=at)n+=delta;hide[n]=v;}}filter={range,hide};}}
-   const out:Tab={...t,cells,style:move(t.style),widths,...(valid?{valid}:{}),...(t.hRows?{hRows:mv(t.hRows,'r')}:{}),...(t.hCols?{hCols:mv(t.hCols,'c')}:{})};if(filter)out.filter=filter;else delete out.filter;return out;});
+   const adj=(x:string)=>adjustRefs(`=${x}`,axis,at,delta).slice(1);const merges2=t.merges?.map(adj).filter(x=>!x.includes('#REF!'));const cf2=t.cf?.map(x=>({...x,range:adj(x.range)})).filter(x=>!x.range.includes('#REF!'));
+   const out:Tab={...t,cells,style:move(t.style),widths,...(merges2?{merges:merges2}:{}),...(cf2?{cf:cf2}:{}),...(valid?{valid}:{}),...(t.hRows?{hRows:mv(t.hRows,'r')}:{}),...(t.hCols?{hCols:mv(t.hCols,'c')}:{})};if(filter)out.filter=filter;else delete out.filter;return out;});
  }
  function sort(dir:1|-1,whole:boolean){
   if(!canEdit)return;
@@ -246,6 +303,7 @@ export default function SheetPage({id}:{id:string}){
   if(mod&&key==='b'){e.preventDefault();toggle('b');return;}if(mod&&key==='i'){e.preventDefault();toggle('i');return;}if(mod&&key==='u'){e.preventDefault();toggle('u');return;}
   if(mod&&key==='d'){e.preventDefault();fillDown(false);return;}if(mod&&key==='r'){e.preventDefault();fillDown(true);return;}
   if(mod&&key==='a'){e.preventDefault();setAnchor([COLS-1,ROWS-1]);setSel([0,0]);return;}
+  if(mod&&key==='k'){e.preventDefault();openLinkEditor();return;}
   if(mod&&key==='f'){e.preventDefault();setFind({q:'',rep:'',at:-1});return;}
   if(mod&&key==='/'){e.preventDefault();setHelp('keys');return;}
   if(mod&&e.key==='Home'){e.preventDefault();setAnchor(null);setSel([0,0]);return;}
@@ -276,6 +334,7 @@ export default function SheetPage({id}:{id:string}){
   if(e.button===2){if(!(c>=box.c0&&c<=box.c1&&r>=box.r0&&r<=box.r1)){setAnchor(null);setSel([c,r]);}return;}
   if(pointing&&editing!==null){e.preventDefault();const add=ref(c,r);drag.current={kind:'fx',start:[c,r],at:editing.length,len:add.length};setEditing(editing+add);return;}
   if(editing!==null)commitEdit();
+  const mg=mergeAt(c,r);if(mg&&!e.shiftKey){setAnchor([mg.c1,mg.r1]);setSel([mg.c0,mg.r0]);drag.current={kind:'sel'};gridRef.current?.focus();return;}
   if(e.shiftKey){if(!anchor)setAnchor(sel);}else setAnchor([c,r]);
   setSel([c,r]);drag.current={kind:'sel'};gridRef.current?.focus();
  }
@@ -305,6 +364,11 @@ export default function SheetPage({id}:{id:string}){
   if(sel[0]>=freeze.c){if(x<el.scrollLeft+fx2)el.scrollLeft=x-fx2;else if(x+w>el.scrollLeft+el.clientWidth)el.scrollLeft=x+w-el.clientWidth+4;}
  },[sel]); // eslint-disable-line react-hooks/exhaustive-deps
  const leftOf=(c:number)=>{let x=ROWHEAD_W;for(let i=0;i<c;i++)x+=width(i);return x;};
+ // A merged cell draws its content in a box covering the whole merged area, on top of the cells it hides.
+ const wrapMerge=(m:Box|undefined,cur:boolean,css:React.CSSProperties,node:React.ReactNode)=>{if(!m||(m.c0===m.c1&&m.r0===m.r1))return node;
+  let w=0;for(let c=m.c0;c<=m.c1;c++)w+=width(c);let h=0;for(let r=m.r0;r<=m.r1;r++)if(!hidden.has(r))h+=ROW_H;
+  const {position:_p,left:_l,top:_t,zIndex:_z,...rest}=css;void _p;void _l;void _t;void _z;
+  return <div className={`zs2-merge${cur?' is-cur':''}`} style={{...rest,width:w,height:h,justifyContent:css.textAlign==='right'?'flex-end':css.textAlign==='left'||!css.textAlign?'flex-start':'center'}}>{node}</div>;};
 
  // ---------- Files ----------
  function csvText(){const q=(s:string)=>/[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;const lines:string[]=[];
@@ -346,8 +410,8 @@ export default function SheetPage({id}:{id:string}){
   View:[{head:'Freeze'},{label:'No rows',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:0}})),on:!freeze.r,off:!canEdit},{label:'1 row',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:1}})),on:freeze.r===1,off:!canEdit},{label:'2 rows',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:2}})),on:freeze.r===2,off:!canEdit},{label:`Up to row ${sel[1]+1}`,run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:Math.min(sel[1]+1,20)}})),off:!canEdit},
    {label:'No columns',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:0}})),on:!freeze.c,off:!canEdit},{label:'1 column',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:1}})),on:freeze.c===1,off:!canEdit},{label:`Up to column ${colName(sel[0])}`,run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:Math.min(sel[0]+1,10)}})),off:!canEdit},
    '-',{label:'Gridlines',run:()=>setGrid(g=>!g),on:grid},'-',{label:'Show all hidden rows',run:()=>setTab(tab.id,t=>({...t,hRows:[]})),off:!canEdit||!manualRows.size},{label:'Show all hidden columns',run:()=>setTab(tab.id,t=>({...t,hCols:[]})),off:!canEdit||!hCols.size},'-',{head:'Zoom'},...zooms.map(z=>({label:`${Math.round(z*100)}%`,run:()=>setZoom(z),on:zoom===z}) as Item)],
-  Insert:[{label:`Row above`,run:()=>shift('r',box.r0,1),off:!canEdit},{label:'Row below',run:()=>shift('r',box.r1+1,1),off:!canEdit},{label:'Column left',run:()=>shift('c',box.c0,1),off:!canEdit},{label:'Column right',run:()=>shift('c',box.c1+1,1),off:!canEdit},'-',{label:'New tab',run:addTab,off:!canEdit},'-',{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Dropdown',run:openDropdown,off:!canEdit},'-',{head:'Function'},...['SUM','AVERAGE','COUNT','MAX','MIN','IF','VLOOKUP'].map(n=>({label:n,run:()=>startEdit(`=${n}(`,'edit'),off:!canEdit}) as Item)],
-  Format:[...fmtItems,'-',{head:'Text'},{label:'Bold',key:'⌘B',run:()=>toggle('b'),on:!!st.b,off:!canEdit},{label:'Italic',key:'⌘I',run:()=>toggle('i'),on:!!st.i,off:!canEdit},{label:'Underline',key:'⌘U',run:()=>toggle('u'),on:!!st.u,off:!canEdit},{label:'Strikethrough',run:()=>toggle('s'),on:!!st.s,off:!canEdit},'-',{head:'Alignment'},{label:'Left',run:()=>styleKeys(keysIn(box),s=>({...s,h:'l'})),on:st.h==='l',off:!canEdit},{label:'Centre',run:()=>styleKeys(keysIn(box),s=>({...s,h:'c'})),on:st.h==='c',off:!canEdit},{label:'Right',run:()=>styleKeys(keysIn(box),s=>({...s,h:'r'})),on:st.h==='r',off:!canEdit},{label:'Wrap text',run:()=>styleKeys(keysIn(box),s=>({...s,wrap:s.wrap?undefined:1})),on:!!st.wrap,off:!canEdit},'-',{label:'Clear formatting',key:'⌘\\',run:()=>styleKeys(keysIn(box),()=>({})),off:!canEdit}],
+  Insert:[{label:`Row above`,run:()=>shift('r',box.r0,1),off:!canEdit},{label:'Row below',run:()=>shift('r',box.r1+1,1),off:!canEdit},{label:'Column left',run:()=>shift('c',box.c0,1),off:!canEdit},{label:'Column right',run:()=>shift('c',box.c1+1,1),off:!canEdit},'-',{label:'New tab',run:addTab,off:!canEdit},'-',{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Dropdown',run:openDropdown,off:!canEdit},{label:'Date',run:()=>{styleKeys(keysIn(box),s2=>({...s2,fmt:'date'}));startEdit(tab.cells[k]??'','edit');},off:!canEdit},{label:'Link',key:'⌘K',run:openLinkEditor,off:!canEdit},'-',{head:'Function'},...['SUM','AVERAGE','COUNT','MAX','MIN','IF','VLOOKUP'].map(n=>({label:n,run:()=>startEdit(`=${n}(`,'edit'),off:!canEdit}) as Item)],
+  Format:[...fmtItems,'-',{head:'Text'},{label:'Bold',key:'⌘B',run:()=>toggle('b'),on:!!st.b,off:!canEdit},{label:'Italic',key:'⌘I',run:()=>toggle('i'),on:!!st.i,off:!canEdit},{label:'Underline',key:'⌘U',run:()=>toggle('u'),on:!!st.u,off:!canEdit},{label:'Strikethrough',run:()=>toggle('s'),on:!!st.s,off:!canEdit},'-',{head:'Alignment'},{label:'Left',run:()=>styleKeys(keysIn(box),s=>({...s,h:'l'})),on:st.h==='l',off:!canEdit},{label:'Centre',run:()=>styleKeys(keysIn(box),s=>({...s,h:'c'})),on:st.h==='c',off:!canEdit},{label:'Right',run:()=>styleKeys(keysIn(box),s=>({...s,h:'r'})),on:st.h==='r',off:!canEdit},{label:'Wrap text',run:()=>styleKeys(keysIn(box),s=>({...s,wrap:s.wrap?undefined:1})),on:!!st.wrap,off:!canEdit},'-',{head:'Merge cells'},{label:'Merge all',run:()=>void mergeCells('all'),off:!canEdit},{label:'Merge horizontally',run:()=>void mergeCells('h'),off:!canEdit},{label:'Merge vertically',run:()=>void mergeCells('v'),off:!canEdit},{label:'Unmerge',run:()=>void mergeCells('un'),off:!canEdit},'-',{label:'Conditional formatting…',run:()=>setCfOpen(true),off:!canEdit},'-',{label:'Clear formatting',key:'⌘\\',run:()=>styleKeys(keysIn(box),()=>({})),off:!canEdit}],
   Data:[filt?{label:'Remove filter',run:removeFilter,off:!canEdit}:{label:'Create a filter',run:createFilter,off:!canEdit},'-',{label:`Sort sheet by column ${colName(sel[0])}, A → Z`,run:()=>sort(1,true),off:!canEdit},{label:`Sort sheet by column ${colName(sel[0])}, Z → A`,run:()=>sort(-1,true),off:!canEdit},'-',{label:'Sort range A → Z',run:()=>sort(1,false),off:!canEdit},{label:'Sort range Z → A',run:()=>sort(-1,false),off:!canEdit},'-',{label:'Dropdown…',run:openDropdown,off:!canEdit},{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Remove dropdowns and checkboxes',run:clearRules,off:!canEdit||!rules.length}],
   Help:[{label:'Keyboard shortcuts',key:'⌘/',run:()=>setHelp('keys')},{label:'Function list',run:()=>setHelp('fx')}],
  };
@@ -397,7 +461,7 @@ export default function SheetPage({id}:{id:string}){
    <button type="button" data-tip="Decrease decimal places" aria-label="Fewer decimals" disabled={!canEdit} onClick={()=>bump(-1)}><b className="zs2-glyph">.0<small>←</small></b></button>
    <button type="button" data-tip="Increase decimal places" aria-label="More decimals" disabled={!canEdit} onClick={()=>bump(1)}><b className="zs2-glyph">.00<small>→</small></b></button>
    <span className="zs2-popwrap"><button type="button" data-tip="More formats" aria-label="More formats" disabled={!canEdit} onClick={()=>setPop(p=>p==='fmt'?null:'fmt')}><b className="zs2-glyph">123</b><ChevronDown size={12}/></button>
-    {pop==='fmt'&&<div className="zs2-menu">{renderItems(fmtItems)}</div>}</span>
+    {pop==='fmt'&&<div className="zs2-menu" ref={fitMenu}>{renderItems(fmtItems)}</div>}</span>
    <i className="zs2-sep"/>
    <span className="zs2-sel"><select aria-label="Font size" disabled={!canEdit} value={st.size??13} onChange={e=>{const v=Number(e.target.value);styleKeys(keysIn(box),s=>({...s,size:v===13?undefined:v}));}}>{fontSizes.map(f=><option key={f} value={f}>{f}</option>)}</select></span>
    <i className="zs2-sep"/>
@@ -406,9 +470,9 @@ export default function SheetPage({id}:{id:string}){
    <button type="button" data-tip="Strikethrough" aria-label="Strikethrough" disabled={!canEdit} className={st.s?'is-on':''} onClick={()=>toggle('s')}><Strikethrough size={16}/></button>
    <button type="button" data-tip="Underline (⌘U)" aria-label="Underline" disabled={!canEdit} className={st.u?'is-on':''} onClick={()=>toggle('u')}><Underline size={16}/></button>
    <span className="zs2-popwrap"><button type="button" data-tip="Text colour" aria-label="Text colour" disabled={!canEdit} onClick={()=>setPop(p=>p==='color'?null:'color')}><span className="zs2-a" style={{borderColor:st.color??'currentColor'}}>A</span></button>
-    {pop==='color'&&<div className="zs2-colors"><button type="button" className="zs2-reset" onClick={()=>{setPop(null);styleKeys(keysIn(box),s=>({...s,color:undefined}));}}>Reset</button><div>{palette.map(c=><button key={c} type="button" aria-label={c} style={{background:c}} onClick={()=>{setPop(null);styleKeys(keysIn(box),s=>({...s,color:c}));}}/>)}</div></div>}</span>
+    {pop==='color'&&<div className="zs2-colors" ref={fitMenu}><button type="button" className="zs2-reset" onClick={()=>{setPop(null);styleKeys(keysIn(box),s=>({...s,color:undefined}));}}>Reset</button><div>{palette.map(c=><button key={c} type="button" aria-label={c} style={{background:c}} onClick={()=>{setPop(null);styleKeys(keysIn(box),s=>({...s,color:c}));}}/>)}</div></div>}</span>
    <span className="zs2-popwrap"><button type="button" data-tip="Fill colour" aria-label="Fill colour" disabled={!canEdit} onClick={()=>setPop(p=>p==='fill'?null:'fill')}><PaintBucket size={16}/><span className="zs2-bar" style={{background:st.bg??'transparent'}}/></button>
-    {pop==='fill'&&<div className="zs2-colors"><button type="button" className="zs2-reset" onClick={()=>{setPop(null);styleKeys(keysIn(box),s=>({...s,bg:undefined}));}}>Reset</button><div>{palette.map(c=><button key={c} type="button" aria-label={c} style={{background:c}} onClick={()=>{setPop(null);styleKeys(keysIn(box),s=>({...s,bg:c}));}}/>)}</div></div>}</span>
+    {pop==='fill'&&<div className="zs2-colors" ref={fitMenu}><button type="button" className="zs2-reset" onClick={()=>{setPop(null);styleKeys(keysIn(box),s=>({...s,bg:undefined}));}}>Reset</button><div>{palette.map(c=><button key={c} type="button" aria-label={c} style={{background:c}} onClick={()=>{setPop(null);styleKeys(keysIn(box),s=>({...s,bg:c}));}}/>)}</div></div>}</span>
    <i className="zs2-sep"/>
    <button type="button" data-tip="Align left" aria-label="Align left" disabled={!canEdit} className={st.h==='l'?'is-on':''} onClick={()=>styleKeys(keysIn(box),s=>({...s,h:s.h==='l'?undefined:'l'}))}><AlignLeft size={16}/></button>
    <button type="button" data-tip="Align centre" aria-label="Align centre" disabled={!canEdit} className={st.h==='c'?'is-on':''} onClick={()=>styleKeys(keysIn(box),s=>({...s,h:s.h==='c'?undefined:'c'}))}><AlignCenter size={16}/></button>
@@ -416,12 +480,26 @@ export default function SheetPage({id}:{id:string}){
    <button type="button" data-tip="Wrap text" aria-label="Wrap text" disabled={!canEdit} className={st.wrap?'is-on':''} onClick={()=>styleKeys(keysIn(box),s=>({...s,wrap:s.wrap?undefined:1}))}><WrapText size={16}/></button>
    <button type="button" data-tip="Clear formatting" aria-label="Clear formatting" disabled={!canEdit} onClick={()=>styleKeys(keysIn(box),()=>({}))}><Eraser size={16}/></button>
    <i className="zs2-sep"/>
+   <span className="zs2-popwrap"><button type="button" data-tip="Borders" aria-label="Borders" disabled={!canEdit} onClick={()=>setPop(p=>p==='border'?null:'border')}><Grid2x2 size={16}/><ChevronDown size={12}/></button>
+    {pop==='border'&&<div className="zs2-menu zs2-borders" ref={fitMenu} onClick={e=>e.stopPropagation()}>
+     <div className="zs2-bgrid">{(['all','inner','horizontal','vertical','outer','left','top','right','bottom','clear'] as const).map(m=><button key={m} type="button" aria-label={`Borders: ${m}`} data-tip={m==='clear'?'Clear borders':`${m[0].toUpperCase()}${m.slice(1)} borders`} onClick={()=>{applyBorders(m);setPop(null);}}><BorderGlyph mode={m}/></button>)}</div>
+     <hr/><p className="zs2-mhead">Line</p>
+     <div className="zs2-blines">{([['1px solid','Thin'],['2px solid','Medium'],['3px solid','Thick'],['1px dashed','Dashed'],['1px dotted','Dotted'],['3px double','Double']] as const).map(([v,l])=><button key={v} type="button" className={bdLine===v?'is-on':''} aria-label={l} data-tip={l} onClick={()=>setBdLine(v)}><i style={{borderTop:`${v} currentColor`}}/></button>)}</div>
+     <p className="zs2-mhead">Colour</p>
+     <div className="zs2-bcolors"><button type="button" aria-label="Default (text colour)" data-tip="Default" className={bdColor==='currentColor'?'is-on':''} style={{background:'var(--z-fg)'}} onClick={()=>setBdColor('currentColor')}/>{palette.slice(0,23).map(c=><button key={c} type="button" aria-label={c} className={bdColor===c?'is-on':''} style={{background:c}} onClick={()=>setBdColor(c)}/>)}</div>
+    </div>}</span>
+   <span className="zs2-popwrap"><button type="button" data-tip="Merge cells" aria-label="Merge cells" disabled={!canEdit} onClick={()=>setPop(p=>p==='merge'?null:'merge')}><TableCellsMerge size={16}/><ChevronDown size={12}/></button>
+    {pop==='merge'&&<div className="zs2-menu" ref={fitMenu}>{renderItems([{label:'Merge all',run:()=>void mergeCells('all')},{label:'Merge horizontally',run:()=>void mergeCells('h')},{label:'Merge vertically',run:()=>void mergeCells('v')},{label:'Unmerge',run:()=>void mergeCells('un')}])}</div>}</span>
+   <button type="button" data-tip="Conditional formatting" aria-label="Conditional formatting" disabled={!canEdit} onClick={()=>setCfOpen(true)}><Highlighter size={16}/></button>
+   <button type="button" data-tip="Insert link (⌘K)" aria-label="Insert link" disabled={!canEdit} onClick={openLinkEditor}><LinkIcon size={16}/></button>
+   <button type="button" data-tip="Insert date" aria-label="Insert date" disabled={!canEdit} onClick={()=>{styleKeys(keysIn(box),s2=>({...s2,fmt:'date'}));startEdit(tab.cells[k]??'','edit');}}><CalendarDays size={16}/></button>
+   <i className="zs2-sep"/>
    <button type="button" data-tip={filt?'Remove filter':'Create a filter'} aria-label={filt?'Remove filter':'Create a filter'} disabled={!canEdit} className={filt?'is-on':''} onClick={()=>filt?removeFilter():createFilter()}><Filter size={16}/></button>
    <button type="button" data-tip="Insert checkbox" aria-label="Insert checkbox" disabled={!canEdit} onClick={addCheckbox}><SquareCheckBig size={16}/></button>
    <button type="button" data-tip="Insert dropdown" aria-label="Insert dropdown" disabled={!canEdit} onClick={openDropdown}><SquareChevronDown size={16}/></button>
    <i className="zs2-sep"/>
    <span className="zs2-popwrap"><button type="button" data-tip="Functions" aria-label="Functions" disabled={!canEdit} onClick={()=>setPop(p=>p==='fx'?null:'fx')}><Sigma size={16}/><ChevronDown size={12}/></button>
-    {pop==='fx'&&<div className="zs2-menu">{['SUM','AVERAGE','COUNT','MAX','MIN'].map(n=><button key={n} type="button" onClick={()=>{setPop(null);if(box.r1>box.r0||box.c1>box.c0){const target=box.r1+1<ROWS?ref(box.c0,box.r1+1):ref(box.c1+1,box.r0);setCells([{tab:tab.id,k:target,v:`=${n}(${ref(box.c0,box.r0)}:${ref(box.c1,box.r1)})`}]);}else startEdit(`=${n}(`,'edit');}}><span className="zs2-mcheck"/><span>{n}</span></button>)}<hr/><button type="button" onClick={()=>{setPop(null);setHelp('fx');}}><span className="zs2-mcheck"/><span>All functions…</span></button></div>}</span>
+    {pop==='fx'&&<div className="zs2-menu" ref={fitMenu}>{['SUM','AVERAGE','COUNT','MAX','MIN'].map(n=><button key={n} type="button" onClick={()=>{setPop(null);if(box.r1>box.r0||box.c1>box.c0){const target=box.r1+1<ROWS?ref(box.c0,box.r1+1):ref(box.c1+1,box.r0);setCells([{tab:tab.id,k:target,v:`=${n}(${ref(box.c0,box.r0)}:${ref(box.c1,box.r1)})`}]);}else startEdit(`=${n}(`,'edit');}}><span className="zs2-mcheck"/><span>{n}</span></button>)}<hr/><button type="button" onClick={()=>{setPop(null);setHelp('fx');}}><span className="zs2-mcheck"/><span>All functions…</span></button></div>}</span>
   </div>
 
   {canEdit&&<div className="zs2-mbar" onClick={e=>e.stopPropagation()}>
@@ -437,7 +515,7 @@ export default function SheetPage({id}:{id:string}){
    <input className="zs2-name" aria-label="Name box" defaultValue={box.c0===box.c1&&box.r0===box.r1?k:`${ref(box.c0,box.r0)}:${ref(box.c1,box.r1)}`} key={`${k}-${box.c0}-${box.r0}-${box.c1}-${box.r1}`}
     onKeyDown={e=>{if(e.key!=='Enter')return;const v=e.currentTarget.value.toUpperCase().trim();const [a,b]=v.split(':');const p=parseRef(a),q=b?parseRef(b):null;if(p){if(q){setAnchor(p);setSel(q);}else{setAnchor(null);setSel(p);}gridRef.current?.focus();}}}/>
    <span className="zs2-fx">fx</span>
-   <input ref={barIn} className="zs2-formula" value={editing??tab.cells[k]??''} readOnly={!canEdit} aria-label="Cell contents"
+   <input ref={barIn} className="zs2-formula" value={editing??(st.fmt==='date'&&/^\d+$/.test(tab.cells[k]??'')?show(Number(tab.cells[k]),{fmt:'date'}):tab.cells[k]??'')} readOnly={!canEdit} aria-label="Cell contents"
     onFocus={()=>{if(editing===null&&canEdit)startEdit(tab.cells[k]??'','edit','bar');else setEditIn('bar');}} onChange={e=>setEditing(e.target.value)} onKeyDown={onEditKey}/>
   </div>
 
@@ -459,12 +537,13 @@ export default function SheetPage({id}:{id:string}){
        <th className={`zs2-rh${r>=box.r0&&r<=box.r1?' is-hl':''}${box.c0===0&&box.c1===COLS-1&&r>=box.r0&&r<=box.r1?' is-full':''}${r===freeze.r-1?' is-freeze':''}`} style={r<freeze.r?{top:HEAD_H+vIndex[r]*ROW_H,zIndex:5}:undefined}
         onMouseDown={e=>{if(editing!==null)commitEdit();if(e.shiftKey&&anchor){setAnchor([COLS-1,anchor[1]]);setSel([0,r]);}else{setAnchor([COLS-1,r]);setSel([0,r]);}gridRef.current?.focus();}}
         onContextMenu={e=>{e.preventDefault();if(!(r>=box.r0&&r<=box.r1&&box.c0===0&&box.c1===COLS-1)){setAnchor([COLS-1,r]);setSel([0,r]);}setCtx({x:e.clientX,y:e.clientY});}}>{r+1}{r>0&&manualRows.has(r-1)&&<button type="button" className="zs2-unhide is-up" aria-label="Show hidden rows" data-tip="Show hidden rows" onMouseDown={e=>{e.stopPropagation();e.preventDefault();unhide('r',runOf(manualRows,r-1,-1),r-1);}}/>}{manualRows.has(r+1)&&<button type="button" className="zs2-unhide is-down" aria-label="Show hidden rows" onMouseDown={e=>{e.stopPropagation();e.preventDefault();unhide('r',r+1,runOf(manualRows,r+1,1));}}/>}</th>
-       {Array.from({length:COLS},(_,c)=>{if(hCols.has(c))return null;const x=ref(c,r),s=tab.style?.[x],v=values[x],rule=ruleOf(c,r),cur=c===sel[0]&&r===sel[1],inside=c>=box.c0&&c<=box.c1&&r>=box.r0&&r<=box.r1,peer=others.find(p=>p.s===x);
+       {Array.from({length:COLS},(_,c)=>{if(hCols.has(c))return null;const mg=mergeAt(c,r);const x=ref(c,r),s=tab.style?.[x],v=values[x],rule=ruleOf(c,r),cur=c===sel[0]&&r===sel[1],inside=c>=box.c0&&c<=box.c1&&r>=box.r0&&r<=box.r1,peer=others.find(p=>p.s===x);
         const fillTarget=fill&&(()=>{const down=Math.abs(fill[1]-box.r1)>=Math.abs(fill[0]-box.c1);return down?(c>=box.c0&&c<=box.c1&&((fill[1]>box.r1&&r>box.r1&&r<=fill[1])||(fill[1]<box.r0&&r<box.r0&&r>=fill[1]))):(r>=box.r0&&r<=box.r1&&((fill[0]>box.c1&&c>box.c1&&c<=fill[0])||(fill[0]<box.c0&&c<box.c0&&c>=fill[0])));})();
         const edges=inside?`${r===box.r0?' t':''}${r===box.r1?' b':''}${c===box.c0?' l':''}${c===box.c1?' r':''}`:'';
-        return <td key={c} className={`${filt&&r===filt.b.r0&&c>=filt.b.c0&&c<=filt.b.c1?' is-fhead':''}${rule?` is-${rule.t}`:''}${inside&&!cur?' is-in':''}${edges?` is-edge${edges}`:''}${cur?' is-cur':''}${isError(v)?' is-err':''}${fillTarget?' is-fill':''}${c===freeze.c-1?' is-fz-c':''}${r===freeze.r-1?' is-fz-r':''}`} style={cellStyle(s,c,r,typeof v==='number')}
+        return <td key={c} className={`${mg?(mg.c0===c&&mg.r0===r?' is-manchor':' is-mcov'):''}${filt&&r===filt.b.r0&&c>=filt.b.c0&&c<=filt.b.c1?' is-fhead':''}${rule?` is-${rule.t}`:''}${inside&&!cur?' is-in':''}${edges?` is-edge${edges}`:''}${cur?' is-cur':''}${isError(v)?' is-err':''}${fillTarget?' is-fill':''}${c===freeze.c-1?' is-fz-c':''}${r===freeze.r-1?' is-fz-r':''}`} style={{...cellStyle(s,c,r,typeof v==='number'),...cfFor(c,r,x,v)}}
          onMouseDown={e=>cellDown(e,c,r)} onMouseEnter={()=>cellEnter(c,r)} onDoubleClick={()=>{const rl=ruleOf(c,r);if(rl?.t==='check')return;if(rl?.t==='list'&&canEdit){setDd(x);return;}startEdit(tab.cells[x]??'','edit');}} onContextMenu={e=>{e.preventDefault();setCtx({x:e.clientX,y:e.clientY});}}>
-         {cur&&editing!==null&&editIn==='cell'?<input ref={cellIn} className="zs2-in" value={editing} onChange={e=>setEditing(e.target.value)} onKeyDown={onEditKey} onBlur={e=>{if(!drag.current.kind&&!(e.relatedTarget as HTMLElement|null)?.closest('.zs2-fbar,.zs2-suggest'))commitEdit();}}/>
+         {s?.bd&&<span className="zs2-bd" style={{borderTop:s.bd.t,borderRight:s.bd.r,borderBottom:s.bd.b,borderLeft:s.bd.l}}/>}
+         {mg&&(mg.c0!==c||mg.r0!==r)?null:wrapMerge(mg,cur,{...cellStyle(s,c,r,typeof v==='number'),...cfFor(c,r,x,v)},<>{cur&&editing!==null&&editIn==='cell'?<input ref={cellIn} className="zs2-in" value={editing} onChange={e=>setEditing(e.target.value)} onKeyDown={onEditKey} onBlur={e=>{if(!drag.current.kind&&!(e.relatedTarget as HTMLElement|null)?.closest('.zs2-fbar,.zs2-suggest'))commitEdit();}}/>
           :rule?.t==='check'?<span className={`zs2-check${isTrue(tab.cells[x])||v===true?' is-on':''}`} role="checkbox" aria-checked={isTrue(tab.cells[x])} onMouseDown={e=>{if(e.button!==0||!canEdit)return;e.stopPropagation();e.preventDefault();if(editing!==null)commitEdit();setAnchor(null);setSel([c,r]);toggleChecks([x]);gridRef.current?.focus();}}/>
           :rule?.t==='list'?<>{(()=>{const txt=show(v,s);if(!txt)return null;const o=rule.opts?.find(y=>y.v.toLowerCase()===txt.toLowerCase());return o?<span className="zs2-chip" style={{background:o.c??CHIP_COLORS[0],color:chipInk(o.c??CHIP_COLORS[0])}}>{txt}</span>:<span className="zs2-badval" title="Not one of the dropdown options">{txt}</span>;})()}
            <button type="button" tabIndex={-1} className="zs2-dd" aria-label="Open dropdown" onMouseDown={e=>{if(e.button!==0)return;e.stopPropagation();e.preventDefault();if(editing!==null)commitEdit();setAnchor(null);setSel([c,r]);if(canEdit)setDd(d=>d===x?null:x);}} onClick={e=>e.stopPropagation()}><ChevronDown size={13}/></button>
@@ -472,11 +551,14 @@ export default function SheetPage({id}:{id:string}){
             <div className="zs2-ddlist">{(rule.opts??[]).map(o=><button key={o.v} type="button" className={show(v,s).toLowerCase()===o.v.toLowerCase()?'is-on':''} onClick={()=>pickOpt(x,o.v)}><span className="zs2-chip" style={{background:o.c??CHIP_COLORS[0],color:chipInk(o.c??CHIP_COLORS[0])}}>{o.v}</span>{show(v,s).toLowerCase()===o.v.toLowerCase()&&<Check size={14}/>}</button>)}</div>
             <div className="zs2-ddfoot">{tab.cells[x]&&<button type="button" onClick={()=>pickOpt(x,'')}><X size={13}/>Clear</button>}<button type="button" onClick={()=>{setDd(null);setRuleEdit(rule);}}><Pencil size={13}/>Edit</button></div>
            </div>}</>
-          :show(v,s)}
+          :(()=>{const t=show(v,s);const u=t&&linkOf(tab.cells[x],t);return u?<span className="zs2-link">{t}</span>:t;})()}</>)}
+         {cur&&editing===null&&!dd&&(()=>{const u=linkOf(tab.cells[x],show(v,s));if(!u)return null;let label=u;try{const q=new URL(u);label=q.host+(q.pathname.length>1?q.pathname:'');}catch{}
+          return <div className="zs2-linkcard" onMouseDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}><a href={u} target="_blank" rel="noopener noreferrer"><ExternalLink size={14}/><span>{label}</span></a>{canEdit&&<><button type="button" aria-label="Edit link" data-tip="Edit link" onClick={openLinkEditor}><Pencil size={14}/></button>{/^=HYPERLINK\(/i.test(tab.cells[x]??'')&&<button type="button" aria-label="Remove link" data-tip="Remove link" onClick={()=>setCells([{tab:tab.id,k:x,v:show(v,s)}])}><Unlink size={14}/></button>}</>}</div>;})()}
          {filt&&r===filt.b.r0&&c>=filt.b.c0&&c<=filt.b.c1&&<button type="button" tabIndex={-1} className={`zs2-fbtn${filt.hide[c]?.length?' is-on':''}`} aria-label="Filter this column" onMouseDown={e=>{e.stopPropagation();e.preventDefault();}} onClick={e=>{e.stopPropagation();const rc=e.currentTarget.getBoundingClientRect();setFpop(p=>p?.c===c?null:{c,x:rc.right,y:rc.bottom});}}>{filt.hide[c]?.length?<Filter size={12}/>:<ListFilter size={13}/>}</button>}
          {cur&&canEdit&&editing===null&&box.c0===box.c1&&box.r0===box.r1&&<span className="zs2-handle" onMouseDown={e=>{e.stopPropagation();e.preventDefault();drag.current={kind:'fill'};}}/>}
          {!cur&&c===box.c1&&r===box.r1&&canEdit&&editing===null&&(box.c0!==box.c1||box.r0!==box.r1)&&<span className="zs2-handle" onMouseDown={e=>{e.stopPropagation();e.preventDefault();drag.current={kind:'fill'};}}/>}
          {peer&&<span className="zs2-peer" style={{borderColor:colorOf(peer.u)}}><em style={{background:colorOf(peer.u)}}>{people[peer.u]?.display_name?.split(' ')[0]??'Someone'}</em></span>}
+         {cur&&editing!==null&&editIn==='cell'&&s?.fmt==='date'&&!editing.startsWith('=')&&<DatePick text={editing} onPick={n=>{commitEdit(String(n));}}/>}
          {cur&&editing!==null&&editIn==='cell'&&(fx.list.length>0||fx.help)&&<div className="zs2-suggest" onMouseDown={e=>e.preventDefault()}>
           {fx.list.map((n,j)=><button key={n} type="button" className={j===pick?'is-on':''} onClick={()=>acceptFx(n)}><b>{n}</b><small>{FUNCTIONS[n].help}</small></button>)}
           {!fx.list.length&&fx.help&&<p>{fx.help}</p>}</div>}
@@ -527,6 +609,8 @@ export default function SheetPage({id}:{id:string}){
   {fpop&&filt&&(()=>{const vals=new Map<string,number>();for(let r=filt.b.r0+1;r<=Math.min(filt.b.r1,used.mr);r++){const x=ref(fpop.c,r),t2=show(values[x],tab.style?.[x]);vals.set(t2,(vals.get(t2)??0)+1);}
    return <FilterPop key={fpop.c} x={fpop.x} y={fpop.y} col={tab.cells[ref(fpop.c,filt.b.r0)]||`Column ${colName(fpop.c)}`} values={[...vals.entries()].sort((a,b)=>a[0]===''?1:b[0]===''?-1:a[0].localeCompare(b[0],undefined,{numeric:true}))} hidden={filt.hide[fpop.c]??[]} canEdit={canEdit}
     onSort={d=>{setFpop(null);sortRange({...filt.b,r0:filt.b.r0+1,r1:Math.min(filt.b.r1,Math.max(used.mr,filt.b.r0+1))},fpop.c,d);}} onApply={h=>{setFpop(null);setFilterHide(fpop.c,h);}} onClose={()=>setFpop(null)}/>;})()}
+  {cfOpen&&<CfPanel rules={tab.cf??[]} range={rangeOf(box)} onClose={()=>setCfOpen(false)} onChange={cf=>setTab(tab.id,t=>({...t,cf}))}/>}
+  {linkEdit&&<LinkModal init={linkEdit} onClose={()=>{setLinkEdit(null);gridRef.current?.focus();}} onSave={saveLink}/>}
   {warn&&<div className="zs2-warn" role="alert">{warn}</div>}
   {help==='keys'&&<Modal title="Keyboard shortcuts" onClose={()=>setHelp(null)} wide><div className="zn-modal-body"><dl className="zs2-keys">{([['Arrow keys','Move'],['Shift + arrows','Select a range'],['⌘ + arrows','Jump to the edge of the data'],['Enter / F2','Edit the cell'],['Type','Replace the cell'],['Tab / Shift+Tab','Move right / left'],['Delete','Clear the selection'],['⌘C / ⌘X / ⌘V','Copy / cut / paste'],['⌘Z / ⌘⇧Z','Undo / redo'],['⌘D / ⌘R','Fill down / right'],['⌘B / ⌘I / ⌘U','Bold / italic / underline'],['⌘A','Select all'],['⌘F','Find and replace'],['Drag the blue square','Fill or continue formulas'],['Click cells while typing =','Insert references']] as const).map(([a,b])=><div key={a}><dt><kbd>{a}</kbd></dt><dd>{b}</dd></div>)}</dl></div></Modal>}
   {help==='fx'&&<Modal title="Functions" onClose={()=>setHelp(null)} wide><div className="zn-modal-body"><ul className="zs2-fxlist">{FUNCTION_NAMES.map(n=><li key={n}><b>{n}</b><code>{FUNCTIONS[n].help}</code></li>)}</ul></div></Modal>}
@@ -582,4 +666,96 @@ function FilterPop({x,y,col,values,hidden,canEdit,onSort,onApply,onClose}:{x:num
    {!shown.length&&<li className="zs2-fpop-none">No matches</li>}</ul>
   <div className="zs2-fpop-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button type="button" className="zn-btn is-primary" disabled={!canEdit} onClick={()=>onApply([...off])}>OK</button></div>
  </div>;
+}
+
+function mix(a:string,b:string,f:number){const p=(h:string)=>{const x=h.replace('#','');const n=parseInt(x.length===3?x.split('').map(y=>y+y).join(''):x,16);return [n>>16&255,n>>8&255,n&255];};
+ const [x,y]=[p(a),p(b)];const t=Math.max(0,Math.min(1,f));return `#${x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,'0')).join('')}`;}
+function cfTest(rule:CfRule,v:unknown,st:Style|undefined,formula:()=>unknown):boolean{
+ const txt=show(v as never,st).toLowerCase(),a=(rule.a??'').toLowerCase(),na=Number(rule.a),nb=Number(rule.b);
+ const n=typeof v==='number'?v:txt!==''&&!Number.isNaN(Number(txt))?Number(txt):NaN;
+ const day=(s?:string)=>{if(!s)return NaN;const t2=s.trim().toLowerCase();const now=new Date();const today=dateToSerial(now.getFullYear(),now.getMonth(),now.getDate());
+  if(t2==='today')return today;if(t2==='tomorrow')return today+1;if(t2==='yesterday')return today-1;return parseDateText(s)??(Number.isNaN(Number(s))?NaN:Number(s));};
+ switch(rule.cond){
+  case 'empty':return txt==='';case 'notEmpty':return txt!=='';
+  case 'contains':return !!a&&txt.includes(a);case 'notContains':return !!a&&!txt.includes(a);
+  case 'startsWith':return !!a&&txt.startsWith(a);case 'endsWith':return !!a&&txt.endsWith(a);case 'is':return txt===a;
+  case 'gt':return n>na;case 'gte':return n>=na;case 'lt':return n<na;case 'lte':return n<=na;case 'eq':return n===na||txt===a;case 'neq':return !(n===na||txt===a);
+  case 'between':return n>=Math.min(na,nb)&&n<=Math.max(na,nb);case 'notBetween':return !Number.isNaN(n)&&(n<Math.min(na,nb)||n>Math.max(na,nb));
+  case 'before':return typeof v==='number'&&v<day(rule.a);case 'after':return typeof v==='number'&&v>day(rule.a);case 'onDate':return typeof v==='number'&&Math.floor(v)===day(rule.a);
+  case 'checked':return v===true;
+  case 'formula':{const r2=formula();return r2===true||(typeof r2==='number'&&r2!==0)||(typeof r2==='string'&&r2.toUpperCase()==='TRUE');}
+ }}
+const CF_LABELS:[CfRule['cond'],string,0|1|2][]=[['empty','Is empty',0],['notEmpty','Is not empty',0],['contains','Text contains',1],['notContains','Text does not contain',1],['startsWith','Text starts with',1],['endsWith','Text ends with',1],['is','Text is exactly',1],
+ ['before','Date is before',1],['onDate','Date is',1],['after','Date is after',1],['gt','Greater than',1],['gte','Greater than or equal to',1],['lt','Less than',1],['lte','Less than or equal to',1],['eq','Is equal to',1],['neq','Is not equal to',1],['between','Is between',2],['notBetween','Is not between',2],['checked','Checkbox is ticked',0],['formula','Custom formula is',1]];
+const CF_FILLS=['#b7e1cd','#fce8b2','#f4c7c3','#c6dafc','#e6d4f5','#fad2cf','#d9ead3','#fff2cc','#cfe2f3','#ead1dc','#57bb8a','#e67c73','#ffd666','#4285f4','#ffffff','#202124'];
+// Conditional formatting panel: the rules on this tab, and an editor for one rule (single colour or colour scale).
+function CfPanel({rules,range,onClose,onChange}:{rules:CfRule[];range:string;onClose:()=>void;onChange:(r:CfRule[])=>void}){
+ const [edit,setEdit]=useState<CfRule|null>(rules.length?null:{id:newId(),range,cond:'notEmpty',fmt:{bg:'#b7e1cd'}});
+ const describe=(x:CfRule)=>x.scale?'Colour scale':`${CF_LABELS.find(l=>l[0]===x.cond)?.[1]??''}${x.a?` ${x.a}`:''}${x.cond==='between'||x.cond==='notBetween'?` and ${x.b??''}`:''}`;
+ if(edit)return <CfEditor rule={edit} onCancel={()=>rules.length?setEdit(null):onClose()} onSave={x=>{const i=rules.findIndex(y=>y.id===x.id);onChange(i>=0?rules.map(y=>y.id===x.id?x:y):[...rules,x]);setEdit(null);}}/>;
+ return <Modal title="Conditional formatting" onClose={onClose}><div className="zn-modal-body zs2-cf">
+  <ul className="zs2-cf-list">{rules.map(x=><li key={x.id}><button type="button" className="zs2-cf-item" onClick={()=>setEdit(x)}>
+   <span className="zs2-cf-sw" style={x.scale?{background:`linear-gradient(90deg,${x.scale.min},${x.scale.mid??x.scale.min},${x.scale.max})`}:{background:x.fmt?.bg??'transparent',color:x.fmt?.color,fontWeight:x.fmt?.b?700:400,fontStyle:x.fmt?.i?'italic':undefined}}>123</span>
+   <span><b>{describe(x)}</b><small>{x.range}</small></span></button>
+   <button type="button" className="zs2-rule-x" aria-label="Delete rule" onClick={()=>onChange(rules.filter(y=>y.id!==x.id))}><Trash2 size={15}/></button></li>)}</ul>
+  <button type="button" className="zn-btn" onClick={()=>setEdit({id:newId(),range,cond:'notEmpty',fmt:{bg:'#b7e1cd'}})}><Plus size={14}/>Add another rule</button>
+  <div className="zn-modal-foot"><button type="button" className="zn-btn is-primary" onClick={onClose}>Done</button></div>
+ </div></Modal>;
+}
+function CfEditor({rule,onCancel,onSave}:{rule:CfRule;onCancel:()=>void;onSave:(r:CfRule)=>void}){
+ const [x,setX]=useState<CfRule>(rule),[err,setErr]=useState('');
+ const args=CF_LABELS.find(l=>l[0]===x.cond)?.[2]??0;const f=x.fmt??{};
+ const setF=(p:Partial<NonNullable<CfRule['fmt']>>)=>setX(y=>{const n={...(y.fmt??{}),...p};for(const kk of Object.keys(n) as (keyof typeof n)[])if(n[kk]===undefined)delete n[kk];return {...y,fmt:n};});
+ function save(e:React.FormEvent){e.preventDefault();if(!parseRange(x.range)){setErr('Enter a range like A2:H100.');return;}if(!x.scale&&args>0&&!(x.a??'').trim()){setErr('Fill in the value.');return;}onSave(x);}
+ return <Modal title="Conditional format rule" onClose={onCancel}><form className="zn-modal-body zs2-rule" onSubmit={save}>
+  <label className="zn-label">Apply to range<input className="zn-input" value={x.range} onChange={e=>setX({...x,range:e.target.value})} spellCheck={false}/></label>
+  <div className="zs2-rule-type" role="radiogroup" aria-label="Kind">{([['one','Single colour'],['scale','Colour scale']] as const).map(([v,l])=><button key={v} type="button" role="radio" aria-checked={(v==='scale')===!!x.scale} className={(v==='scale')===!!x.scale?'is-on':''} onClick={()=>setX(v==='scale'?{...x,scale:x.scale??{min:'#ffffff',max:'#57bb8a'}}:(()=>{const n={...x};delete n.scale;return n;})())}>{l}</button>)}</div>
+  {x.scale?<div className="zs2-cf-scale">{(['min','mid','max'] as const).map(kk=><label key={kk} className="zn-label">{kk==='min'?'Lowest':kk==='mid'?'Middle (optional)':'Highest'}
+    <span className="zs2-bcolors">{kk==='mid'&&<button type="button" aria-label="No middle colour" className={!x.scale!.mid?'is-on':''} style={{background:'var(--z-panel-2)'}} onClick={()=>setX({...x,scale:{...x.scale!,mid:undefined}})}/>}{CF_FILLS.map(c=><button key={c} type="button" aria-label={c} className={x.scale![kk]===c?'is-on':''} style={{background:c}} onClick={()=>setX({...x,scale:{...x.scale!,[kk]:c}})}/>)}</span></label>)}</div>
+  :<>
+   <label className="zn-label">Format cells if…<select className="zn-input" value={x.cond} onChange={e=>setX({...x,cond:e.target.value as CfRule['cond']})}>{CF_LABELS.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
+   {args>0&&<input className="zn-input" placeholder={x.cond==='formula'?'=$C2="Posted"':x.cond==='before'||x.cond==='after'||x.cond==='onDate'?'today, or a date like 18/11/2026':'Value'} value={x.a??''} onChange={e=>setX({...x,a:e.target.value})}/>}
+   {args>1&&<input className="zn-input" placeholder="and" value={x.b??''} onChange={e=>setX({...x,b:e.target.value})}/>}
+   {x.cond==='formula'&&<p className="zn-nav-note">Write it for the first cell of the range; it moves along for the others. Use $ to pin a column, like <code>{'=$C2="Posted"'}</code> to colour whole rows.</p>}
+   <div className="zn-label">Formatting style</div>
+   <div className="zs2-cf-style">
+    <span className="zs2-cf-sw is-big" style={{background:f.bg??'transparent',color:f.color,fontWeight:f.b?700:400,fontStyle:f.i?'italic':undefined,textDecoration:[f.u?'underline':'',f.s?'line-through':''].join(' ').trim()||undefined}}>Preview</span>
+    {(['b','i','u','s'] as const).map(kk=><button key={kk} type="button" className={`zs2-cf-tog${f[kk]?' is-on':''}`} aria-label={kk} onClick={()=>setF({[kk]:f[kk]?undefined:1})}>{kk==='b'?<Bold size={15}/>:kk==='i'?<Italic size={15}/>:kk==='u'?<Underline size={15}/>:<Strikethrough size={15}/>}</button>)}
+   </div>
+   <div className="zn-label">Fill colour</div>
+   <div className="zs2-bcolors"><button type="button" aria-label="No fill" className={!f.bg?'is-on':''} style={{background:'var(--z-panel-2)'}} onClick={()=>setF({bg:undefined})}/>{CF_FILLS.map(c=><button key={c} type="button" aria-label={c} className={f.bg===c?'is-on':''} style={{background:c}} onClick={()=>setF({bg:c})}/>)}</div>
+   <div className="zn-label">Text colour</div>
+   <div className="zs2-bcolors"><button type="button" aria-label="Default" className={!f.color?'is-on':''} style={{background:'var(--z-panel-2)'}} onClick={()=>setF({color:undefined})}/>{['#202124','#ffffff','#c5221f','#188038','#0b57d0','#b06000','#8430ce','#e37400'].map(c=><button key={c} type="button" aria-label={c} className={f.color===c?'is-on':''} style={{background:c}} onClick={()=>setF({color:c})}/>)}</div>
+  </>}
+  {err&&<p className="zn-error" role="alert">{err}</p>}
+  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onCancel}>Cancel</button><button className="zn-btn is-primary">Done</button></div>
+ </form></Modal>;
+}
+function LinkModal({init,onClose,onSave}:{init:{text:string;url:string};onClose:()=>void;onSave:(text:string,url:string)=>void}){
+ const [text,setText]=useState(init.text),[url,setUrl]=useState(init.url);
+ return <Modal title={init.url?'Edit link':'Insert link'} onClose={onClose}><form className="zn-modal-body" onSubmit={e=>{e.preventDefault();onSave(text,url);}}>
+  <label className="zn-label">Text<input className="zn-input" value={text} onChange={e=>setText(e.target.value)} placeholder="What the cell shows"/></label>
+  <label className="zn-label">Link<input className="zn-input" type="url" inputMode="url" autoFocus value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://"/></label>
+  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary" disabled={!url.trim()&&!init.url}>Apply</button></div>
+ </form></Modal>;
+}
+// Calendar under a date cell while it's being edited.
+function DatePick({text,onPick}:{text:string;onPick:(serial:number)=>void}){
+ const cur=parseDateText(text)??(/^\d+$/.test(text.trim())?Number(text):null);
+ const base=cur!==null?serialToDate(cur):new Date();
+ const [ym,setYm]=useState<[number,number]>(()=>cur!==null?[base.getUTCFullYear(),base.getUTCMonth()]:[base.getFullYear(),base.getMonth()]);
+ const first=new Date(Date.UTC(ym[0],ym[1],1)),start=(first.getUTCDay()+6)%7,days=new Date(Date.UTC(ym[0],ym[1]+1,0)).getUTCDate();
+ const now=new Date(),today=dateToSerial(now.getFullYear(),now.getMonth(),now.getDate());
+ const step=(d:number)=>setYm(([y,m])=>{const n=new Date(Date.UTC(y,m+d,1));return [n.getUTCFullYear(),n.getUTCMonth()];});
+ return <div className="zs2-cal" onMouseDown={e=>{e.preventDefault();e.stopPropagation();}} onClick={e=>e.stopPropagation()}>
+  <div className="zs2-cal-head"><button type="button" aria-label="Previous month" onClick={()=>step(-1)}><ChevronLeft size={16}/></button><b>{first.toLocaleString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'})}</b><button type="button" aria-label="Next month" onClick={()=>step(1)}><ChevronRight size={16}/></button></div>
+  <div className="zs2-cal-grid">{['M','T','W','T','F','S','S'].map((d,i)=><i key={i}>{d}</i>)}{Array.from({length:start},(_,i)=><span key={`b${i}`}/>)}
+   {Array.from({length:days},(_,i)=>{const sn=dateToSerial(ym[0],ym[1],i+1);return <button key={i} type="button" className={`${sn===cur?'is-on':''}${sn===today?' is-today':''}`} onClick={()=>onPick(sn)}>{i+1}</button>;})}</div>
+  <button type="button" className="zs2-cal-today" onClick={()=>onPick(today)}>Today</button>
+ </div>;
+}
+function BorderGlyph({mode}:{mode:string}){
+ const on=(k:string)=>({all:'tblrhv',inner:'hv',horizontal:'h',vertical:'v',outer:'tblr',left:'l',top:'t',right:'r',bottom:'b',clear:''} as Record<string,string>)[mode].includes(k);
+ const L=(k:string,x1:number,y1:number,x2:number,y2:number)=><line key={k} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth={on(k)?2:1} strokeDasharray={on(k)?undefined:'1.5 2'} opacity={on(k)?1:.45}/>;
+ return <svg width="18" height="18" viewBox="0 0 18 18">{L('t',2,2,16,2)}{L('b',2,16,16,16)}{L('l',2,2,2,16)}{L('r',16,2,16,16)}{L('h',2,9,16,9)}{L('v',9,2,9,16)}</svg>;
 }
