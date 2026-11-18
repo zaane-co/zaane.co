@@ -2513,3 +2513,14 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zp-move-list>button:active,.zp-move-cancel:active{background:var(--z-hover)}
 .zp-move-cancel{min-height:56px;border-radius:16px;background:var(--z-panel);font-size:17px;font-weight:700;color:var(--z-fg)}
 .zp-card{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+/* Phones: full-page forms follow the visible area, so the keyboard shortens the page instead of pushing it up;
+   the buttons stop floating while typing so lists (like Assign to) have room. */
+@media(pointer:coarse) and (max-width:760px){
+ .zn-modal-scrim:has(>.zn-modal-page){inset:auto;left:0;right:0;top:var(--zvt,0px);height:var(--zvh,100dvh)}
+ html[data-kb] .zn-modal-scrim>.zn-modal.zn-modal-page{padding-top:calc(env(safe-area-inset-top) + 8px);padding-bottom:8px}
+ html[data-kb] .zn-modal-page .zn-modal-body>.zn-modal-foot,html[data-kb] .zn-modal-page form.zn-modal-body .zn-modal-foot{position:static}
+ html[data-kb] .zn-modal-page .zn-modal-body{padding-bottom:0!important}
+ .zp-picker-input input[type=search]{-webkit-appearance:none;appearance:none}
+ .zp-picker-input input::-webkit-search-cancel-button{display:none}
+ .zp-picker-list{max-height:260px}
+}
