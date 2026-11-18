@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {Settings2,Archive,FolderInput,FolderKanban,FolderPlus,Pencil,Plus,Trash2} from 'lucide-react';
+import {Settings2,Archive,ChevronRight,FolderInput,FolderKanban,FolderPlus,MoreHorizontal,Pencil,Plus,Trash2} from 'lucide-react';
 import {AddExisting,GroupDialog,GroupField,ManageGroups,resolveGroup} from './ProjectExtras';
 import {useConfirm} from './ConfirmProvider';
 import {useZarn} from './ZarnProvider';
@@ -48,7 +48,7 @@ export function NewProject({onClose,onCreated,clientId,groupId}:{onClose:()=>voi
 // /zarn/projects: in-house projects you're in, by group. Archived ones are tucked away at the bottom.
 export default function Projects(){
  const {db,me,projects,projectGroups,reloadProjects}=useZarn(),confirm=useConfirm();
- const [creating,setCreating]=useState<string|true|false>(false),[showArchived,setShowArchived]=useState(false),[editing,setEditing]=useState<{id:string;name:string;color:string}|'new'|null>(null),[adding,setAdding]=useState<{id:string;name:string}|null>(null),[groupMenu,setGroupMenu]=useState<string|null>(null),[managing,setManaging]=useState(false);
+ const [creating,setCreating]=useState<string|true|false>(false),[showArchived,setShowArchived]=useState(false),[editing,setEditing]=useState<{id:string;name:string;color:string}|'new'|null>(null),[adding,setAdding]=useState<{id:string;name:string}|null>(null),[groupMenu,setGroupMenu]=useState<string|null>(null),[managing,setManaging]=useState(false),[sheet,setSheet]=useState<string|'page'|null>(null);
  const inHouse=(projects??[]).filter(p=>!p.lead_id);
  const live=inHouse.filter(p=>!p.archived_at),archived=inHouse.filter(p=>p.archived_at);
  const groups=[...projectGroups.map(g=>({...g,list:live.filter(p=>p.group_id===g.id)})),{id:'',name:'No group',color:'#52525b',position:0,created_by:null,list:live.filter(p=>!p.group_id||!projectGroups.some(g=>g.id===p.group_id))}].filter(g=>g.id||g.list.length);
@@ -57,10 +57,13 @@ export default function Projects(){
  const card=(p:typeof inHouse[number])=><Link key={p.id} href={`/zarn/projects/${p.id}`} className={`zp-project-card${p.archived_at?' is-archived':''}`}>
   <span className="zpc-top"><span className="zp-badge" style={{background:p.color}}>{p.name.slice(0,1).toUpperCase()}</span><b>{p.name}</b>{p.archived_at&&<em className="zpc-tag">Archived</em>}</span>
   <p className="zpc-desc">{p.description||'No description yet.'}</p>
+  <ChevronRight className="zpc-chev" size={18} aria-hidden/>
  </Link>;
+ const sheetGroup=sheet&&sheet!=='page'?groups.find(g=>g.id===sheet):null;
  return <div className="zn-page">
   <header className="zn-page-head zpg-head-bar"><div><h1><FolderKanban size={16}/>Projects</h1><p>Our in-house projects, by group. Each has its chat, board, docs, team and vault.</p></div>
-   <span className="zpg-head-btns"><button type="button" className="zn-btn" onClick={()=>setManaging(true)}><Settings2 size={14}/>Manage groups</button>{me.zarnAdmin&&<button type="button" className="zn-btn" onClick={()=>setEditing('new')}><FolderPlus size={14}/>New group</button>}<button type="button" className="zn-btn is-primary" onClick={()=>setCreating(true)}><Plus size={14}/>New project</button></span></header>
+   <span className="zpg-head-btns"><button type="button" className="zn-btn" onClick={()=>setManaging(true)}><Settings2 size={14}/>Manage groups</button>{me.zarnAdmin&&<button type="button" className="zn-btn" onClick={()=>setEditing('new')}><FolderPlus size={14}/>New group</button>}<button type="button" className="zn-btn is-primary" onClick={()=>setCreating(true)}><Plus size={14}/>New project</button></span>
+   <button type="button" className="zpg-more is-head" aria-label="More" onClick={()=>setSheet('page')}><MoreHorizontal size={20}/></button></header>
   <div className="zn-crm-list zpg-list" data-lenis-prevent>
    {projects===null?<p className="zn-loading">Loading…</p>:inHouse.length||projectGroups.length?<>
     {groups.map(g=><section key={g.id||'none'} className="zpg-group">
@@ -72,6 +75,7 @@ export default function Projects(){
         {groupMenu===g.id&&<div className="zn-menu zpg-pop" onMouseLeave={()=>setGroupMenu(null)}><button type="button" onClick={()=>{setGroupMenu(null);setCreating(g.id);}}><Plus size={15}/>New project in {g.name}</button><button type="button" onClick={()=>{setGroupMenu(null);setAdding(g);}}><FolderInput size={15}/>Add existing projects</button></div>}</span>
        {canEditGroup(g)&&<><button type="button" aria-label={`Edit ${g.name}`} data-tip="Edit group" onClick={()=>setEditing(g)}><Pencil size={14}/></button><button type="button" aria-label={`Delete ${g.name}`} data-tip="Delete group" onClick={()=>void deleteGroup(g.id,g.list.length)}><Trash2 size={14}/></button></>}
       </span>}
+      {g.id&&<button type="button" className="zpg-more" aria-label={`${g.name} options`} onClick={()=>setSheet(g.id)}><MoreHorizontal size={18}/></button>}
      </header>
      {g.list.length?<div className="zp-project-grid">{g.list.map(card)}</div>:<p className="zn-nav-note">No projects in this group yet. Use Add project to make one or bring existing ones in.</p>}
     </section>)}
@@ -80,6 +84,22 @@ export default function Projects(){
    </>
    :<div className="zn-empty-state"><h2>No projects yet</h2><p>Create a group (like “Products” or “Internal tools”), then add projects to it.</p><button type="button" className="zn-btn is-primary" onClick={()=>setCreating(true)}><Plus size={15}/>New project</button></div>}
   </div>
+  <button type="button" className="zpg-fab" aria-label="New project" onClick={()=>setCreating(true)}><Plus size={26}/></button>
+  {sheet&&<div className="zp-move-scrim" onClick={()=>setSheet(null)}><div className="zp-move" role="dialog" aria-label="Options" onClick={e=>e.stopPropagation()}>
+   <div className="zp-move-list">{sheetGroup?<>
+    <p className="zp-move-title"><small>Group</small><b>{sheetGroup.name}</b></p>
+    <button type="button" onClick={()=>{setSheet(null);setCreating(sheetGroup.id);}}>New project here</button>
+    <button type="button" onClick={()=>{setSheet(null);setAdding(sheetGroup);}}>Add existing projects</button>
+    {canEditGroup(sheetGroup)&&<><button type="button" onClick={()=>{setSheet(null);setEditing(sheetGroup);}}>Edit group</button>
+    <button type="button" className="is-danger" onClick={()=>{setSheet(null);void deleteGroup(sheetGroup.id,sheetGroup.list.length);}}>Delete group</button></>}
+   </>:<>
+    <p className="zp-move-title"><small>Projects</small></p>
+    <button type="button" onClick={()=>{setSheet(null);setCreating(true);}}>New project</button>
+    {me.zarnAdmin&&<button type="button" onClick={()=>{setSheet(null);setEditing('new');}}>New group</button>}
+    <button type="button" onClick={()=>{setSheet(null);setManaging(true);}}>Manage groups</button>
+   </>}</div>
+   <button type="button" className="zp-move-cancel" onClick={()=>setSheet(null)}>Cancel</button>
+  </div></div>}
   {creating&&<NewProject groupId={typeof creating==='string'?creating:undefined} onClose={()=>setCreating(false)}/>}
   {editing&&<GroupDialog group={editing==='new'?undefined:editing} onClose={()=>setEditing(null)} onSaved={()=>{setEditing(null);void reloadProjects();}}/>}
   {managing&&<ManageGroups onClose={()=>setManaging(false)}/>}
