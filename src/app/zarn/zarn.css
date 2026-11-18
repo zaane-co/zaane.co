@@ -843,7 +843,7 @@ html:has(.zarn.is-light),body:has(.zarn.is-light),html:has(.zarn-auth.is-light),
 .zp-tl-scroll{overflow-x:auto;border:1px solid var(--z-border);border-radius:14px;background:var(--z-panel)}
 .zp-tl{position:relative}
 .zp-tl-head{display:flex;border-bottom:1px solid var(--z-border);position:sticky;top:0;background:var(--z-panel);z-index:3}
-.zp-tl-label{flex:none;width:220px;padding:0 12px;position:sticky;left:0;background:var(--z-panel);z-index:2;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
+.zp-tl-label{flex:none;width:var(--zp-lw,220px);padding:0 12px;position:sticky;left:0;background:var(--z-panel);z-index:2;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px}
 .zp-tl-label span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
 .zp-tl-months{display:flex;height:26px;font-size:12px;font-weight:700;color:var(--z-muted)}
 .zp-tl-months span{padding:5px 8px;border-left:1px solid var(--z-border);overflow:hidden;white-space:nowrap}
@@ -2545,4 +2545,17 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zp-assign button .zn-avatar{border-radius:50%!important}
  .zp-block{font-size:12.5px}
  .zp-block .zp-input{font-size:15px}
+}
+/* Timeline: the board area scrolls as one box so the date header stays pinned while you scroll the tasks */
+.zp-body:has(>.zp-timeline){display:flex;flex-direction:column}
+.zp-timeline{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.zp-tl-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
+@media(max-width:760px){
+ .zp-body:has(>.zp-timeline){padding-bottom:calc(84px + env(safe-area-inset-bottom))!important}
+ .zp-tl-scroll{border:0;border-radius:16px}
+ .zp-tl-label{padding:0 10px;font-size:13px}
+ .zp-tl-label .zp-stack{display:none}
+ .zp-tl-row{height:44px}
+ .zp-tl-bar{top:8px;height:28px;padding:0 8px;font-size:11.5px}
+ .zp-tl-months span{padding:5px 6px}
 }

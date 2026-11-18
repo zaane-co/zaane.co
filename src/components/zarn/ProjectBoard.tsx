@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {Archive,ArchiveRestore,BookOpen,FolderInput,KeyRound,Users as UsersIcon,FileText,Bookmark,CalendarDays,ChartGantt,ChevronDown,Ellipsis,Kanban,LayoutTemplate,List,ListChecks,ListFilter,MessageSquare,Plus,Search,Send,Trash2,UserPlus,X} from 'lucide-react';
@@ -58,6 +58,10 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  const [view,setView]=useState<View>(id?'chat':'list'),[q,setQ]=useState(''),[prio,setPrio]=useState<'all'|Priority>('all'),[who,setWho]=useState('all'),[collapsed,setCollapsed]=useState<Record<string,boolean>>({});
  const [form,setForm]=useState<Form|null>(null),[open,setOpen]=useState<string|null>(null),[inviting,setInviting]=useState(false),[showMembers,setShowMembers]=useState(false),[menu,setMenu]=useState(false),[movingGroup,setMovingGroup]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[dragging,setDragging]=useState<string|null>(null);
  // Phones: long-press a Kanban card to move it (drag and drop doesn't work with touch).
+ const narrow=useSyncExternalStore(cb=>{const m=matchMedia('(max-width:760px)');m.addEventListener('change',cb);return()=>m.removeEventListener('change',cb);},()=>matchMedia('(max-width:760px)').matches,()=>false);
+ const tlScroll=useRef<HTMLDivElement>(null);
+ // Open the timeline at today instead of the earliest task.
+ useEffect(()=>{if(view!=='timeline')return;const id=requestAnimationFrame(()=>{const el=tlScroll.current;if(!el)return;const x=Number(el.dataset.today??0);el.scrollLeft=Math.max(0,x-el.clientWidth*.35);});return()=>cancelAnimationFrame(id);},[view,narrow,loaded]);
  const [moving,setMoving]=useState<string|null>(null),press=useRef<{t:number;x:number;y:number}|null>(null),pressed=useRef(false);
  const cardTouch={
   onTouchStart:(id:string,e:React.TouchEvent)=>{const p=e.touches[0]!;pressed.current=false;press.current={x:p.clientX,y:p.clientY,t:window.setTimeout(()=>{press.current=null;pressed.current=true;setMoving(id);try{navigator.vibrate?.(10);}catch{}},420)};},
@@ -226,16 +230,16 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
   const dated=shown.filter(t=>t.start_at||t.due_at),undated=shown.filter(t=>!t.start_at&&!t.due_at);
   if(!dated.length)return <div className="zn-empty-state"><h2>No dates to plot</h2><p>Give tasks a start and due date and they appear on the timeline.</p></div>;
   const spans=dated.map(t=>({t,s:day((t.start_at??t.due_at)!),e:day((t.due_at??t.start_at)!)}));
-  const min=Math.min(...spans.map(x=>x.s),day(today))-3*DAY,days=Math.max(28,Math.ceil((Math.max(...spans.map(x=>x.e),day(today))+8*DAY-min)/DAY)),W=34;
+  const min=Math.min(...spans.map(x=>x.s),day(today))-3*DAY,days=Math.max(28,Math.ceil((Math.max(...spans.map(x=>x.e),day(today))+8*DAY-min)/DAY)),W=narrow?30:34,LW=narrow?128:220;
   const cols=Array.from({length:days},(_,i)=>new Date(min+i*DAY));
   const months:{label:string;n:number}[]=[];for(const d of cols){const l=d.toLocaleDateString('en-GB',{month:'short',year:'numeric',timeZone:'UTC'});if(months.at(-1)?.label===l)months.at(-1)!.n++;else months.push({label:l,n:1});}
   const todayX=((day(today)-min)/DAY)*W+W/2;
-  return <div className="zp-timeline"><div className="zp-tl-scroll"><div className="zp-tl" style={{width:220+days*W}}>
+  return <div className="zp-timeline" style={{['--zp-lw' as string]:`${LW}px`}}><div className="zp-tl-scroll" ref={tlScroll} data-today={LW+todayX}><div className="zp-tl" style={{width:LW+days*W}}>
    <div className="zp-tl-head"><div className="zp-tl-label"/><div className="zp-tl-cols" style={{width:days*W}}>
     <div className="zp-tl-months">{months.map(m=><span key={m.label} style={{width:m.n*W}}>{m.label}</span>)}</div>
     <div className="zp-tl-days">{cols.map((d,i)=><span key={i} className={iso(d)===today?'is-today':d.getUTCDay()%6===0?'is-weekend':''} style={{width:W}}>{d.getUTCDate()}</span>)}</div></div></div>
    <div className="zp-tl-body">
-    <div className="zp-tl-today" style={{left:220+todayX}}/>
+    <div className="zp-tl-today" style={{left:LW+todayX}}/>
     {spans.map(({t,s,e})=>{const g=statuses.find(x=>x.key===t.status)??statuses[0]!;return <div key={t.id} className="zp-tl-row" onClick={()=>setOpen(t.id)}>
      <div className="zp-tl-label"><span>{t.title}</span><Stack ids={assign[t.id]??[]} max={2}/></div>
      <div className="zp-tl-track" style={{width:days*W,backgroundSize:`${W}px 100%`}}><div className="zp-tl-bar" style={{left:((s-min)/DAY)*W+3,width:Math.max(W-6,((e-s)/DAY+1)*W-6),background:g.color}} title={`${t.title} · ${estimate(t)}`}><span>{t.title}</span></div></div>
