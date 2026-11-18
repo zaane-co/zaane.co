@@ -10,7 +10,9 @@ import ShareDoc from './ShareDoc';
 import {Modal} from './Dialogs';
 import {Avatar} from './format';
 import {uploadEditorImage} from './editor-images';
-import {CHIP_COLORS,COLS,COL_W,FUNCTIONS,FUNCTION_NAMES,ROWS,ROW_H,adjustRefs,blankTab,chipInk,colName,dateToSerial,evaluate,exprEval,linkOf,parseDateText,serialToDate,isError,parseRange,parseRef,readSheet,ref,shiftRefs,show,type ChartType,type CfRule,type Cmt,type Obj,type Rule,type SheetData,type Style,type Tab} from '@/lib/sheet';
+import {PivotEditor,ProtectPanel,VersionPanel} from './SheetExtras';
+import {sheetToXlsx} from './sheet-to-xlsx';
+import {CHIP_COLORS,COLS,COL_W,FUNCTIONS,FUNCTION_NAMES,ROWS,ROW_H,adjustRefs,blankTab,chipInk,colName,dateToSerial,evaluate,exprEval,linkOf,parseDateText,serialToDate,isError,parseRange,parseRef,protAt,readSheet,ref,runPivot,shiftRefs,show,type ChartType,type CfRule,type Cmt,type Obj,type Rule,type SheetData,type Style,type Tab} from '@/lib/sheet';
 
 type Row={id:string;title:string;content:string;owner_id:string;kind:string;drive:'my'|'team'|'client';folder_id:string|null;lead_id:string|null};
 type Role='owner'|'edit'|'view';
@@ -30,13 +32,15 @@ const fitMenu=(el:HTMLElement|null)=>{if(!el)return;el.style.marginLeft='';const
 // A spreadsheet in Drive, built to feel like Google Sheets: menus, a full toolbar, the name box and formula bar,
 // a fast grid with frozen rows/columns, fill handle and resizable columns, formulas with suggestions, and live co-editing.
 export default function SheetPage({id}:{id:string}){
- const {db,me,people,channels,title:chTitle}=useZarn(),router=useRouter(),confirm=useConfirm();
+ const {db,me,people,members,channels,title:chTitle}=useZarn(),router=useRouter(),confirm=useConfirm();
  const [row,setRow]=useState<Row|null|undefined>(undefined),[role,setRole]=useState<Role|null>(null);
  const [data,setData]=useState<SheetData>({tabs:[blankTab()]}),[tabId,setTabId]=useState(''),[title,setTitle]=useState('');
  const [sel,setSel]=useState<[number,number]>([0,0]),[anchor,setAnchor]=useState<[number,number]|null>(null);
  const [editing,setEditing]=useState<string|null>(null),[editMode,setEditMode]=useState<'type'|'edit'>('edit'),[editIn,setEditIn]=useState<'cell'|'bar'>('cell'),[pick,setPick]=useState(0);
  const [state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[crumbs,setCrumbs]=useState<{name:string;href:string}[]>([]);
  const [toolSheet,setToolSheet]=useState(false),[dd,setDd]=useState<string|null>(null),[ruleEdit,setRuleEdit]=useState<Rule|null>(null),[warn,setWarn]=useState(''),[fpop,setFpop]=useState<{c:number;x:number;y:number}|null>(null),[bdLine,setBdLine]=useState('1px solid'),[bdColor,setBdColor]=useState('currentColor'),[cfOpen,setCfOpen]=useState(false),[linkEdit,setLinkEdit]=useState<{text:string;url:string}|null>(null),[noteEdit,setNoteEdit]=useState<string|null>(null),[cmtOpen,setCmtOpen]=useState<string|null>(null),[cmtPanel,setCmtPanel]=useState(false),[objSel,setObjSel]=useState<string|null>(null),[objDraft,setObjDraft]=useState<{id:string;x:number;y:number;w:number;h:number}|null>(null),[chartEdit,setChartEdit]=useState<string|null>(null),[imgBusy,setImgBusy]=useState(false);
+ const [preview,setPreview]=useState<{id:string;label:string;data:SheetData}|null>(null),[verOpen,setVerOpen]=useState(false),[protOpen,setProtOpen]=useState(false),[showProt,setShowProt]=useState(false),[pivOpen,setPivOpen]=useState(true);
+ const base=useRef(''),snapAt=useRef(0),guard=useRef<(a:SheetData,b:SheetData)=>{block?:string;warn?:boolean}|null>(()=>null);
  const imgIn=useRef<HTMLInputElement>(null),imgMode=useRef<'cell'|'over'>('cell'),objDrag=useRef<{id:string;mode:'move'|'size';sx:number;sy:number;o:{x:number;y:number;w:number;h:number}}|null>(null);
  const [menu,setMenu]=useState<string|null>(null),[pop,setPop]=useState<string|null>(null),[ctx,setCtx]=useState<{x:number;y:number}|null>(null),[tabMenu,setTabMenu]=useState<string|null>(null),[renamingTab,setRenamingTab]=useState<string|null>(null);
  const [zoom,setZoom]=useState(1),[grid,setGrid]=useState(true),[find,setFind]=useState<{q:string;rep:string;at:number}|null>(null),[help,setHelp]=useState<'keys'|'fx'|null>(null);
@@ -45,7 +49,7 @@ export default function SheetPage({id}:{id:string}){
  const hist=useRef<{past:SheetData[];future:SheetData[]}>({past:[],future:[]}),clip=useRef<{cells:Record<string,string>;style:Record<string,Style>;box:Box;cut:boolean;text:string}|null>(null);
  const gridRef=useRef<HTMLDivElement>(null),cellIn=useRef<HTMLInputElement>(null),barIn=useRef<HTMLInputElement>(null),titleIn=useRef<HTMLInputElement>(null),csvIn=useRef<HTMLInputElement>(null);
  const drag=useRef<{kind:'sel'|'fill'|'fx'|'resize'|null;start?:[number,number];x?:number;w?:number;col?:number;at?:number;len?:number}>({kind:null});
- const canEdit=role==='owner'||role==='edit';
+ const canEdit=(role==='owner'||role==='edit')&&!preview;
 
  // ---------- Load, save, live ----------
  useEffect(()=>{let on=true;void (async()=>{
@@ -53,7 +57,8 @@ export default function SheetPage({id}:{id:string}){
   if(!on)return;
   if(d&&(d as Row).kind!=='sheet'){router.replace(`/zarn/docs/${id}`);return;}
   setRow((d as Row|null)??null);setRole((r as Role|null)??null);
-  if(d){const s=readSheet((d as Row).content);setData(s);setTabId(s.tabs[0].id);setTitle((d as Row).title);latest.current={data:s,title:(d as Row).title};
+  if(d){const s=readSheet((d as Row).content);setData(s);setTabId(s.tabs[0].id);setTitle((d as Row).title);latest.current={data:s,title:(d as Row).title};base.current=(d as Row).content;
+   void db.from('zarn_doc_versions').select('created_at').eq('doc_id',id).order('created_at',{ascending:false}).limit(1).then(({data:v}:{data:unknown})=>{const t=(v as {created_at:string}[]|null)?.[0]?.created_at;snapAt.current=t?new Date(t).getTime():0;});
    void db.from('zarn_drive_opens').upsert({user_id:me.user_id,kind:'doc',item_id:id,opened_at:new Date().toISOString()});}
  })();return()=>{on=false;};},[db,id,me.user_id,router]);
  useEffect(()=>{if(!row)return;let on=true;void (async()=>{
@@ -63,18 +68,27 @@ export default function SheetPage({id}:{id:string}){
   while(f&&h<20){const {data:x}=await db.from('zarn_drive_folders').select('id,name,parent_id').eq('id',f).maybeSingle();if(!x)break;trail.unshift({name:x.name as string,href:`/zarn/drive?f=${x.id}`});f=x.parent_id as string|null;h++;}
   if(on)setCrumbs([root,...trail]);})();return()=>{on=false;};},[row,db,channels,chTitle,me.user_id]);
 
+ // Version history: the first save in each 10-minute stretch of editing keeps a copy of the sheet as it was before.
  const save=useCallback(async()=>{timer.current=null;setState('saving');
-  const {error}=await db.from('zarn_docs').update({title:latest.current.title.trim()||'Untitled sheet',content:JSON.stringify(latest.current.data),updated_by:me.user_id}).eq('id',id);
+  const content=JSON.stringify(latest.current.data),title2=latest.current.title.trim()||'Untitled sheet';
+  if(base.current&&base.current!==content&&Date.now()-snapAt.current>10*60e3){snapAt.current=Date.now();void db.from('zarn_doc_versions').insert({doc_id:id,title:title2,content:base.current,created_by:me.user_id}).then(()=>{});}
+  const {error}=await db.from('zarn_docs').update({title:title2,content,updated_by:me.user_id}).eq('id',id);
+  if(!error)base.current=content;
   setState(error?'error':'saved');},[db,id,me.user_id]);
  const queue=useCallback(()=>{setState('saving');if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void save(),700);},[save]);
  useEffect(()=>()=>{if(timer.current){clearTimeout(timer.current);void save();}},[save]);
 
  // Every change goes through here: it's undoable, saved, and sent to everyone else with the sheet open.
- const commit=useCallback((next:SheetData,edits?:Edit[],undoable=true)=>{
+ const apply=useCallback((next:SheetData,edits?:Edit[],undoable=true)=>{
   if(undoable){hist.current.past.push(latest.current.data);if(hist.current.past.length>100)hist.current.past.shift();hist.current.future=[];}
   latest.current.data=next;setData(next);setHl({u:hist.current.past.length,r:hist.current.future.length});queue();
   void live.current?.send({type:'broadcast',event:edits?'cells':'full',payload:edits?{edits}:{data:next}});
  },[queue]);
+ const commit=useCallback((next:SheetData,edits?:Edit[],undoable=true,force=false)=>{
+  if(!force){const g=guard.current?.(latest.current.data,next);
+   if(g?.block){const m=g.block;setWarn(m);setTimeout(()=>setWarn(w=>w===m?'':w),3200);return;}
+   if(g?.warn){void confirm({title:'Edit a protected range?',message:'These cells are protected so they aren’t changed by accident. Only carry on if you mean to.',confirm:'Edit anyway',danger:false}).then(ok=>{if(ok)apply(next,edits,undoable);});return;}}
+  apply(next,edits,undoable);},[apply,confirm]);
  const applyEdits=(d:SheetData,edits:Edit[]):SheetData=>({tabs:d.tabs.map(t=>{const mine=edits.filter(e=>e.tab===t.id);if(!mine.length)return t;const cells={...t.cells};for(const e of mine){if(e.v==='')delete cells[e.k];else cells[e.k]=e.v;}return {...t,cells};})});
  const setCells=useCallback((edits:Edit[])=>{if(!edits.length)return;commit(applyEdits(latest.current.data,edits),edits);},[commit]);
  const setTab=useCallback((tid:string,fn:(t:Tab)=>Tab)=>commit({tabs:latest.current.data.tabs.map(t=>t.id===tid?fn(t):t)}),[commit]);
@@ -88,8 +102,12 @@ export default function SheetPage({id}:{id:string}){
   live.current=ch;return()=>{live.current=null;void db.removeChannel(ch);};
  },[db,id,row,me.user_id]);
 
- const tab=data.tabs.find(t=>t.id===tabId)??data.tabs[0];
- const values=useMemo(()=>evaluate(tab,data.tabs),[tab,data.tabs]);
+ // While looking at an old version the grid shows that instead. Pivot tabs get their cells worked out from the source.
+ const view=preview?.data??data;
+ const pivots=useMemo(()=>{const m:Record<string,ReturnType<typeof runPivot>>={};for(const t of view.tabs)if(t.pivot)m[t.id]=runPivot(t.pivot,view.tabs);return m;},[view.tabs]);
+ const tabs=useMemo(()=>view.tabs.map(t=>pivots[t.id]?{...t,cells:pivots[t.id].cells,style:{...pivots[t.id].style,...t.style}}:t),[view.tabs,pivots]);
+ const tab=tabs.find(t=>t.id===tabId)??tabs[0];
+ const values=useMemo(()=>evaluate(tab,tabs),[tab,tabs]);
  const k=ref(sel[0],sel[1]);
  useEffect(()=>{const t=setTimeout(()=>void live.current?.track({u:me.user_id,t:tab.id,s:k}),150);return()=>clearTimeout(t);},[k,tab.id,me.user_id]);
  const box:Box=useMemo(()=>{const a=anchor??sel;return {c0:Math.min(a[0],sel[0]),c1:Math.max(a[0],sel[0]),r0:Math.min(a[1],sel[1]),r1:Math.max(a[1],sel[1])};},[anchor,sel]);
@@ -156,7 +174,7 @@ export default function SheetPage({id}:{id:string}){
  }
  // ---------- Conditional formatting ----------
  const cfs=useMemo(()=>(tab.cf??[]).map(x=>({x,b:parseRange(x.range)})).filter((y):y is {x:CfRule;b:Box}=>!!y.b),[tab.cf]);
- const cfEval=useMemo(()=>cfs.some(y=>y.x.cond==='formula')?exprEval(tab,data.tabs):null,[cfs,tab,data.tabs]);
+ const cfEval=useMemo(()=>cfs.some(y=>y.x.cond==='formula')?exprEval(tab,tabs):null,[cfs,tab,tabs]);
  const cfScale=useMemo(()=>{const out:Record<string,{lo:number;hi:number}>={};for(const {x,b} of cfs){if(!x.scale)continue;let lo=Infinity,hi=-Infinity;
    for(let r=b.r0;r<=Math.min(b.r1,used.mr);r++)for(let c=b.c0;c<=Math.min(b.c1,used.mc);c++){const v=values[ref(c,r)];if(typeof v==='number'){lo=Math.min(lo,v);hi=Math.max(hi,v);}}
    if(lo<=hi)out[x.id]={lo,hi};}return out;},[cfs,values,used.mr,used.mc]);
@@ -207,6 +225,29 @@ export default function SheetPage({id}:{id:string}){
  const isTrue=(raw?:string)=>(raw??'').trim().toUpperCase()==='TRUE';
  const rangeOf=(b:Box)=>b.c0===b.c1&&b.r0===b.r1?ref(b.c0,b.r0):`${ref(b.c0,b.r0)}:${ref(b.c1,b.r1)}`;
  const flash=(m:string)=>{setWarn(m);setTimeout(()=>setWarn(w=>w===m?'':w),2800);};
+ // Every change is checked here first: pivot tabs can't be typed into, and protected ranges only change for the people allowed.
+ guard.current=(a,b)=>{
+  if(preview)return {block:'You’re looking at an earlier version. Go back to the current version to edit.'};
+  let warnMe=false;
+  for(const t of b.tabs){const o=a.tabs.find(x=>x.id===t.id);if(!o||o===t)continue;
+   if(o.pivot&&t.cells!==o.cells&&Object.keys(t.cells).length)return {block:'This is a pivot table. Change it in the pivot table editor.'};
+   for(const pr of o.prot??[]){if(role==='owner'||pr.by===me.user_id||pr.eds?.includes(me.user_id))continue;let hit=false;
+    if(!pr.range)hit=t.cells!==o.cells||t.style!==o.style||t.merges!==o.merges||t.valid!==o.valid||t.cf!==o.cf||t.objs!==o.objs||t.hRows!==o.hRows||t.hCols!==o.hCols||t.widths!==o.widths||t.filter!==o.filter;
+    else{const bx=parseRange(pr.range);if(bx){const inside=(x:string)=>{const q=parseRef(x);return !!q&&q[0]>=bx.c0&&q[0]<=bx.c1&&q[1]>=bx.r0&&q[1]<=bx.r1;};
+     if(t.cells!==o.cells)for(const x of new Set([...Object.keys(o.cells),...Object.keys(t.cells)]))if(o.cells[x]!==t.cells[x]&&inside(x)){hit=true;break;}
+     if(!hit&&t.style!==o.style)for(const x of new Set([...Object.keys(o.style??{}),...Object.keys(t.style??{})]))if(inside(x)&&JSON.stringify(o.style?.[x])!==JSON.stringify(t.style?.[x])){hit=true;break;}}}
+    if(hit){if(!pr.warn)return {block:`${pr.desc?`“${pr.desc}” is`:pr.range?'These cells are':'This tab is'} protected. Ask ${people[pr.by]?.display_name?.split(' ')[0]??'the owner'} if it needs changing.`};warnMe=true;}}}
+  return warnMe?{warn:true}:null;};
+ // A pivot table goes on a new tab, built from the selection (or all the data on this tab, heading row first).
+ function insertPivot(){if(!canEdit)return;if(tab.pivot){flash('Pick the data on a normal tab first.');return;}let b:Box;
+  if(box.c0!==box.c1||box.r0!==box.r1)b={...box};
+  else{if(used.mc<0){flash('Add some data with a heading row first.');return;}let top=ROWS;for(const x of Object.keys(tab.cells)){const q=parseRef(x);if(q)top=Math.min(top,q[1]);}b={c0:0,c1:used.mc,r0:top,r1:used.mr};}
+  const n=blankTab();let i=1;while(latest.current.data.tabs.some(x=>x.name===`Pivot table ${i}`))i++;n.name=`Pivot table ${i}`;
+  n.pivot={src:tab.id,range:`${ref(b.c0,b.r0)}:${ref(b.c1,b.r1)}`,rows:[],cols:[],vals:[]};
+  commit({tabs:[...latest.current.data.tabs,n]});setTabId(n.id);setSel([0,0]);setAnchor(null);setPivOpen(true);}
+ async function restoreVersion(d:SheetData,label:string){
+  if(!await confirm({title:'Restore this version?',message:`The sheet goes back to how it was (${label}). The current version is kept in version history, so you can switch back.`,confirm:'Restore',danger:false}))return;
+  snapAt.current=0;setPreview(null);commit(d,undefined,true,true);if(!d.tabs.some(t=>t.id===tabId))setTabId(d.tabs[0].id);flash('Version restored');}
  function toggleChecks(keys:string[]){const ks=keys.filter(x=>{const p=parseRef(x);return p&&ruleOf(p[0],p[1])?.t==='check';});if(!ks.length||!canEdit)return false;
   const on=!ks.every(x=>isTrue(tab.cells[x]));setCells(ks.map(x=>({tab:tab.id,k:x,v:on?'TRUE':'FALSE'})));return true;}
  function saveRule(rule:Rule){if(!canEdit)return;setTab(tab.id,t=>({...t,valid:[...(t.valid??[]).filter(x=>x.id!==rule.id),rule]}));}
@@ -443,14 +484,14 @@ export default function SheetPage({id}:{id:string}){
  type Item={label:string;key?:string;run?:()=>void;off?:boolean;on?:boolean}|'-'|{head:string};
  const fmtItems:Item[]=[{head:'Number'},{label:'Automatic',run:()=>setFmt('auto'),on:!st.fmt},{label:'Number  1,000.12',run:()=>setFmt('num'),on:st.fmt==='num'},{label:'Percent  10.12%',run:()=>setFmt('pct'),on:st.fmt==='pct'},{label:'Currency  ₦1,000.12',run:()=>setFmt('cur','₦'),on:st.fmt==='cur'&&st.cur==='₦'},{label:'Currency  $1,000.12',run:()=>setFmt('cur','$'),on:st.fmt==='cur'&&st.cur==='$'},{label:'Currency  £1,000.12',run:()=>setFmt('cur','£'),on:st.fmt==='cur'&&st.cur==='£'},{label:'Date  18 Nov 2026',run:()=>setFmt('date'),on:st.fmt==='date'},{label:'Plain text',run:()=>setFmt('text'),on:st.fmt==='text'}];
  const menus:Record<string,Item[]>={
-  File:[{label:'New sheet',run:()=>void newSheet()},{label:'Import CSV…',run:()=>csvIn.current?.click(),off:!canEdit},'-',{label:'Download as CSV (this tab)',run:download},{label:'Print',key:'⌘P',run:print},'-',{label:'Rename',run:()=>titleIn.current?.focus(),off:!canEdit},...(role==='owner'?[{label:'Share',run:()=>setSharing(true)} as Item,{label:'Move to trash',run:()=>void remove()} as Item]:[])],
+  File:[{label:'New sheet',run:()=>void newSheet()},{label:'Import CSV…',run:()=>csvIn.current?.click(),off:!canEdit},'-',{label:'Download as Excel (.xlsx)',run:()=>void sheetToXlsx(tabs,title)},{label:'Download as CSV (this tab)',run:download},'-',{label:'Version history',run:()=>setVerOpen(true)},{label:'Print',key:'⌘P',run:print},'-',{label:'Rename',run:()=>titleIn.current?.focus(),off:!canEdit},...(role==='owner'?[{label:'Share',run:()=>setSharing(true)} as Item,{label:'Move to trash',run:()=>void remove()} as Item]:[])],
   Edit:[{label:'Undo',key:'⌘Z',run:undo,off:!hl.u},{label:'Redo',key:'⌘⇧Z',run:redo,off:!hl.r},'-',{label:'Cut',key:'⌘X',run:()=>void menuCopy(true),off:!canEdit},{label:'Copy',key:'⌘C',run:()=>void menuCopy(false)},{label:'Paste',key:'⌘V',run:()=>void menuPaste(),off:!canEdit},'-',{label:'Delete values',key:'Del',run:()=>setCells(keysIn(box).filter(x=>tab.cells[x]).map(x=>({tab:tab.id,k:x,v:''}))),off:!canEdit},{label:'Fill down',key:'⌘D',run:()=>fillDown(false),off:!canEdit},{label:'Fill right',key:'⌘R',run:()=>fillDown(true),off:!canEdit},'-',{label:'Find and replace',key:'⌘F',run:()=>setFind({q:'',rep:'',at:-1})}],
   View:[{head:'Freeze'},{label:'No rows',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:0}})),on:!freeze.r,off:!canEdit},{label:'1 row',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:1}})),on:freeze.r===1,off:!canEdit},{label:'2 rows',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:2}})),on:freeze.r===2,off:!canEdit},{label:`Up to row ${sel[1]+1}`,run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:Math.min(sel[1]+1,20)}})),off:!canEdit},
    {label:'No columns',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:0}})),on:!freeze.c,off:!canEdit},{label:'1 column',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:1}})),on:freeze.c===1,off:!canEdit},{label:`Up to column ${colName(sel[0])}`,run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:Math.min(sel[0]+1,10)}})),off:!canEdit},
-   '-',{label:'Gridlines',run:()=>setGrid(g=>!g),on:grid},'-',{label:`Comments${openCmts.length?` (${openCmts.length})`:''}`,run:()=>setCmtPanel(true)},'-',{label:'Show all hidden rows',run:()=>setTab(tab.id,t=>({...t,hRows:[]})),off:!canEdit||!manualRows.size},{label:'Show all hidden columns',run:()=>setTab(tab.id,t=>({...t,hCols:[]})),off:!canEdit||!hCols.size},'-',{head:'Zoom'},...zooms.map(z=>({label:`${Math.round(z*100)}%`,run:()=>setZoom(z),on:zoom===z}) as Item)],
-  Insert:[{label:`Row above`,run:()=>shift('r',box.r0,1),off:!canEdit},{label:'Row below',run:()=>shift('r',box.r1+1,1),off:!canEdit},{label:'Column left',run:()=>shift('c',box.c0,1),off:!canEdit},{label:'Column right',run:()=>shift('c',box.c1+1,1),off:!canEdit},'-',{label:'New tab',run:addTab,off:!canEdit},'-',{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Dropdown',run:openDropdown,off:!canEdit},{label:'Date',run:()=>{styleKeys(keysIn(box),s2=>({...s2,fmt:'date'}));startEdit(tab.cells[k]??'','edit');},off:!canEdit},{label:'Link',key:'⌘K',run:openLinkEditor,off:!canEdit},'-',{label:'Chart',run:insertChart,off:!canEdit},{label:'Image in cell',run:()=>pickImage('cell'),off:!canEdit},{label:'Image over cells',run:()=>pickImage('over'),off:!canEdit},'-',{label:'Note',key:'⇧F2',run:()=>setNoteEdit(k),off:!canEdit},{label:'Comment',key:'⌘⌥M',run:()=>setCmtOpen(k)},'-',{head:'Function'},...['SUM','AVERAGE','COUNT','MAX','MIN','IF','VLOOKUP'].map(n=>({label:n,run:()=>startEdit(`=${n}(`,'edit'),off:!canEdit}) as Item)],
+   '-',{label:'Gridlines',run:()=>setGrid(g=>!g),on:grid},{label:'Protected ranges',run:()=>setShowProt(v=>!v),on:showProt},'-',{label:`Comments${openCmts.length?` (${openCmts.length})`:''}`,run:()=>setCmtPanel(true)},'-',{label:'Show all hidden rows',run:()=>setTab(tab.id,t=>({...t,hRows:[]})),off:!canEdit||!manualRows.size},{label:'Show all hidden columns',run:()=>setTab(tab.id,t=>({...t,hCols:[]})),off:!canEdit||!hCols.size},'-',{head:'Zoom'},...zooms.map(z=>({label:`${Math.round(z*100)}%`,run:()=>setZoom(z),on:zoom===z}) as Item)],
+  Insert:[{label:`Row above`,run:()=>shift('r',box.r0,1),off:!canEdit},{label:'Row below',run:()=>shift('r',box.r1+1,1),off:!canEdit},{label:'Column left',run:()=>shift('c',box.c0,1),off:!canEdit},{label:'Column right',run:()=>shift('c',box.c1+1,1),off:!canEdit},'-',{label:'New tab',run:addTab,off:!canEdit},'-',{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Dropdown',run:openDropdown,off:!canEdit},{label:'Date',run:()=>{styleKeys(keysIn(box),s2=>({...s2,fmt:'date'}));startEdit(tab.cells[k]??'','edit');},off:!canEdit},{label:'Link',key:'⌘K',run:openLinkEditor,off:!canEdit},'-',{label:'Chart',run:insertChart,off:!canEdit},{label:'Pivot table',run:insertPivot,off:!canEdit},{label:'Image in cell',run:()=>pickImage('cell'),off:!canEdit},{label:'Image over cells',run:()=>pickImage('over'),off:!canEdit},'-',{label:'Note',key:'⇧F2',run:()=>setNoteEdit(k),off:!canEdit},{label:'Comment',key:'⌘⌥M',run:()=>setCmtOpen(k)},'-',{head:'Function'},...['SUM','AVERAGE','COUNT','MAX','MIN','IF','VLOOKUP'].map(n=>({label:n,run:()=>startEdit(`=${n}(`,'edit'),off:!canEdit}) as Item)],
   Format:[...fmtItems,'-',{head:'Text'},{label:'Bold',key:'⌘B',run:()=>toggle('b'),on:!!st.b,off:!canEdit},{label:'Italic',key:'⌘I',run:()=>toggle('i'),on:!!st.i,off:!canEdit},{label:'Underline',key:'⌘U',run:()=>toggle('u'),on:!!st.u,off:!canEdit},{label:'Strikethrough',run:()=>toggle('s'),on:!!st.s,off:!canEdit},'-',{head:'Alignment'},{label:'Left',run:()=>styleKeys(keysIn(box),s=>({...s,h:'l'})),on:st.h==='l',off:!canEdit},{label:'Centre',run:()=>styleKeys(keysIn(box),s=>({...s,h:'c'})),on:st.h==='c',off:!canEdit},{label:'Right',run:()=>styleKeys(keysIn(box),s=>({...s,h:'r'})),on:st.h==='r',off:!canEdit},{label:'Wrap text',run:()=>styleKeys(keysIn(box),s=>({...s,wrap:s.wrap?undefined:1})),on:!!st.wrap,off:!canEdit},'-',{head:'Merge cells'},{label:'Merge all',run:()=>void mergeCells('all'),off:!canEdit},{label:'Merge horizontally',run:()=>void mergeCells('h'),off:!canEdit},{label:'Merge vertically',run:()=>void mergeCells('v'),off:!canEdit},{label:'Unmerge',run:()=>void mergeCells('un'),off:!canEdit},'-',{label:'Conditional formatting…',run:()=>setCfOpen(true),off:!canEdit},'-',{label:'Clear formatting',key:'⌘\\',run:()=>styleKeys(keysIn(box),()=>({})),off:!canEdit}],
-  Data:[filt?{label:'Remove filter',run:removeFilter,off:!canEdit}:{label:'Create a filter',run:createFilter,off:!canEdit},'-',{label:`Sort sheet by column ${colName(sel[0])}, A → Z`,run:()=>sort(1,true),off:!canEdit},{label:`Sort sheet by column ${colName(sel[0])}, Z → A`,run:()=>sort(-1,true),off:!canEdit},'-',{label:'Sort range A → Z',run:()=>sort(1,false),off:!canEdit},{label:'Sort range Z → A',run:()=>sort(-1,false),off:!canEdit},'-',{label:'Dropdown…',run:openDropdown,off:!canEdit},{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Remove dropdowns and checkboxes',run:clearRules,off:!canEdit||!rules.length}],
+  Data:[filt?{label:'Remove filter',run:removeFilter,off:!canEdit}:{label:'Create a filter',run:createFilter,off:!canEdit},'-',{label:`Sort sheet by column ${colName(sel[0])}, A → Z`,run:()=>sort(1,true),off:!canEdit},{label:`Sort sheet by column ${colName(sel[0])}, Z → A`,run:()=>sort(-1,true),off:!canEdit},'-',{label:'Sort range A → Z',run:()=>sort(1,false),off:!canEdit},{label:'Sort range Z → A',run:()=>sort(-1,false),off:!canEdit},'-',{label:'Dropdown…',run:openDropdown,off:!canEdit},{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Remove dropdowns and checkboxes',run:clearRules,off:!canEdit||!rules.length},'-',{label:'Protect sheets and ranges',run:()=>setProtOpen(true),off:!canEdit},{label:'Pivot table',run:insertPivot,off:!canEdit},...(tab.pivot?[{label:'Pivot table editor',run:()=>setPivOpen(true),off:!canEdit} as Item]:[])],
   Help:[{label:'Keyboard shortcuts',key:'⌘/',run:()=>setHelp('keys')},{label:'Function list',run:()=>setHelp('fx')}],
  };
  const renderItems=(items:Item[])=>items.map((it,i)=>it==='-'?<hr key={i}/>:'head' in it?<p key={i} className="zs2-mhead">{it.head}</p>:<button key={i} type="button" disabled={it.off} onClick={()=>{setMenu(null);setCtx(null);it.run?.();}}><span className="zs2-mcheck">{it.on&&<Check size={13}/>}</span><span>{it.label}</span>{it.key&&<kbd>{it.key}</kbd>}</button>);
@@ -583,7 +624,7 @@ export default function SheetPage({id}:{id:string}){
        {Array.from({length:COLS},(_,c)=>{if(hCols.has(c))return null;const mg=mergeAt(c,r);const x=ref(c,r),s=tab.style?.[x],v=values[x],rule=ruleOf(c,r),cur=c===sel[0]&&r===sel[1],inside=c>=box.c0&&c<=box.c1&&r>=box.r0&&r<=box.r1,peer=others.find(p=>p.s===x);
         const fillTarget=fill&&(()=>{const down=Math.abs(fill[1]-box.r1)>=Math.abs(fill[0]-box.c1);return down?(c>=box.c0&&c<=box.c1&&((fill[1]>box.r1&&r>box.r1&&r<=fill[1])||(fill[1]<box.r0&&r<box.r0&&r>=fill[1]))):(r>=box.r0&&r<=box.r1&&((fill[0]>box.c1&&c>box.c1&&c<=fill[0])||(fill[0]<box.c0&&c<box.c0&&c>=fill[0])));})();
         const edges=inside?`${r===box.r0?' t':''}${r===box.r1?' b':''}${c===box.c0?' l':''}${c===box.c1?' r':''}`:'';
-        return <td key={c} className={`${notes[x]?' has-note':''}${comments[x]&&!comments[x].done?' has-cmt':''}${mg?(mg.c0===c&&mg.r0===r?' is-manchor':' is-mcov'):''}${filt&&r===filt.b.r0&&c>=filt.b.c0&&c<=filt.b.c1?' is-fhead':''}${rule?` is-${rule.t}`:''}${inside&&!cur?' is-in':''}${edges?` is-edge${edges}`:''}${cur?' is-cur':''}${isError(v)?' is-err':''}${fillTarget?' is-fill':''}${c===freeze.c-1?' is-fz-c':''}${r===freeze.r-1?' is-fz-r':''}`} style={{...cellStyle(s,c,r,typeof v==='number'),...cfFor(c,r,x,v)}}
+        return <td key={c} className={`${notes[x]?' has-note':''}${comments[x]&&!comments[x].done?' has-cmt':''}${mg?(mg.c0===c&&mg.r0===r?' is-manchor':' is-mcov'):''}${filt&&r===filt.b.r0&&c>=filt.b.c0&&c<=filt.b.c1?' is-fhead':''}${showProt&&protAt(tab.prot,c,r)?' is-prot':''}${rule?` is-${rule.t}`:''}${inside&&!cur?' is-in':''}${edges?` is-edge${edges}`:''}${cur?' is-cur':''}${isError(v)?' is-err':''}${fillTarget?' is-fill':''}${c===freeze.c-1?' is-fz-c':''}${r===freeze.r-1?' is-fz-r':''}`} style={{...cellStyle(s,c,r,typeof v==='number'),...cfFor(c,r,x,v)}}
          onMouseDown={e=>cellDown(e,c,r)} onMouseEnter={()=>cellEnter(c,r)} onDoubleClick={()=>{const rl=ruleOf(c,r);if(rl?.t==='check')return;if(rl?.t==='list'&&canEdit){setDd(x);return;}startEdit(tab.cells[x]??'','edit');}} onContextMenu={e=>{e.preventDefault();setCtx({x:e.clientX,y:e.clientY});}}>
          {notes[x]&&<span className="zs2-tri is-note"/>}{comments[x]&&!comments[x].done&&<span className="zs2-tri is-cmt"/>}
          {notes[x]&&!(cur&&noteEdit===x)&&<span className="zs2-notebub">{notes[x]}</span>}
@@ -628,8 +669,8 @@ export default function SheetPage({id}:{id:string}){
   <footer className="zs2-foot" onClick={e=>e.stopPropagation()}>
    {canEdit&&<button type="button" className="zs2-ticon" aria-label="Add tab" data-tip="Add tab" onClick={addTab}><Plus size={16}/></button>}
    <span className="zs2-popwrap"><button type="button" className="zs2-ticon" aria-label="All tabs" data-tip="All tabs" onClick={()=>setPop(p=>p==='tabs'?null:'tabs')}><Menu size={16}/></button>
-    {pop==='tabs'&&<div className="zs2-menu is-up">{data.tabs.map(t=><button key={t.id} type="button" onClick={()=>{setPop(null);setTabId(t.id);setSel([0,0]);setAnchor(null);}}><span className="zs2-mcheck">{t.id===tab.id&&<Check size={13}/>}</span><span>{t.name}</span></button>)}</div>}</span>
-   <div className="zs2-tabs">{data.tabs.map(t=><span key={t.id} className={`zs2-tab${t.id===tab.id?' is-on':''}`} style={t.color?{boxShadow:`inset 0 -3px 0 ${t.color}`}:undefined}>
+    {pop==='tabs'&&<div className="zs2-menu is-up">{tabs.map(t=><button key={t.id} type="button" onClick={()=>{setPop(null);setTabId(t.id);setSel([0,0]);setAnchor(null);}}><span className="zs2-mcheck">{t.id===tab.id&&<Check size={13}/>}</span><span>{t.name}</span></button>)}</div>}</span>
+   <div className="zs2-tabs">{tabs.map(t=><span key={t.id} className={`zs2-tab${t.id===tab.id?' is-on':''}`} style={t.color?{boxShadow:`inset 0 -3px 0 ${t.color}`}:undefined}>
     {renamingTab===t.id?<input autoFocus defaultValue={t.name} maxLength={40} aria-label="Tab name" onBlur={e=>renameTab(t,e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter')renameTab(t,e.currentTarget.value);else if(e.key==='Escape')setRenamingTab(null);}}/>
      :<button type="button" onClick={()=>{if(t.id!==tab.id){setTabId(t.id);setSel([0,0]);setAnchor(null);}}} onDoubleClick={()=>{if(canEdit)setRenamingTab(t.id);}} onContextMenu={e=>{e.preventDefault();if(canEdit)setTabMenu(t.id);}}>{t.name}</button>}
     {canEdit&&t.id===tab.id&&renamingTab!==t.id&&<button type="button" className="zs2-tcaret" aria-label={`${t.name} options`} onClick={()=>setTabMenu(m=>m===t.id?null:t.id)}><ChevronDown size={13}/></button>}
@@ -670,6 +711,11 @@ export default function SheetPage({id}:{id:string}){
   {cmtPanel&&<Modal title="Comments" onClose={()=>setCmtPanel(false)}><div className="zn-modal-body"><ul className="zs2-cmtlist">{openCmts.length?openCmts.map(([x,c])=><li key={x}><button type="button" onClick={()=>{const pp=parseRef(x);if(pp){setAnchor(null);setSel(pp);}setCmtPanel(false);}}><b>{x}</b><span>{people[c.u]?.display_name??'Someone'}: {c.t}</span><small>{(c.re?.length??0)>0?`${c.re!.length} repl${c.re!.length===1?'y':'ies'}`:''}</small></button></li>):<li className="zn-nav-note">No open comments on this tab.</li>}</ul></div></Modal>}
   {cfOpen&&<CfPanel rules={tab.cf??[]} range={rangeOf(box)} onClose={()=>setCfOpen(false)} onChange={cf=>setTab(tab.id,t=>({...t,cf}))}/>}
   {linkEdit&&<LinkModal init={linkEdit} onClose={()=>{setLinkEdit(null);gridRef.current?.focus();}} onSave={saveLink}/>}
+  {verOpen&&<VersionPanel db={db} docId={id} people={people} canEdit={role==='owner'||role==='edit'} isOwner={role==='owner'} previewId={preview?.id??null} onPreview={setPreview} onRestore={(d,l)=>void restoreVersion(d,l)} onClose={()=>{setVerOpen(false);setPreview(null);}}/>}
+  {preview&&<div className="zs2-verbar" role="status"><b>Earlier version</b><span>{preview.label}</span><button type="button" className="zn-btn" onClick={()=>setPreview(null)}>Back to current</button></div>}
+  {protOpen&&<ProtectPanel prot={tab.prot??[]} range={rangeOf(box)} me={me.user_id} isOwner={role==='owner'} members={members.filter(m=>!m.deactivated_at)} onChange={pr=>setTab(tab.id,t=>({...t,prot:pr}))} onClose={()=>setProtOpen(false)}/>}
+  {tab.pivot&&canEdit&&!verOpen&&(pivOpen?<PivotEditor key={tab.id} p={tab.pivot} head={pivots[tab.id]?.head??[]} tabs={tabs} onChange={pv=>setTab(tab.id,t=>({...t,pivot:pv}))} onClose={()=>setPivOpen(false)}/>
+   :<button type="button" className="zs2-pivbtn zn-btn" onClick={()=>setPivOpen(true)}>Edit pivot table</button>)}
   {warn&&<div className="zs2-warn" role="alert">{warn}</div>}
   {help==='keys'&&<Modal title="Keyboard shortcuts" onClose={()=>setHelp(null)} wide><div className="zn-modal-body"><dl className="zs2-keys">{([['Arrow keys','Move'],['Shift + arrows','Select a range'],['⌘ + arrows','Jump to the edge of the data'],['Enter / F2','Edit the cell'],['Type','Replace the cell'],['Tab / Shift+Tab','Move right / left'],['Delete','Clear the selection'],['⌘C / ⌘X / ⌘V','Copy / cut / paste'],['⌘Z / ⌘⇧Z','Undo / redo'],['⌘D / ⌘R','Fill down / right'],['⌘B / ⌘I / ⌘U','Bold / italic / underline'],['⌘A','Select all'],['⌘F','Find and replace'],['Drag the blue square','Fill or continue formulas'],['Click cells while typing =','Insert references']] as const).map(([a,b])=><div key={a}><dt><kbd>{a}</kbd></dt><dd>{b}</dd></div>)}</dl></div></Modal>}
   {help==='fx'&&<Modal title="Functions" onClose={()=>setHelp(null)} wide><div className="zn-modal-body"><ul className="zs2-fxlist">{FUNCTION_NAMES.map(n=><li key={n}><b>{n}</b><code>{FUNCTIONS[n].help}</code></li>)}</ul></div></Modal>}

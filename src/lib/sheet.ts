@@ -18,8 +18,16 @@ export type Tab={id:string;name:string;cells:Record<string,string>;style?:Record
  /** filter: the range (header row first) and, per column index, the values hidden */ filter?:{range:string;hide:Record<string,string[]>};hRows?:number[];hCols?:number[];
  /** merged ranges like 'A1:C2' */ merges?:string[];cf?:CfRule[];
  notes?:Record<string,string>;comments?:Record<string,Cmt>;objs?:Obj[];
+ /** protected ranges (no range = the whole tab) */ prot?:Prot[];
+ /** a pivot table tab: its cells are worked out from the source, not typed */ pivot?:Pivot;
  /** legacy */ bold?:Record<string,boolean>;/** legacy */ align?:Record<string,'l'|'c'|'r'>};
 export type SheetData={tabs:Tab[]};
+// Protected ranges: only the doc owner, whoever set it up, and the listed editors can change them. warn = anyone can, after a warning.
+export type Prot={id:string;range?:string;desc?:string;by:string;eds?:string[];warn?:1};
+export const protAt=(prot:Prot[]|undefined,c:number,r:number)=>prot?.find(p=>{if(!p.range)return true;const b=parseRange(p.range);return !!b&&c>=b.c0&&c<=b.c1&&r>=b.r0&&r<=b.r1;});
+// Pivot tables: group the source rows by some columns (rows / cols, as indexes inside the range) and summarise others.
+export type PivFn='SUM'|'COUNTA'|'COUNT'|'AVERAGE'|'MIN'|'MAX';
+export type Pivot={src:string;range:string;rows:number[];cols:number[];vals:{c:number;fn:PivFn}[];noTot?:1};
 export const COLS=52,ROWS=1000,COL_W=104,ROW_H=24;
 export const colName=(c:number)=>{let s='',n=c+1;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26);}return s;};
 export const colIndex=(s:string)=>{let n=0;for(const ch of s.toUpperCase())n=n*26+(ch.charCodeAt(0)-64);return n-1;};
@@ -230,3 +238,40 @@ export function parseDateText(s:string):number|null{const t=s.trim();if(!t||/^-?
 export function linkOf(raw:string|undefined,shown:string):string|null{
  const m=raw?/^=HYPERLINK\(\s*"([^"]+)"/i.exec(raw):null;const u=m?m[1]:/^(https?:\/\/|www\.)\S+$/i.test(shown.trim())?shown.trim():null;
  if(!u)return null;const full=/^https?:\/\//i.test(u)?u:`https://${u}`;try{const x=new URL(full);return x.protocol==='http:'||x.protocol==='https:'?x.href:null;}catch{return null;}}
+
+// Works a pivot table out into plain cells (and bold headers / totals) for the pivot tab.
+export function runPivot(p:Pivot,tabs:Tab[]):{cells:Record<string,string>;style:Record<string,Style>;head:string[]}{
+ const src=tabs.find(t=>t.id===p.src),b=parseRange(p.range);
+ if(!src||!b)return {cells:{A1:'The source data for this pivot table is missing.'},style:{},head:[]};
+ const vals=evaluate(src,tabs),at=(c:number,r:number)=>vals[ref(b.c0+c,r)]??'';
+ const head=Array.from({length:b.c1-b.c0+1},(_,i)=>text(at(i,b.r0)).trim()||`Column ${colName(b.c0+i)}`);
+ let last=b.r0;for(const k of Object.keys(src.cells)){const q=parseRef(k);if(q&&q[0]>=b.c0&&q[0]<=b.c1&&q[1]<=b.r1)last=Math.max(last,q[1]);}
+ const rows:V[][]=[];for(let r=b.r0+1;r<=last;r++){const row=head.map((_,i)=>at(i,r));if(row.some(x=>x!==''))rows.push(row);}
+ const keyOf=(row:V[],idx:number[])=>idx.map(i=>text(row[i]??'')).join('\u0001');
+ const bag=new Map<string,V[][]>();const put=(k:string,row:V[])=>{let a=bag.get(k);if(!a)bag.set(k,a=[]);a.push(row);};
+ const rk=new Set<string>(),ck=new Set<string>();
+ for(const row of rows){const r2=keyOf(row,p.rows),c2=keyOf(row,p.cols);rk.add(r2);ck.add(c2);put(`${r2}\u0002${c2}`,row);put(`${r2}\u0002*`,row);put(`*\u0002${c2}`,row);put('*\u0002*',row);}
+ const cmp=(x:string,y:string)=>{const a=x.split('\u0001'),z=y.split('\u0001');for(let i=0;i<a.length;i++){const n=a[i].localeCompare(z[i]??'',undefined,{numeric:true});if(n)return n;}return 0;};
+ const RK=p.rows.length?[...rk].sort(cmp):[],CK=p.cols.length?[...ck].sort(cmp):[];
+ const agg=(set:V[][]|undefined,v:{c:number;fn:PivFn}):number|''=>{const xs=(set??[]).map(r=>r[v.c]??'');if(!set?.length)return '';
+  if(v.fn==='COUNTA')return xs.filter(x=>x!=='').length;const ns=xs.filter(isNum).map(Number);
+  if(v.fn==='COUNT')return ns.length;if(v.fn==='SUM')return ns.reduce((a,c)=>a+c,0);if(!ns.length)return '';
+  return v.fn==='AVERAGE'?ns.reduce((a,c)=>a+c,0)/ns.length:v.fn==='MIN'?Math.min(...ns):Math.max(...ns);};
+ const label=(v:{c:number;fn:PivFn})=>`${v.fn} of ${head[v.c]??'?'}`;
+ const cells:Record<string,string>={},style:Record<string,Style>={};
+ const set=(c:number,r:number,v:V|'',bold=false)=>{if(c>=COLS||r>=ROWS)return;const k=ref(c,r);let s=text(v);if(s.startsWith('='))s=` ${s}`;if(s!=='')cells[k]=s;if(bold)style[k]={b:1};};
+ const L=Math.max(p.rows.length,1),V2=p.vals.length?p.vals:[],tot=!p.noTot;
+ const blocks=[...CK.map(c=>c),...(CK.length&&tot?['*']:[])];if(!CK.length)blocks.push('*');
+ const hr=CK.length?2:1;
+ // Header rows
+ p.rows.forEach((ri,i)=>set(i,hr-1,head[ri]??'',true));
+ if(CK.length){set(0,0,p.cols.map(i=>head[i]).join(' / '),true);
+  blocks.forEach((ckey,bi)=>{const x=L+bi*Math.max(V2.length,1);set(x,0,ckey==='*'?'Grand total':ckey.split('\u0001').join(' / '),true);V2.forEach((v,vi)=>set(x+vi,1,label(v),true));});}
+ else V2.forEach((v,vi)=>set(L+vi,0,label(v),true));
+ // Body
+ let r=hr;const prev:string[]=[];
+ for(const key of RK){const parts=key.split('\u0001');let same=true;parts.forEach((pt,i)=>{same=same&&prev[i]===pt;if(!same)set(i,r,pt===''?'(blank)':pt);});prev.splice(0,prev.length,...parts);
+  blocks.forEach((ckey,bi)=>V2.forEach((v,vi)=>set(L+bi*V2.length+vi,r,agg(bag.get(`${key}\u0002${ckey}`),v))));r++;}
+ if(tot||!RK.length){set(0,r,'Grand total',true);blocks.forEach((ckey,bi)=>V2.forEach((v,vi)=>set(L+bi*V2.length+vi,r,agg(bag.get(`*\u0002${ckey}`),v),true)));}
+ return {cells,style,head};
+}
