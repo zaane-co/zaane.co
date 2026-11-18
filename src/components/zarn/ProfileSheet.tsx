@@ -8,7 +8,7 @@ import {Modal,squareCrop} from './Dialogs';
 
 type Edit=null|'profile'|'contact'|'about';
 // Someone's profile (Slack-style): photo, who they are, how to reach them, and about them. Your own has Edit links on each part.
-export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onClose:()=>void;onEdit:()=>void}){
+export default function ProfileSheet({userId,onClose,onEdit,onLeave}:{userId:string;onClose:()=>void;onEdit:()=>void;onLeave?:()=>void}){
  const {people,me,online,db,openDm}=useZarn();
  const p=people[userId],isMe=userId===me.user_id,guestViewer=me.account_type==='guest';
  const [em,setEm]=useState<ZEmergency|null>(null),[busy,setBusy]=useState(false),[edit,setEdit]=useState<Edit>(null);
@@ -34,7 +34,7 @@ export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onCl
    </div>
    <div className="zn-prof-actions">
     {isMe?<button type="button" className="zn-btn" onClick={onEdit}><Smile size={15}/>{st?'Update status':'Set a status'}</button>
-     :<button type="button" className="zn-btn is-primary" disabled={busy} onClick={async()=>{setBusy(true);try{await openDm([userId]);onClose();}finally{setBusy(false);}}}><MessageSquare size={15}/>Message</button>}
+     :<button type="button" className="zn-btn is-primary" disabled={busy} onClick={async()=>{setBusy(true);try{await openDm([userId]);(onLeave??onClose)();}finally{setBusy(false);}}}><MessageSquare size={15}/>Message</button>}
     {email&&<a className="zn-btn" href={`mailto:${email}`}><Mail size={15}/>Email</a>}
     {p.phone&&<a className="zn-btn" href={`tel:${p.phone}`}><Phone size={15}/>Call</a>}
     {wa&&<a className="zn-btn zn-wa-btn" href={wa} target="_blank" rel="noopener noreferrer"><WaIcon/>WhatsApp</a>}

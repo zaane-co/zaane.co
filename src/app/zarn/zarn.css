@@ -2399,3 +2399,5 @@ a.zn-act-row:hover{background:var(--z-hover)}
 }
 @keyframes zn-push{from{transform:translateX(100%)}to{transform:none}}
 @media(prefers-reduced-motion:reduce){.zn-sheet.zn-prof{animation:none!important}}
+/* Phones: large-title screens opened from somewhere else leave room for the round back button */
+@media(max-width:760px){.zarn.is-deep .zn-tab-head{padding-left:64px}}

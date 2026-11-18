@@ -44,6 +44,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  const newPeople=guest?[]:Object.values(z.people).filter(p=>p.user_id!==z.me.user_id&&!p.deactivated_at&&!dmWith.has(p.user_id)).sort((a,b)=>a.display_name.localeCompare(b.display_name));
  const [menu,setMenu]=useState(false),[dialog,setDialog]=useState<Dialog>(null),[collapsed,setCollapsed]=useState<Record<string,boolean>>({archivedclients:true});
  const [newProject,setNewProject]=useState(false),[managingGroups,setManagingGroups]=useState(false),[clientQ,setClientQ]=useState(''),[profileId,setProfileId]=useState<string|null>(null),[quick,setQuick]=useState(false),[meMenu,setMeMenu]=useState(false),[prefs,setPrefs]=useState<null|'availability'|'notifications'|'appearance'>(null);
+ useEffect(()=>{if(!profileId)return;const pop=()=>{if(!(history.state as {znProfile?:number}|null)?.znProfile)setProfileId(null);};window.addEventListener('popstate',pop);return()=>window.removeEventListener('popstate',pop);},[profileId]);
  const router=useRouter();
  const {mode:installMode,install}=useInstall(),sound=useSound(),soundCfg=useSoundSettings(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false),[installDone,setInstallDone]=useState(false);
  const routeArea=areaOf(pathname);
@@ -93,7 +94,11 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small className="zn-tab-label">{label}</small></Link>;};
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
- return <ConfirmProvider><CallProvider><ShellCtx.Provider value={{open:setDialog,profile:setProfileId}}>
+ // A profile is its own step in the back history, so iOS swipe-back (or Android back) closes it instead of leaving the chat.
+ const openProfile=(uid:string|null)=>{if(uid&&!profileId){try{history.pushState({...(history.state??{}),znProfile:1},'',location.href);}catch{}}setProfileId(uid);};
+ const leaveProfile=()=>{const st=history.state as {znProfile?:number}|null;if(st?.znProfile){const rest={...st};delete rest.znProfile;try{history.replaceState(rest,'',location.href);}catch{}}setProfileId(null);};
+ const closeProfile=()=>{if((history.state as {znProfile?:number}|null)?.znProfile)history.back();else setProfileId(null);};
+ return <ConfirmProvider><CallProvider><ShellCtx.Provider value={{open:setDialog,profile:openProfile}}>
  <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}${routeArea==='drive'?' is-drive':''}${fileDrag&&hasDropTarget()?' is-file-drag':''}`} data-lenis-prevent>
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
@@ -115,7 +120,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
      <button type="button" role="menuitem" onClick={()=>{z.setAway(!z.away);setMeMenu(false);}}>Set yourself as <b>{z.away?'active':'away'}</b></button>
      <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setPrefs('notifications');}}>Notifications<em>{push.state==='on'?'On':push.state==='error'?'Fix':'Off'}<ChevronRight size={15}/></em></button>
      <div className="zn-me-sep"/>
-     <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setProfileId(me.user_id);}}>Profile</button>
+     <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);openProfile(me.user_id);}}>Profile</button>
      <button type="button" role="menuitem" onClick={()=>{setMeMenu(false);setPrefs('availability');}}>Preferences</button>
      {me.zarnAdmin&&<Link role="menuitem" href="/zarn/admin" onClick={()=>setMeMenu(false)}>ZARN admin</Link>}
      <Link role="menuitem" href="/zarn/password" onClick={()=>setMeMenu(false)}>Account settings<em><ExternalLink size={15}/></em></Link>
@@ -212,7 +217,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
     {!guest&&tab('/zarn/clients',<Briefcase size={24}/>,'Clients',badges.clients)}
    </nav>
   </div>
-  {profileId&&<ProfileSheet userId={profileId} onClose={()=>setProfileId(null)} onEdit={()=>{setProfileId(null);setDialog('profile');}}/>}
+  {profileId&&<ProfileSheet userId={profileId} onClose={closeProfile} onLeave={leaveProfile} onEdit={()=>{closeProfile();setDialog('profile');}}/>}
   <InstallPrompt onDone={()=>setInstallDone(true)} onHelp={()=>setDialog('install')}/>
   <CareAlerts/>
   <NotifyPrompt wait={!installDone} installMode={installMode} onInstall={()=>setDialog('install')}/>
