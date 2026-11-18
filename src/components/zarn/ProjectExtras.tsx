@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {ArrowDown,ArrowUp,FileSpreadsheet,FileText,Plus,Trash2,UserPlus} from 'lucide-react';
+import {ArrowDown,ArrowUp,ChevronRight,FileSpreadsheet,FileText,Plus,Trash2,UserPlus} from 'lucide-react';
 import {useConfirm} from './ConfirmProvider';
 import {useZarn,type ZProject} from './ZarnProvider';
 import {Modal} from './Dialogs';
@@ -71,11 +71,12 @@ export function ProjectDocs({projectId}:{projectId:string}){
   router.push(sheet?`/zarn/sheets/${id}`:`/zarn/docs/${id}`);
  }
  return <div className="zpx-wrap">
-  <div className="zpx-head"><h2>Documentation</h2><span className="zpx-actions"><button type="button" className="zp-btn" onClick={()=>void create(true)}><FileSpreadsheet size={15}/>New sheet</button><button type="button" className="zp-btn is-dark" onClick={()=>void create(false)}><Plus size={15}/>New doc</button></span></div>
+  <div className="zpx-head is-docs"><h2>Documentation</h2><span className="zpx-actions"><button type="button" className="zp-btn" onClick={()=>void create(true)}><FileSpreadsheet size={15}/>New sheet</button><button type="button" className="zp-btn is-dark" onClick={()=>void create(false)}><Plus size={15}/>New doc</button></span></div>
   {err&&<p className="zn-error" role="alert">{err}</p>}
   {rows===null?<p className="zn-loading">Loading…</p>:rows.length?<div className="zpx-docs">{rows.map(d=><Link key={d.id} href={d.kind==='sheet'?`/zarn/sheets/${d.id}`:`/zarn/docs/${d.id}`} className="zpx-doc">
    {d.kind==='sheet'?<FileSpreadsheet size={20} className="zdr-ic is-sheet"/>:<FileText size={20} className="zdr-ic is-doc"/>}
    <span><b>{d.title||'Untitled'}</b><small>{d.owner_id===me.user_id?'You':people[d.owner_id]?.display_name??'Someone'} · {dayOf(d.updated_at)}</small></span>
+   <ChevronRight size={18} className="zpx-chev" aria-hidden/>
   </Link>)}</div>
   :<div className="zn-empty-state"><h2>No documentation yet</h2><p>Write specs, notes, how-tos and decisions here. Everyone on the project can open and edit them.</p></div>}
  </div>;

@@ -2962,3 +2962,20 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zarn.is-deep .zp-tabs button:active{opacity:.7}
  .zarn.is-deep .zp-tabs .zp-tab-count{margin-left:6px}
 }
+
+/* Project Docs tab on phones: the tab already says Docs, so the heading goes and the two create buttons share a row; docs are grouped list rows. */
+.zpx-chev{display:none}
+@media (max-width:760px){
+ .zpx-head.is-docs h2{display:none}
+ .zpx-head.is-docs .zpx-actions{flex:1;display:flex;flex-direction:row-reverse;gap:10px}
+ .zpx-head.is-docs .zp-btn{flex:1;justify-content:center;height:44px;white-space:nowrap;border-radius:12px;font-size:15px}
+ .zpx-head.is-docs .zp-btn:not(.is-dark){border:0;background:var(--z-panel-2)}
+ .zpx-docs{display:flex;flex-direction:column;gap:0;border-radius:14px;background:var(--z-panel);overflow:hidden}
+ .zpx-doc{position:relative;padding:13px 12px 13px 16px;border:0;border-radius:0;background:none}
+ .zpx-doc+.zpx-doc::before{content:"";position:absolute;top:0;left:48px;right:0;height:1px;background:var(--z-border)}
+ .zpx-doc:active{background:var(--z-hover)}
+ .zpx-doc>span{flex:1}
+ .zpx-doc b{font-size:16px;font-weight:600}
+ .zpx-doc small{font-size:13px}
+ .zpx-chev{display:block;flex:none;color:var(--z-muted);opacity:.6}
+}
