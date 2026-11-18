@@ -2319,17 +2319,19 @@ a.zn-act-row:hover{background:var(--z-hover)}
 }
 @keyframes zn-sheet-up{from{transform:translateY(100%)}to{transform:none}}
 @media(prefers-reduced-motion:reduce){.zn-modal-scrim>.zn-modal{animation:none!important}}
-/* Phones: iOS-style chat header. Name on top with the topic / typing / online as a small line under it,
-   then plain round icons. Members and pins live in Details (the i button). */
+.zn-chan-id{display:contents}
+/* Phones: chat header. Name with the topic / typing / online right under it as one block, then plain round icons.
+   Members and pins live in Details (the i button). */
 @media(max-width:760px){
- .zn-chan-head{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;align-content:center;column-gap:8px;height:56px;padding-right:8px}
- .zn-chan-head .zn-chan-title{grid-column:1;grid-row:1;margin:0;padding:0;gap:6px;background:none!important;align-self:end}
- .zn-chan-head .zn-chan-title svg{width:15px;height:15px;color:var(--z-muted);flex:none}
- .zn-chan-head .zn-chan-title h1{font-size:17px;font-weight:700;letter-spacing:-.01em}
- .zn-chan-head .zn-topic{grid-column:1;grid-row:2;display:block!important;flex:none;margin:1px 0 0;font-size:12px;line-height:1.3;color:var(--z-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;align-self:start}
- .zn-chan-head .zn-head-actions{grid-column:2;grid-row:1/3;margin:0;gap:0;flex-wrap:nowrap}
- .zn-chan-head .zn-head-actions button{width:40px;height:40px;min-width:40px;padding:0;justify-content:center;border-radius:50%;color:var(--z-fg)}
- .zn-chan-head .zn-head-actions button svg{width:20px;height:20px}
+ .zn-chan-head{display:flex!important;align-items:center;gap:4px;height:58px;padding-right:6px}
+ .zn-chan-id{display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;gap:1px}
+ .zn-chan-head .zn-chan-title{margin:0;padding:0;gap:5px;background:none!important;max-width:100%}
+ .zn-chan-head .zn-chan-title>svg{width:14px;height:14px;color:var(--z-muted);flex:none}
+ .zn-chan-head .zn-chan-title h1{font-size:16.5px;font-weight:700;line-height:1.2;letter-spacing:-.01em}
+ .zn-chan-head .zn-topic{display:block!important;flex:none;margin:0;font-size:12px;line-height:1.25;color:var(--z-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+ .zn-chan-head .zn-head-actions{margin:0;gap:0;flex-wrap:nowrap;flex:none}
+ .zn-chan-head .zn-head-actions button{width:38px;height:38px;min-width:38px;padding:0;justify-content:center;border-radius:50%;color:var(--z-fg)}
+ .zn-chan-head .zn-head-actions button svg{width:19px;height:19px}
  .zn-chan-head .zn-head-actions button.is-on{color:#f59e0b}
  .zn-chan-head .zn-head-actions .zn-head-faces,.zn-chan-head .zn-head-actions button[data-tip="Pinned messages"]{display:none}
 }

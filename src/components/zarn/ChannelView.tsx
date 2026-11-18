@@ -118,6 +118,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
  return <div className={`zn-channel${thread?' has-thread':''}`}>
   <div className="zn-chan-main">
    {!embedded&&<header className="zn-chan-head">
+    <div className="zn-chan-id">
     <button type="button" className="zn-chan-title" onClick={()=>{const other=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];if(other.length===1)profile(other[0]!);else setDetails(true);}}>{channel.kind==='dm'?(dmPeer&&people[dmPeer]?<Avatar m={people[dmPeer]} size={28} online={z.online.has(dmPeer)}/>:null):channel.kind==='private'?<Lock size={16}/>:<Hash size={17}/>}<h1>{title(channel)}</h1></button>
     {(()=>{
      const dmOther=channel.kind==='dm'?(channel.dm_key??'').split(',').find(u=>u!==me.user_id):undefined;
@@ -125,6 +126,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
      if(dmOther)return <p className="zn-topic">{z.online.has(dmOther)?<span className="zn-online">online</span>:lastSeen(people[dmOther]?.last_seen_at)}</p>;
      return channel.topic?<p className="zn-topic is-topic" title={channel.topic}>{channel.topic}</p>:null;
     })()}
+    </div>
     <div className="zn-head-actions">
      <button type="button" aria-label="Search this conversation" data-tip="Search here" onClick={()=>setSearching(true)}><Search size={16}/></button>
      {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined&&!!people[o[0]!]&&!people[o[0]!]?.deactivated_at?<button type="button" aria-label="Voice call" data-tip={call.busy?'You’re on a call':'Voice call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!)}><Phone size={16}/></button>:null;})()}
