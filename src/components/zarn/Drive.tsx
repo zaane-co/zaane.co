@@ -8,6 +8,7 @@ import {Modal,PeoplePicker} from './Dialogs';
 import {Avatar,dayOf} from './format';
 import DocViewer,{docKind} from './DocViewer';
 import ShareDoc from './ShareDoc';
+import ShareFolder from './ShareFolder';
 import Files from './Files';
 import {optimizeImage} from '@/components/admin/blog/shared';
 
@@ -15,7 +16,7 @@ type DriveKind='my'|'team'|'client';
 type Kind='folder'|'doc'|'file';
 const isTable=(it:{kind:string;name:string})=>it.kind==='file'&&/\.(xlsx|xlsm|xls|ods|csv|tsv)$/i.test(it.name);
 const isPdf=(it:{kind:string;name:string;type?:string})=>it.kind==='file'&&(it.type==='application/pdf'||/\.pdf$/i.test(it.name));
-type Item={sheet?:boolean;color?:string|null;opened?:string;kind:Kind;id:string;name:string;owner_id:string;drive:DriveKind;lead_id:string|null;folder_id:string|null;trashed_at:string|null;updated_at:string;size?:number;type?:string;shared?:boolean};
+type Item={toMe?:boolean;restricted?:boolean;sheet?:boolean;color?:string|null;opened?:string;kind:Kind;id:string;name:string;owner_id:string;drive:DriveKind;lead_id:string|null;folder_id:string|null;trashed_at:string|null;updated_at:string;size?:number;type?:string;shared?:boolean};
 // Where you are: a drive's root or a folder, or one of the cross-drive lists.
 type Place={drive:DriveKind;lead:string|null;folder:string|null};
 type ListView='shared'|'recent'|'starred'|'trash'|'chats';
@@ -35,7 +36,7 @@ export default function Drive(){
  const [items,setItems]=useState<Item[]|null>(null),[stars,setStars]=useState<Set<string>>(new Set()),[err,setErr]=useState('');
  const [q,setQ]=useState(''),[layout,setLayout]=useState<'grid'|'list'>('grid'),[sort,setSort]=useState<'name'|'updated'>('updated');
  const [menu,setMenu]=useState<{item:Item;x:number;y:number}|null>(null),[newMenu,setNewMenu]=useState(false),[bgMenu,setBgMenu]=useState<{x:number;y:number}|null>(null),[sel,setSel]=useState<Set<string>>(new Set());
- const [renaming,setRenaming]=useState<Item|null>(null),[naming,setNaming]=useState(false),[moving,setMoving]=useState<Item[]|null>(null),[sharingDoc,setSharingDoc]=useState<string|null>(null),[sharingItem,setSharingItem]=useState<Item|null>(null),[accessItem,setAccessItem]=useState<Item|null>(null),[viewing,setViewing]=useState<Item|null>(null);
+ const [renaming,setRenaming]=useState<Item|null>(null),[naming,setNaming]=useState(false),[moving,setMoving]=useState<Item[]|null>(null),[sharingDoc,setSharingDoc]=useState<string|null>(null),[sharingItem,setSharingItem]=useState<Item|null>(null),[accessItem,setAccessItem]=useState<Item|null>(null),[sharingFolder,setSharingFolder]=useState<string|null>(null),[viewing,setViewing]=useState<Item|null>(null);
  const [uploads,setUploads]=useState<{name:string;done:boolean;err?:string}[]>([]),[dragOver,setDragOver]=useState<string|null>(null);
  const bulkRef=useRef<(k:'trash'|'restore'|'star')=>Promise<void>>(async()=>{}),openRef=useRef<(i:Item)=>void>(()=>{}),newDocRef=useRef<(s:boolean)=>Promise<void>>(async()=>{});
  const pick=useRef<HTMLInputElement>(null),pickDir=useRef<HTMLInputElement>(null),searchRef=useRef<HTMLInputElement>(null);
@@ -51,20 +52,20 @@ export default function Drive(){
 
  const load=useCallback(async()=>{
   const [f,d,fl,s,fs,dm,fm,op]=await Promise.all([
-   db.from('zarn_drive_folders').select('id,name,owner_id,drive,lead_id,parent_id,trashed_at,updated_at,color').limit(2000),
+   db.from('zarn_drive_folders').select('*').limit(2000),
    db.from('zarn_docs').select('id,title,owner_id,drive,lead_id,folder_id,trashed_at,updated_at,visibility,kind').limit(2000),
    db.from('zarn_files').select('id,name,owner_id,drive,lead_id,folder_id,trashed_at,updated_at,size,type').limit(2000),
    db.from('zarn_drive_stars').select('kind,item_id').eq('user_id',me.user_id),
    db.from('zarn_file_shares').select('file_id').eq('user_id',me.user_id),
    db.from('zarn_doc_members').select('doc_id').eq('user_id',me.user_id),
-   db.from('zarn_drive_folder_members').select('folder_id'),
+   db.from('zarn_drive_folder_members').select('folder_id,user_id'),
    db.from('zarn_drive_opens').select('kind,item_id,opened_at').eq('user_id',me.user_id),
   ]);
   if(f.error||d.error||fl.error){setErr('Drive could not load. If this keeps happening, the Drive update may not be installed yet.');setItems([]);return;}
-  const opened=new Map(((op.data??[]) as {kind:string;item_id:string;opened_at:string}[]).map(x=>[`${x.kind}:${x.item_id}`,x.opened_at])),sharedFolders=new Set(((fm.data??[]) as {folder_id:string}[]).map(x=>x.folder_id)),sharedFiles=new Set(((fs.data??[]) as {file_id:string}[]).map(x=>x.file_id)),sharedDocs=new Set(((dm.data??[]) as {doc_id:string}[]).map(x=>x.doc_id));
+  const opened=new Map(((op.data??[]) as {kind:string;item_id:string;opened_at:string}[]).map(x=>[`${x.kind}:${x.item_id}`,x.opened_at])),sharedFolders=new Set(((fm.data??[]) as {folder_id:string}[]).map(x=>x.folder_id)),toMeFolders=new Set(((fm.data??[]) as {folder_id:string;user_id:string}[]).filter(x=>x.user_id===me.user_id).map(x=>x.folder_id)),sharedFiles=new Set(((fs.data??[]) as {file_id:string}[]).map(x=>x.file_id)),sharedDocs=new Set(((dm.data??[]) as {doc_id:string}[]).map(x=>x.doc_id));
   type R=Record<string,unknown>;
   const all:Item[]=[
-   ...((f.data??[]) as R[]).map(x=>({kind:'folder' as const,id:x.id as string,name:x.name as string,owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.parent_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,shared:sharedFolders.has(x.id as string),color:x.color as string|null})),
+   ...((f.data??[]) as R[]).map(x=>({kind:'folder' as const,id:x.id as string,name:x.name as string,owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.parent_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,shared:sharedFolders.has(x.id as string)||x.access==='restricted',toMe:toMeFolders.has(x.id as string),restricted:x.access==='restricted',color:x.color as string|null})),
    ...((d.data??[]) as R[]).map(x=>({kind:'doc' as const,id:x.id as string,name:(x.title as string)||'Untitled',owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.folder_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,shared:sharedDocs.has(x.id as string)||x.visibility==='team',sheet:x.kind==='sheet',opened:opened.get(`doc:${x.id}`)})),
    ...((fl.data??[]) as R[]).map(x=>({kind:'file' as const,id:x.id as string,name:x.name as string,owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.folder_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,size:x.size as number,type:x.type as string,shared:sharedFiles.has(x.id as string),opened:opened.get(`file:${x.id}`)})),
   ];
@@ -98,7 +99,7 @@ export default function Drive(){
   else if(list==='trash')r=items.filter(i=>i.trashed_at&&!buried(i));
   else if(list==='recent')r=items.filter(i=>i.kind!=='folder'&&alive(i)&&(i.opened||i.owner_id===me.user_id)).sort((a,b)=>(b.opened??b.updated_at).localeCompare(a.opened??a.updated_at)).slice(0,60);
   else if(list==='starred')r=items.filter(i=>stars.has(`${i.kind}:${i.id}`)&&alive(i));
-  else if(list==='shared')r=items.filter(i=>i.owner_id!==me.user_id&&i.drive==='my'&&(!i.folder_id||!byId.has(i.folder_id))&&alive(i));
+  else if(list==='shared')r=items.filter(i=>i.owner_id!==me.user_id&&(i.drive==='my'||i.toMe)&&(!i.folder_id||!byId.has(i.folder_id))&&alive(i));
   else if(place)r=items.filter(i=>alive(i)&&i.folder_id===place.folder&&i.drive===place.drive&&(place.drive!=='my'||place.folder||i.owner_id===me.user_id)&&(place.drive!=='client'||i.lead_id===place.lead));
   else r=[];
   if(list==='recent'&&!q.trim())return r;
@@ -404,7 +405,7 @@ export default function Drive(){
   </div></div>}
   {menu&&<ItemMenu item={menu.item} x={menu.x} y={menu.y} starred={stars.has(`${menu.item.kind}:${menu.item.id}`)} mine={menu.item.owner_id===me.user_id} picked={sel.has(keyOf(menu.item))} onPick={()=>toggle(menu.item)} onEditPdf={isPdf(menu.item)&&place?()=>void editPdf(menu.item):undefined} onEditTable={isTable(menu.item)&&place?()=>void editTable(menu.item):undefined}
    onOpen={()=>open(menu.item)} onRename={()=>setRenaming(menu.item)} onMove={()=>setMoving([menu.item])} onStar={()=>void toggleStar(menu.item)}
-   onColor={c=>void recolor(menu.item,c)} onShare={()=>{const it=menu.item;if(it.drive!=='my'&&!(it.kind==='doc'&&it.owner_id===me.user_id))setAccessItem(it);else if(it.kind==='doc')setSharingDoc(it.id);else if(it.owner_id===me.user_id)setSharingItem(it);else setAccessItem(it);}} onTrash={()=>void trash(menu.item)} onRestore={()=>void trash(menu.item,true)} onDestroy={()=>void destroy([menu.item])} close={()=>setMenu(null)}/>}
+   onColor={c=>void recolor(menu.item,c)} onShare={()=>{const it=menu.item;if(it.kind==='folder'){setSharingFolder(it.id);return;}if(it.drive!=='my'&&!(it.kind==='doc'&&it.owner_id===me.user_id))setAccessItem(it);else if(it.kind==='doc')setSharingDoc(it.id);else if(it.owner_id===me.user_id)setSharingItem(it);else setAccessItem(it);}} onTrash={()=>void trash(menu.item)} onRestore={()=>void trash(menu.item,true)} onDestroy={()=>void destroy([menu.item])} close={()=>setMenu(null)}/>}
   {bgMenu&&<div className="zn-menu zdr-ctx" style={{left:Math.min(bgMenu.x,window.innerWidth-240),top:Math.min(bgMenu.y,window.innerHeight-200)}} onClick={e=>e.stopPropagation()} role="menu">
    <button type="button" onClick={()=>{setBgMenu(null);setNaming(true);}}><FolderPlus size={15}/>New folder</button>
    <button type="button" onClick={()=>{setBgMenu(null);void newDoc();}}><FileText size={15}/>New doc</button>
@@ -418,6 +419,7 @@ export default function Drive(){
   {moving&&<MoveDialog picked={moving} items={items??[]} clients={clients} guest={guest} onClose={()=>setMoving(null)} onMove={to=>moveAll(moving,to)}/>}
   {sharingDoc&&<ShareDoc docId={sharingDoc} onClose={()=>{setSharingDoc(null);void load();}}/>}
   {accessItem&&<AccessPanel item={accessItem} where={where(accessItem)} onClose={()=>setAccessItem(null)} onLimit={async()=>{const it=accessItem;setAccessItem(null);await move(it,{drive:'my',lead:null,folder:null});await load();setSharingItem({...it,drive:'my',lead_id:null,folder_id:null});}}/>}
+  {sharingFolder&&<ShareFolder folderId={sharingFolder} onClose={()=>{setSharingFolder(null);void load();}}/>}
   {sharingItem&&<ShareItem item={sharingItem} onClose={()=>{setSharingItem(null);void load();}}/>}
   {viewing&&viewing.kind==='file'&&(isImage(viewing.type)?<Modal title={viewing.name} wide onClose={()=>setViewing(null)}><div className="zdr-preview"><img src={`/api/zarn/files?f=${viewing.id}`} alt={viewing.name}/><a className="zn-btn" href={`/api/zarn/files?f=${viewing.id}&download=1`}><Download size={14}/>Download</a></div></Modal>
    :<DocViewer att={{name:viewing.name,type:viewing.type??''}} src={`/api/zarn/files?f=${viewing.id}`} dl={`/api/zarn/files?f=${viewing.id}&download=1`} onClose={()=>setViewing(null)} action={isPdf(viewing)?{label:pdfBusy?'Converting…':'Edit as doc',run:()=>void editPdf(viewing)}:undefined}/>)}

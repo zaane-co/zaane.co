@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {serviceClient} from '@/lib/supabase/server';
+import {serviceClient,sessionClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
 import {hashPassword,newToken} from '@/lib/doc-share';
 // Share links always point at the live site, even when ZARN runs locally (same database, so they work there).
@@ -11,6 +11,7 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('share'),id,visibility:z.enum(['private','team']),team_role:z.enum(['view','edit']),lead_id:id.nullable(),members:z.array(z.object({user_id:id,role:z.enum(['view','edit'])})).max(300)}),
  z.object({action:z.literal('links'),id}),
  z.object({action:z.literal('resolve'),token:z.string().min(8).max(200)}),
+ z.object({action:z.literal('folder_notify'),folder_id:id,users:z.array(id).max(100)}),
  z.object({action:z.literal('link_create'),id,password:z.string().min(4).max(100).optional(),days:z.number().int().min(1).max(365).nullable().optional()}),
  z.object({action:z.literal('link_revoke'),link_id:id}),
  // One link per document, Google style: turn it on or off, and change its expiry or password without changing the URL.
@@ -29,6 +30,17 @@ export async function POST(request:Request){
   if(!l||!await owns(l.doc_id))return fail('Not found.',404);
   await db.from('zarn_doc_links').update({revoked_at:new Date().toISOString()}).eq('id',b.link_id);
   return Response.json({ok:true});
+ }
+ // Tell people they were just added to a folder. The caller must be able to open the folder, and only people added in the last few minutes are told.
+ if(b.action==='folder_notify'){
+  const ses=await sessionClient();
+  const {data:f}=await ses.from('zarn_drive_folders').select('id,name,drive,lead_id').eq('id',b.folder_id).maybeSingle();
+  if(!f)return fail('Not found.',404);
+  const {data:rows}=await db.from('zarn_drive_folder_members').select('user_id').eq('folder_id',b.folder_id).in('user_id',b.users).gt('created_at',new Date(Date.now()-600_000).toISOString());
+  const to=(rows??[]).map(r=>r.user_id).filter(u=>u!==me.user_id);
+  const where=f.drive==='team'?'v=team':f.drive==='client'?`v=client&l=${f.lead_id}`:'v=my';
+  if(to.length)await pushTo(to,{title:`${me.display_name} shared a folder with you`,body:f.name,tag:`folder-${f.id}`,url:`/zarn/drive?${where}&f=${f.id}`}).catch(()=>0);
+  return Response.json({ok:true,notified:to.length});
  }
  // A public link pasted in chat: say which document it is, so the card can show its place in Drive (access is still checked when reading it).
  if(b.action==='resolve'){const {data:l}=await db.from('zarn_doc_links').select('doc_id').eq('token',b.token).is('revoked_at',null).maybeSingle();return Response.json({doc_id:l?.doc_id??null});}
