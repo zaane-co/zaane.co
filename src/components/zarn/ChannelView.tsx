@@ -124,7 +124,8 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
      const dmOther=channel.kind==='dm'?(channel.dm_key??'').split(',').find(u=>u!==me.user_id):undefined;
      if(typers.length)return <p className="zn-topic is-typing">{channel.kind==='dm'?'typing':`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></p>;
      if(dmOther)return <p className="zn-topic">{z.online.has(dmOther)?<span className="zn-online">online</span>:lastSeen(people[dmOther]?.last_seen_at)}</p>;
-     return channel.topic?<p className="zn-topic is-topic" title={channel.topic}>{channel.topic}</p>:null;
+     const names=Object.keys(reads).filter(u=>people[u]&&!people[u]!.deactivated_at).sort((a,b)=>a===me.user_id?1:b===me.user_id?-1:0).map(u=>u===me.user_id?'You':(people[u]!.display_name||'').split(' ')[0]).filter(Boolean);
+     return <>{channel.topic?<p className="zn-topic is-topic" title={channel.topic}>{channel.topic}</p>:null}{names.length?<p className="zn-topic is-names">{names.join(', ')}</p>:null}</>;
     })()}
     </div>
     <div className="zn-head-actions">
