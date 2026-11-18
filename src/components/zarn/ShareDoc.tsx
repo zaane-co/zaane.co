@@ -57,7 +57,7 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
  async function copy(){
   let l=link;
   if(dirty){const r=await save();if(r===false)return;l=r;}
-  const url=access==='anyone'&&l?l.url:`${location.origin}/zarn/${kind==='sheet'?'sheets':'docs'}/${docId}`;
+  const url=access==='anyone'&&l?l.url:`${(process.env.NEXT_PUBLIC_SHARE_URL||'https://zaane.co').replace(/\/$/,'')}/zarn/${kind==='sheet'?'sheets':'docs'}/${docId}`;
   try{await navigator.clipboard.writeText(url);setCopied(true);setTimeout(()=>setCopied(false),1800);}catch{setMsg(url);}
  }
  async function done(){if(dirty&&await save()===false)return;onClose();}

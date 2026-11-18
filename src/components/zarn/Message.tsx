@@ -13,6 +13,7 @@ import VoicePlayer from './VoicePlayer';
 import AddToTask from './AddToTask';
 import {useConfirm} from './ConfirmProvider';
 import LinkPreview,{firstLink} from './LinkPreview';
+import DriveCard,{driveLink} from './DriveCard';
 import {Avatar,StatusMark,renderBody,timeOf,tokensToText,textToTokens} from './format';
 
 // One message row. compact = same author as the previous message within a few minutes (no avatar/name).
@@ -69,7 +70,7 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
    {!compact&&<p className={`zn-msg-head${m.kind==='crm'?' is-crm':''}`}>{m.kind==='crm'?<b>CRM</b>:<button type="button" className="zn-author-name" onClick={()=>m.user_id&&profile(m.user_id)}>{author?.display_name??m.author_name??'Former member'}</button>}{m.kind!=='crm'&&<StatusMark m={author}/>}{m.kind==='crm'&&<span className="zn-app-tag">APP</span>}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time>{m.pinned_at&&<span className="zn-pin-tag"><Pin size={11}/>Pinned</span>}</p>}
    {editing?<div className="zn-edit"><textarea autoFocus value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void saveEdit();}if(e.key==='Escape')setEditing(false);}}/><div><button type="button" onClick={()=>setEditing(false)}>Cancel</button><button type="button" className="is-primary" onClick={()=>void saveEdit()}>Save</button></div></div>
     :m.body&&<div className="zn-body" onClick={e=>{const u=(e.target as HTMLElement).closest<HTMLElement>('[data-uid]')?.dataset.uid;if(u)profile(u);}}>{renderBody(m.body,people,me.user_id)}{m.edited_at&&<span className="zn-edited"> (edited)</span>}</div>}
-   {m.body&&!m.deleted_at&&!editing&&m.kind==='user'&&(()=>{const u=firstLink(m.body);return u?<LinkPreview url={u}/>:null;})()}
+   {m.body&&!m.deleted_at&&!editing&&m.kind==='user'&&(()=>{const u=firstLink(m.body);if(!u)return null;const dl=driveLink(u);return dl?<DriveCard url={u} target={dl}/>:<LinkPreview url={u}/>;})()}
    {m.kind==='crm'&&<CrmEvent m={m}/>}
    {m.kind!=='crm'&&m.lead_id&&<LeadCard id={m.lead_id}/>}
    {m.attachments.length>0&&<div className="zn-files">{m.attachments.map((a,i)=>a.type.startsWith('image/')&&a.type!=='image/svg+xml'

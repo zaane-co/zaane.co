@@ -2,13 +2,15 @@ import {z} from 'zod';
 import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
 import {hashPassword,newToken} from '@/lib/doc-share';
-import {siteUrl} from '@/lib/newsletter';
+// Share links always point at the live site, even when ZARN runs locally (same database, so they work there).
+const siteUrl=()=>(process.env.NEXT_PUBLIC_SHARE_URL||'https://zaane.co').replace(/\/$/,'');
 import {pushTo} from '@/lib/zarn-push';
 // Sharing for documents. Only the owner can change who has access or manage links.
 const id=z.uuid();
 const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('share'),id,visibility:z.enum(['private','team']),team_role:z.enum(['view','edit']),lead_id:id.nullable(),members:z.array(z.object({user_id:id,role:z.enum(['view','edit'])})).max(300)}),
  z.object({action:z.literal('links'),id}),
+ z.object({action:z.literal('resolve'),token:z.string().min(8).max(200)}),
  z.object({action:z.literal('link_create'),id,password:z.string().min(4).max(100).optional(),days:z.number().int().min(1).max(365).nullable().optional()}),
  z.object({action:z.literal('link_revoke'),link_id:id}),
  // One link per document, Google style: turn it on or off, and change its expiry or password without changing the URL.
@@ -28,6 +30,8 @@ export async function POST(request:Request){
   await db.from('zarn_doc_links').update({revoked_at:new Date().toISOString()}).eq('id',b.link_id);
   return Response.json({ok:true});
  }
+ // A public link pasted in chat: say which document it is, so the card can show its place in Drive (access is still checked when reading it).
+ if(b.action==='resolve'){const {data:l}=await db.from('zarn_doc_links').select('doc_id').eq('token',b.token).is('revoked_at',null).maybeSingle();return Response.json({doc_id:l?.doc_id??null});}
  if(!await owns(b.id))return fail('Only the owner can do that.',403);
  if(b.action==='share'){
   const {error}=await db.from('zarn_docs').update({visibility:b.visibility,team_role:b.team_role,lead_id:b.lead_id}).eq('id',b.id);
