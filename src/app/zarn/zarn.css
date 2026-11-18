@@ -2784,3 +2784,9 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zg-ins button.is-danger{color:#ef4444}
  .zg-mlink{display:flex;position:absolute;left:8px;right:8px;bottom:calc(66px + env(safe-area-inset-bottom));z-index:45;margin:0;padding:8px;border-radius:14px;background:var(--z-panel);border:1px solid var(--z-border)}
 }
+@media(max-width:760px){
+ .zg-mbar>.zg-aa{flex:none;display:inline-flex;align-items:center;gap:4px;height:42px;padding:0 12px 0 14px;border-radius:12px;background:#2563eb;color:#fff;margin-left:4px}
+ .zg-mbar>.zg-aa b{font-size:17px;font-weight:800;letter-spacing:-.02em}
+ .zg-mbar>.zg-aa.is-open{background:var(--z-fg);color:var(--z-bg)}
+ .zg-mbar>i:last-of-type{display:none}
+}

@@ -8,7 +8,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import LinkExt from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import {ImagePlus,Bold,Check,ChevronLeft,ChevronRight,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,ListChecks,Loader2,Quote,Redo2,Share2,Strikethrough,Underline as UnderlineIcon,Undo2,AlignLeft,AlignCenter,AlignRight,AlignJustify,Baseline,Highlighter,IndentIncrease,IndentDecrease,RemoveFormatting,Printer,Minus,Plus,Table2,Lock,FileText,PanelLeft,CloudOff,Type,X} from 'lucide-react';
+import {ImagePlus,Bold,Check,ChevronLeft,ChevronRight,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,ListChecks,Loader2,Quote,Redo2,Share2,Strikethrough,Underline as UnderlineIcon,Undo2,AlignLeft,AlignCenter,AlignRight,AlignJustify,Baseline,Highlighter,IndentIncrease,IndentDecrease,RemoveFormatting,Printer,Minus,Plus,Table2,Lock,FileText,PanelLeft,CloudOff,ChevronDown,ChevronUp,X} from 'lucide-react';
 import {Extension} from '@tiptap/core';
 import TextAlign from '@tiptap/extension-text-align';
 import {TextStyleKit} from '@tiptap/extension-text-style';
@@ -215,7 +215,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
    {btn('Undo',<Undo2 size={19}/>,false,()=>c().undo().run())}{btn('Redo',<Redo2 size={19}/>,false,()=>c().redo().run())}<i/>
    {btn('Bold',<Bold size={19}/>,ed.isActive('bold'),()=>c().toggleBold().run())}{btn('Italic',<Italic size={19}/>,ed.isActive('italic'),()=>c().toggleItalic().run())}{btn('Underline',<UnderlineIcon size={19}/>,ed.isActive('underline'),()=>c().toggleUnderline().run())}
    {btn('Bulleted list',<List size={19}/>,ed.isActive('bulletList'),()=>c().toggleBulletList().run())}{btn('Checklist',<ListChecks size={19}/>,ed.isActive('taskList'),()=>c().toggleTaskList().run())}<i/>
-   {btn('More formatting',<Type size={19}/>,!!sheet,()=>setSheet(v=>v?null:'text'))}
+   <button type="button" className={`zg-aa${sheet?' is-open':''}`} aria-label="All formatting tools" aria-expanded={!!sheet} onMouseDown={e=>e.preventDefault()} onClick={()=>setSheet(v=>v?null:'text')}><b>Aa</b>{sheet?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button>
   </div>}
   {canEdit&&ed&&sheet&&<div className="zg-sheet" role="dialog" aria-label="Formatting" onClick={e=>e.stopPropagation()} onMouseDown={e=>{if((e.target as HTMLElement).tagName!=='SELECT')e.preventDefault();}}>
    <header><nav>{([['text','Text'],['para','Paragraph'],['insert','Insert']] as const).map(([k,l])=><button key={k} type="button" className={sheet===k?'is-on':''} onClick={()=>setSheet(k)}>{l}</button>)}</nav><button type="button" className="zg-sheet-x" aria-label="Close" onClick={()=>setSheet(null)}><X size={18}/></button></header>
