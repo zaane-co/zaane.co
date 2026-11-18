@@ -18,6 +18,17 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('link_set'),id,on:z.boolean(),days:z.number().int().min(0).max(365).optional(),password:z.string().min(4).max(100).optional(),clear_password:z.boolean().optional()}),
 ]);
 const fail=(error:string,status=400)=>Response.json({error},{status});
+// Like Google's share email: a direct message from the person sharing, with the link (chat shows it as a Drive card).
+type Me=NonNullable<Awaited<ReturnType<typeof zarnMember>>>;
+async function tellInChat(me:Me,to:{user_id:string;role:string}[],what:string,name:string,path:string){
+ const label:Record<string,string>={view:'a Viewer',edit:'an Editor',manage:'a Manager'};
+ for(const p of to){
+  try{
+   const {data:dm}=await me.db.rpc('zarn_open_dm',{others:[p.user_id]});if(!dm)continue;
+   await me.db.from('zarn_messages').insert({channel_id:dm,user_id:me.user_id,body:`I shared the ${what} “${name}” with you as ${label[p.role]??'a Viewer'}.\n${siteUrl()}${path}`});
+  }catch{}
+ }
+}
 export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return fail('Invalid origin',403);
  const me=await zarnMember();if(!me)return fail('Sign in first.',401);
@@ -37,10 +48,11 @@ export async function POST(request:Request){
   const ses=await sessionClient();
   const {data:f}=await ses.from('zarn_drive_folders').select('id,name,drive,lead_id').eq('id',b.folder_id).maybeSingle();
   if(!f)return fail('Not found.',404);
-  const {data:rows}=await db.from('zarn_drive_folder_members').select('user_id').eq('folder_id',b.folder_id).in('user_id',b.users).gt('created_at',new Date(Date.now()-600_000).toISOString());
+  const {data:rows}=await db.from('zarn_drive_folder_members').select('user_id,role').eq('folder_id',b.folder_id).in('user_id',b.users).gt('created_at',new Date(Date.now()-600_000).toISOString());
   const to=(rows??[]).map(r=>r.user_id).filter(u=>u!==me.user_id);
   const where=f.drive==='team'?'v=team':f.drive==='client'?`v=client&l=${f.lead_id}`:'v=my';
   if(to.length)await pushTo(to,{title:`${me.display_name} shared a folder with you`,body:f.name,tag:`folder-${f.id}`,url:`/zarn/drive?${where}&f=${f.id}`}).catch(()=>0);
+  if(to.length)await tellInChat(me,(rows??[]).filter(r=>to.includes(r.user_id)),'folder',f.name,`/zarn/drive?${where}&f=${f.id}`);
   return Response.json({ok:true,notified:to.length});
  }
  // A public link pasted in chat: say which document it is, so the card can show its place in Drive (access is still checked when reading it).
@@ -64,6 +76,7 @@ export async function POST(request:Request){
    const {data:doc}=await db.from('zarn_docs').select('title,kind').eq('id',b.id).maybeSingle();
    const sheet=doc?.kind==='sheet',what=sheet?'a sheet':'a document';
    await pushTo(added,{title:`${me.display_name} shared ${what} with you`,body:doc?.title||'Untitled',tag:`doc-${b.id}`,url:`/zarn/${sheet?'sheets':'docs'}/${b.id}`}).catch(()=>0);
+   await tellInChat(me,rows.filter(r=>added.includes(r.user_id)),sheet?'sheet':'document',doc?.title||'Untitled',`/zarn/${sheet?'sheets':'docs'}/${b.id}`);
   }
   return Response.json({ok:true,added:added.length});
  }
