@@ -17,7 +17,7 @@ const SHARE_BASE=(process.env.NEXT_PUBLIC_SHARE_URL||'https://zaane.co').replace
 export default function ShareFolder({folderId,onClose}:{folderId:string;onClose:()=>void}){
  const {db,me,members,people,channels,title}=useZarn(),confirm=useConfirm();
  const [chain,setChain]=useState<Folder[]|null>(null),[inherited,setInherited]=useState<Grant[]>([]),[mine,setMine]=useState<Grant[]>([]),[orig,setOrig]=useState<Grant[]>([]);
- const [access,setAccess]=useState<'team'|'restricted'>('team'),[teamRole,setTeamRole]=useState<'view'|'edit'>('edit');
+ const [myRole,setMyRole]=useState<string|null>(null),[access,setAccess]=useState<'team'|'restricted'>('team'),[teamRole,setTeamRole]=useState<'view'|'edit'>('edit');
  const [dirty,setDirty]=useState(false),[busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[copied,setCopied]=useState(false);
  useEffect(()=>{
   let live=true;
@@ -25,7 +25,8 @@ export default function ShareFolder({folderId,onClose}:{folderId:string;onClose:
    const list:Folder[]=[];let id:string|null=folderId;
    for(let i=0;id&&i<50;i++){const {data}:{data:unknown}=await db.from('zarn_drive_folders').select('*').eq('id',id).maybeSingle();if(!data)break;const f=data as Folder;list.push(f);id=f.parent_id;}
    if(!live||!list.length){if(live)setChain([]);return;}
-   const {data:g}=await db.from('zarn_drive_folder_members').select('folder_id,user_id,role').in('folder_id',list.map(f=>f.id));
+   const [{data:g},{data:r}]=await Promise.all([db.from('zarn_drive_folder_members').select('folder_id,user_id,role').in('folder_id',list.map(f=>f.id)),db.rpc('zarn_folder_role',{f:folderId})]);
+   if(live)setMyRole((r as string|null)??null);
    const grants=(g??[]) as Grant[];
    setChain(list);setMine(grants.filter(x=>x.folder_id===folderId));setOrig(grants.filter(x=>x.folder_id===folderId));setInherited(grants.filter(x=>x.folder_id!==folderId));
    setAccess(list[0].access??'team');setTeamRole(list[0].team_role??'edit');
@@ -34,7 +35,9 @@ export default function ShareFolder({folderId,onClose}:{folderId:string;onClose:
  },[db,folderId]);
  const f=chain?.[0];
  const lockedAbove=chain?.slice(1).find(x=>x.access==='restricted');
- const canManage=!!chain&&(chain.some(x=>x.owner_id===me.user_id)||(f?.drive!=='my'&&me.zarnAdmin)||[...mine,...inherited].some(g=>g.user_id===me.user_id&&g.role==='manage'));
+ // Owners and Managers control everything; Editors can share as Viewer or Editor, like Google Drive.
+ const canManage=myRole==='owner'||(!!chain&&chain.some(x=>x.owner_id===me.user_id));
+ const canShare=canManage||myRole==='edit';
  const has=new Set([...mine.map(g=>g.user_id),f?.owner_id??'']);
  const candidates=useMemo(()=>members.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member'&&m.user_id!==f?.owner_id).map(m=>m.user_id),[members,f?.owner_id]);
  const fromAbove=inherited.filter(g=>!has.has(g.user_id)).reduce<Grant[]>((a,g)=>{const i=a.findIndex(x=>x.user_id===g.user_id);if(i<0)a.push(g);return a;},[]);
@@ -74,12 +77,12 @@ export default function ShareFolder({folderId,onClose}:{folderId:string;onClose:
   <div className="zn-modal-body zd-share">
    {chain===null?<p className="zn-loading">Loading…</p>:!f?<p className="zn-error">This folder is not available.</p>:<>
    <section>
-    {canManage?<AssigneePicker candidates={candidates} value={mine.map(g=>g.user_id)} onToggle={toggle}/>:<p className="zn-note">Only managers of this folder can change who has access.</p>}
+    {canShare?<AssigneePicker candidates={candidates} value={mine.map(g=>g.user_id)} onToggle={toggle}/>:<p className="zn-note">Only owners, managers and editors of this folder can share it.</p>}
     <h3>People with access</h3>
     <ul className="zd-people">
      <li><Avatar m={people[f.owner_id]} size={30}/><span>{people[f.owner_id]?.display_name??'Someone'}{f.owner_id===me.user_id?' (you)':''}</span><small className="zd-owner">Owner</small></li>
      {mine.filter(g=>g.user_id!==f.owner_id).map(g=><li key={g.user_id}><Avatar m={people[g.user_id]} size={30}/><span>{people[g.user_id]?.display_name??'Member'}{g.user_id===me.user_id?' (you)':''}</span>
-      {canManage?<Dropdown variant="inline" label="Access" value={g.role} onChange={v=>{if(v==='remove'){toggle(g.user_id);return;}touch();setMine(s=>s.map(x=>x.user_id===g.user_id?{...x,role:v as Role}:x));}} options={[{value:'view',label:'Viewer',hint:'Can open and download'},{value:'edit',label:'Editor',hint:'Can add, rename and move things'},{value:'manage',label:'Manager',hint:'Can also share and delete'},{value:'remove',label:'Remove access'}]}/>:<small className="zd-owner">{ROLE[g.role]}</small>}
+      {canManage||(canShare&&g.role!=='manage')?<Dropdown variant="inline" label="Access" value={g.role} onChange={v=>{if(v==='remove'){toggle(g.user_id);return;}touch();setMine(s=>s.map(x=>x.user_id===g.user_id?{...x,role:v as Role}:x));}} options={[{value:'view',label:'Viewer',hint:'Can open and download'},{value:'edit',label:'Editor',hint:'Can add, rename, move and share'},...(canManage?[{value:'manage',label:'Manager',hint:'Can also delete and change general access'}]:[]),{value:'remove',label:'Remove access'}]}/>:<small className="zd-owner">{ROLE[g.role]}</small>}
      </li>)}
      {fromAbove.map(g=><li key={`up-${g.user_id}`} className="is-inherited"><Avatar m={people[g.user_id]} size={30}/><span>{people[g.user_id]?.display_name??'Member'}<em>From “{folderName(g.folder_id)}”</em></span><small className="zd-owner">{ROLE[g.role]}</small></li>)}
     </ul>
