@@ -139,8 +139,16 @@ export default function Drive(){
  async function sendFile(raw:File,to:{drive:string;folder_id:string|null;lead_id:string|null}){
   const file=raw.type.startsWith('image/')&&raw.type!=='image/gif'&&raw.type!=='image/svg+xml'&&raw.size<8*1024*1024?await optimizeImage(raw):raw;
   const post=async(body:object)=>{const r=await fetch('/api/zarn/files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...to,...body})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Upload failed');return d;};
+  // Small files go through ZARN's server, which always works. Bigger ones go straight to storage; if storage blocks the
+  // browser (its CORS setting), they can't be sent and we say so.
+  const viaServer=async()=>{const form=new FormData();form.set('file',file,raw.name);form.set('scope','drive');form.set('drive',to.drive);if(to.folder_id)form.set('folder_id',to.folder_id);if(to.lead_id)form.set('lead_id',to.lead_id);
+   const r=await fetch('/api/zarn/files',{method:'POST',body:form});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Upload failed');};
+  if(file.size<=4*1024*1024)return viaServer();
   const s=await post({action:'sign',name:raw.name,type:file.type||'application/octet-stream',size:file.size});
-  const put=await fetch(s.url,{method:'PUT',headers:{'Content-Type':s.type},body:file});if(!put.ok)throw new Error('Upload failed');
+  let put:Response;
+  try{put=await fetch(s.url,{method:'PUT',headers:{'Content-Type':s.type},body:file});}
+  catch{throw new Error('Files over 4 MB can’t upload yet: storage needs its CORS setting turned on.');}
+  if(!put.ok)throw new Error('Upload failed');
   await post({action:'save',key:s.key,name:raw.name});
  }
  async function upload(files:File[]){
