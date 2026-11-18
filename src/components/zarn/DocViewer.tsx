@@ -25,7 +25,7 @@ function parseCsv(t:string){
  return rows.slice(0,1000);
 }
 // Message attachments pass messageId + index; other files (like a client's Files tab) pass src and download links directly.
-export default function DocViewer({messageId,index,att,src:srcProp,dl:dlProp,onClose}:{messageId?:string;index?:number;att:Pick<ZAttachment,'name'|'type'>;src?:string;dl?:string;onClose:()=>void}){
+export default function DocViewer({messageId,index,att,src:srcProp,dl:dlProp,onClose,action}:{messageId?:string;index?:number;att:Pick<ZAttachment,'name'|'type'>;src?:string;dl?:string;onClose:()=>void;action?:{label:string;run:()=>void}}){
  const kind=docKind(att),src=srcProp??`/api/zarn/files?m=${messageId}&i=${index}`,dl=dlProp??`${src}&download=1`;
  const [text,setText]=useState<string|null>(null),[html,setHtml]=useState<string|null>(null),[err,setErr]=useState('');
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[onClose]);
@@ -45,7 +45,7 @@ export default function DocViewer({messageId,index,att,src:srcProp,dl:dlProp,onC
  const rows=kind==='csv'&&text?parseCsv(text):[];
  return <div className="zn-doc" role="dialog" aria-label={att.name} onClick={onClose}>
   <div className="zn-doc-card" onClick={e=>e.stopPropagation()}>
-   <header><FileText size={16}/><b title={att.name}>{att.name}</b><a href={dl} aria-label="Download" data-tip="Download"><Download size={17}/></a><button type="button" aria-label="Close" onClick={onClose}><X size={19}/></button></header>
+   <header><FileText size={16}/><b title={att.name}>{att.name}</b>{action&&<button type="button" className="zn-doc-action" onClick={action.run}>{action.label}</button>}<a href={dl} aria-label="Download" data-tip="Download"><Download size={17}/></a><button type="button" aria-label="Close" onClick={onClose}><X size={19}/></button></header>
    <div className="zn-doc-body">
     {kind==='image'&&<div className="zn-doc-img"><img src={src} alt={att.name}/></div>}
     {kind==='pdf'&&<iframe title={att.name} src={src}/>}
