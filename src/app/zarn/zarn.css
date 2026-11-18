@@ -2280,3 +2280,15 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zdr-empty-acts button{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--z-border);background:var(--z-panel);font-size:13px;font-weight:600;color:var(--z-fg)}
 .zdr-empty-acts button:hover{background:var(--z-hover)}.zdr-empty-acts button svg{color:var(--z-muted)}
 .zdr-empty-link{margin-top:6px;font-size:13px;font-weight:700;color:var(--z-accent)}
+/* Drive header tidy */
+.zdr-head{min-height:60px;padding:10px 24px;gap:10px}
+.zdr-crumbs button{font-size:18px;font-weight:700;padding:4px 8px}
+.zdr-crumbs h1{font-size:18px}
+.zdr-who{display:inline-flex;align-items:center;height:24px;padding:0 10px;margin-left:6px;border-radius:999px;background:var(--z-panel-2);border:1px solid var(--z-border);font-size:12px;font-weight:600;color:var(--z-muted)}
+.zdr-search{height:36px;flex:0 1 320px}
+.zdr-sort{height:36px;padding:0 30px 0 12px;border-radius:999px;appearance:none;-webkit-appearance:none;background:var(--z-panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239b9ba5' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 11px center;font-weight:600;cursor:pointer}
+.zdr-sort:hover{background-color:var(--z-hover)}
+.zdr-seg{height:36px;background:var(--z-panel)}
+.zdr-seg button{height:34px;width:40px}
+.zdr-seg button.is-on{background:var(--z-hover);color:var(--z-fg)}
+.zarn.is-light .zdr-seg button.is-on{background:#e4e4e9}

@@ -299,7 +299,7 @@ export default function Drive(){
     <div className="zdr-crumbs">
      {place&&!q?<>
       <button type="button" onClick={()=>router.push(rootHref(place))} {...dropOn({...place,folder:null},'root')} data-over={dragOver==='root'||undefined}>{rootLabel(place)}</button>
-      {!place.folder&&<span className="zdr-who">{place.drive==='team'?'· Everyone on the team':place.drive==='client'?'· Everyone in this client’s space':'· Only you'}</span>}
+      {!place.folder&&<span className="zdr-who">{place.drive==='team'?'Everyone on the team':place.drive==='client'?'Everyone in this client’s space':'Only you'}</span>}
       {trail.map(f=><span key={f.id} className="zdr-crumb"><ChevronRight size={16}/><button type="button" onClick={()=>router.push(`/zarn/drive?f=${f.id}`)} {...dropOn(asPlace(f),`b:${f.id}`)} data-over={dragOver===`b:${f.id}`||undefined}>{f.name}</button></span>)}
      </>:<h1>{q?`Results for “${q}”`:heading}</h1>}
     </div>
