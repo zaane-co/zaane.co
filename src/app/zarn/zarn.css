@@ -3243,3 +3243,10 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-voice-wave i.is-on{background:var(--z-accent);opacity:1}
 .zn-voice-wave:focus-visible{box-shadow:0 0 0 2px var(--z-accent);border-radius:6px}
 .zn-voice{width:min(340px,100%)}
+/* Phone project tabs: room after the last tab, and a fade on whichever edge has more tabs past it */
+@media (max-width:760px){
+ .zarn.is-deep .zp-tabs::after{content:'';flex:0 0 8px}
+ .zarn.is-deep .zp-tabs[data-more]{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 56px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 56px),transparent)}
+ .zarn.is-deep .zp-tabs[data-back]{-webkit-mask-image:linear-gradient(to right,transparent,#000 40px);mask-image:linear-gradient(to right,transparent,#000 40px)}
+ .zarn.is-deep .zp-tabs[data-more][data-back]{-webkit-mask-image:linear-gradient(to right,transparent,#000 40px,#000 calc(100% - 56px),transparent);mask-image:linear-gradient(to right,transparent,#000 40px,#000 calc(100% - 56px),transparent)}
+}

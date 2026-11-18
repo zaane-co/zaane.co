@@ -267,7 +267,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
    </div>}
   </header>}
   <div className="zp-bar">
-   <div className="zp-tabs" role="tablist" aria-label="View">{views.map(([k,l,i])=><button key={k} type="button" role="tab" aria-selected={view===k} className={view===k?'is-on':''} onClick={()=>pick(k)}>{i}{l}{k==='chat'&&chatUnread>0&&<span className="zp-tab-count">{chatUnread>99?'99+':chatUnread}</span>}</button>)}</div>
+   <TabStrip active={view}>{views.map(([k,l,i])=><button key={k} type="button" role="tab" aria-selected={view===k} className={view===k?'is-on':''} onClick={()=>pick(k)}>{i}{l}{k==='chat'&&chatUnread>0&&<span className="zp-tab-count">{chatUnread>99?'99+':chatUnread}</span>}</button>)}</TabStrip>
    {view!=='saved'&&view!=='chat'&&view!=='team'&&view!=='docs'&&view!=='vault'&&view!=='brief'&&<div className="zp-tools">
     <label className="zp-search"><Search size={14}/><input placeholder="Search" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search tasks"/></label>
     <Dropdown variant="toolbar" label="Priority" icon={<ListFilter size={14}/>} value={prio} onChange={v=>setPrio(v as 'all'|Priority)} options={[{value:'all',label:'All priorities'},...priorities.map(p=>({value:p.key,label:p.label}))]}/>
@@ -355,4 +355,14 @@ function TaskDrawer({task,assignees,typeOptions,projectLabel,loadMembers,onClose
     <p className="zp-created">Created by {creator} · {dayOf(task.created_at)}</p>
    </div>
   </aside></>;
+}
+
+// Phone tab strip scrolls sideways: fade the edge that has more tabs past it, and keep the open tab in view.
+function TabStrip({active,children}:{active:string;children:React.ReactNode}){
+ const ref=useRef<HTMLDivElement|null>(null),[more,setMore]=useState(false),[back,setBack]=useState(false);
+ const edge=useCallback(()=>{const el=ref.current;if(!el)return;setMore(el.scrollLeft+el.clientWidth<el.scrollWidth-4);setBack(el.scrollLeft>4);},[]);
+ useEffect(()=>{const el=ref.current;if(!el)return;const on=el.querySelector<HTMLElement>('[aria-selected="true"]');
+  if(on)el.scrollTo({left:on.offsetLeft-(el.clientWidth-on.offsetWidth)/2,behavior:'smooth'});
+  const ro=new ResizeObserver(edge);ro.observe(el);return()=>ro.disconnect();},[active,edge]);
+ return <div className="zp-tabs" role="tablist" aria-label="View" ref={ref} data-more={more||undefined} data-back={back||undefined} onScroll={edge}>{children}</div>;
 }
