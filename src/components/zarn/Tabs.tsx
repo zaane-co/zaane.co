@@ -25,18 +25,13 @@ const Row=({href,icon,label,sub,onClick,badge}:{href?:string;icon:React.ReactNod
 };
 
 export function HomeTab(){
- const {open}=useShell(),{starred,rooms,dms,guest,canCreate,canBusiness,badges}=useNav(),{me}=useZarn();
+ const {open}=useShell(),{starred,rooms,dms,guest,canCreate,badges}=useNav(),{me}=useZarn();
  // iOS-style top bar: your photo (opens You) on the left, Activity and New message on the right.
  return <Screen title="Home" lead={<Link href="/zarn/you" className="zn-tab-me" aria-label="You"><Avatar m={me} size={32}/></Link>} action={<span className="zn-tab-actions">
    <Link href="/zarn/activity" className="zn-tab-action" aria-label="Activity"><Bell size={20}/></Link>
    <button type="button" className="zn-tab-action" aria-label="New message" onClick={()=>open('dm')}><MessageSquarePlus size={20}/>{badges.dms>0&&<i className="zn-ping"/>}</button></span>}>
   <Invites/>
   <button type="button" className="zn-search-bar" onClick={()=>open('search')}><Search size={16}/>Search messages</button>
-  {canBusiness&&<Group label="Business">
-   <Row href="/zarn/business" icon={<TrendingUp size={18}/>} label="Overview" sub="Pipeline, my clients, my tasks"/>
-   <Row href="/zarn/crm" icon={<Briefcase size={18}/>} label="Pipeline"/>
-   <Row href="/zarn/business/clients" icon={<Users size={18}/>} label="All clients"/>
-  </Group>}
   {starred.length>0&&<Group label="Starred">{starred.map(c=><ChannelRow key={c.id} c={c} big/>)}</Group>}
   <Group label="Channels" add={canCreate?()=>open('channel'):undefined}>
    {rooms.map(c=><ChannelRow key={c.id} c={c} big/>)}
