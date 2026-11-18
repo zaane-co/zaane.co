@@ -24,7 +24,8 @@ export async function POST(request:Request){
  if(me.account_type==='guest')return fail('Guests can’t share documents.',403);
  const parsed=actions.safeParse(await request.json().catch(()=>null));if(!parsed.success)return fail('Invalid request');
  const b=parsed.data,db=serviceClient();
- const owns=async(docId:string)=>{const {data}=await db.from('zarn_docs').select('id').eq('id',docId).eq('owner_id',me.user_id).maybeSingle();return !!data;};
+ // Like Google Docs, the owner and editors can share. Viewers can't.
+ const owns=async(docId:string)=>{const ses=await sessionClient();const {data}=await ses.rpc('zarn_doc_role',{d:docId});return data==='owner'||data==='edit';};
  if(b.action==='link_revoke'){
   const {data:l}=await db.from('zarn_doc_links').select('doc_id').eq('id',b.link_id).maybeSingle();
   if(!l||!await owns(l.doc_id))return fail('Not found.',404);
@@ -44,7 +45,7 @@ export async function POST(request:Request){
  }
  // A public link pasted in chat: say which document it is, so the card can show its place in Drive (access is still checked when reading it).
  if(b.action==='resolve'){const {data:l}=await db.from('zarn_doc_links').select('doc_id').eq('token',b.token).is('revoked_at',null).maybeSingle();return Response.json({doc_id:l?.doc_id??null});}
- if(!await owns(b.id))return fail('Only the owner can do that.',403);
+ if(!await owns(b.id))return fail('Only the owner and editors can share this.',403);
  if(b.action==='share'){
   const {error}=await db.from('zarn_docs').update({visibility:b.visibility,team_role:b.team_role,lead_id:b.lead_id}).eq('id',b.id);
   if(error)return fail('Could not save sharing.');
@@ -52,7 +53,8 @@ export async function POST(request:Request){
   const ok=new Set((active??[]).map(a=>a.user_id));
   const {data:before}=await db.from('zarn_doc_members').select('user_id').eq('doc_id',b.id);
   const had=new Set((before??[]).map(r=>r.user_id));
-  const rows=b.members.filter(m=>ok.has(m.user_id)&&m.user_id!==me.user_id).map(m=>({doc_id:b.id,user_id:m.user_id,role:m.role}));
+  const {data:own}=await db.from('zarn_docs').select('owner_id').eq('id',b.id).maybeSingle();
+  const rows=b.members.filter(m=>ok.has(m.user_id)&&m.user_id!==own?.owner_id).map(m=>({doc_id:b.id,user_id:m.user_id,role:m.role}));
   const {error:delErr}=await db.from('zarn_doc_members').delete().eq('doc_id',b.id);
   if(delErr)return fail('Could not save sharing.');
   if(rows.length){const {error:insErr}=await db.from('zarn_doc_members').insert(rows);if(insErr)return fail('Could not save sharing.');}

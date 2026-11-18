@@ -16,24 +16,25 @@ const day=(iso:string)=>new Date(iso).toLocaleDateString('en-GB',{day:'numeric',
 // and copy the document's one link. "Anyone with the link" is read only for people outside ZARN, with an optional expiry and password.
 export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}){
  const {db,me,members,channels,title,people}=useZarn(),confirm=useConfirm();
- const [loaded,setLoaded]=useState(false),[docTitle,setDocTitle]=useState(''),[kind,setKind]=useState<'doc'|'sheet'>('doc');
+ const [loaded,setLoaded]=useState(false),[owner,setOwner]=useState(''),[canShare,setCanShare]=useState(true),[docTitle,setDocTitle]=useState(''),[kind,setKind]=useState<'doc'|'sheet'>('doc');
  const [access,setAccess]=useState<Access>('restricted'),[teamRole,setTeamRole]=useState<'view'|'edit'>('view'),[lead,setLead]=useState(''),[shared,setShared]=useState<Person[]>([]);
  const [link,setLink]=useState<Link|null>(null),[expiry,setExpiry]=useState('keep'),[password,setPassword]=useState(''),[clearPw,setClearPw]=useState(false);
  const [dirty,setDirty]=useState(false),[busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[copied,setCopied]=useState(false);
  const clients=channels.filter(c=>c.kind==='client'&&c.lead_id&&!c.archived_at);
- const candidates=useMemo(()=>members.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member'&&m.user_id!==me.user_id).map(m=>m.user_id),[members,me.user_id]);
+ const candidates=useMemo(()=>members.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member'&&m.user_id!==owner).map(m=>m.user_id),[members,owner]);
  useEffect(()=>{
   let live=true;
   void (async()=>{
-   const [{data:d},{data:m},links]=await Promise.all([
-    db.from('zarn_docs').select('title,kind,visibility,team_role,lead_id').eq('id',docId).single(),
+   const [{data:d},{data:m},links,{data:role}]=await Promise.all([
+    db.from('zarn_docs').select('title,kind,visibility,team_role,lead_id,owner_id').eq('id',docId).single(),
     db.from('zarn_doc_members').select('user_id,role').eq('doc_id',docId),
     api({action:'links',id:docId}).catch(()=>({links:[]})),
+    db.rpc('zarn_doc_role',{d:docId}),
    ]);
    if(!live||!d)return;
-   const x=d as {title:string;kind:string;visibility:'private'|'team';team_role:'view'|'edit';lead_id:string|null};
+   const x=d as {owner_id:string;title:string;kind:string;visibility:'private'|'team';team_role:'view'|'edit';lead_id:string|null};
    const l=((links.links??[]) as Link[]).find(k=>!k.expires_at||new Date(k.expires_at)>new Date())??null;
-   setDocTitle(x.title||'Untitled');setKind(x.kind==='sheet'?'sheet':'doc');
+   setDocTitle(x.title||'Untitled');setOwner(x.owner_id);setCanShare(role==='owner'||role==='edit');setKind(x.kind==='sheet'?'sheet':'doc');
    setAccess(l?'anyone':x.visibility==='team'?'team':'restricted');setTeamRole(x.team_role);setLead(x.lead_id??'');setShared((m??[]) as Person[]);setLink(l);setLoaded(true);
   })();
   return()=>{live=false;};
@@ -69,11 +70,11 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
  return <Modal title={loaded?`Share “${docTitle}”`:'Share'} onClose={()=>void close()} wide>
   <div className="zn-modal-body zd-share">
    <section>
-    <AssigneePicker candidates={candidates} value={shared.map(p=>p.user_id)} onToggle={toggle}/>
+    {canShare?<AssigneePicker candidates={candidates} value={shared.map(p=>p.user_id)} onToggle={toggle}/>:<p className="zn-note">You can view who has access. Only the owner and editors can share.</p>}
     <h3>People with access</h3>
     <ul className="zd-people">
-     <li><Avatar m={people[me.user_id]} size={30}/><span>{people[me.user_id]?.display_name??'You'} (you)</span><small className="zd-owner">Owner</small></li>
-     {shared.map(p=><li key={p.user_id}><Avatar m={people[p.user_id]} size={30}/><span>{people[p.user_id]?.display_name??'Member'}</span><Dropdown variant="inline" label="Access" value={p.role} onChange={v=>{if(v==='remove'){toggle(p.user_id);return;}touch();setShared(s=>s.map(x=>x.user_id===p.user_id?{...x,role:v as 'view'|'edit'}:x));}} options={[{value:'view',label:'Viewer'},{value:'edit',label:'Editor'},{value:'remove',label:'Remove access'}]}/></li>)}
+     {owner&&<li><Avatar m={people[owner]} size={30}/><span>{people[owner]?.display_name??'Someone'}{owner===me.user_id?' (you)':''}</span><small className="zd-owner">Owner</small></li>}
+     {shared.map(p=><li key={p.user_id}><Avatar m={people[p.user_id]} size={30}/><span>{people[p.user_id]?.display_name??'Member'}{p.user_id===me.user_id?' (you)':''}</span><Dropdown variant="inline" disabled={!canShare} label="Access" value={p.role} onChange={v=>{if(v==='remove'){toggle(p.user_id);return;}touch();setShared(s=>s.map(x=>x.user_id===p.user_id?{...x,role:v as 'view'|'edit'}:x));}} options={[{value:'view',label:'Viewer'},{value:'edit',label:'Editor'},{value:'remove',label:'Remove access'}]}/></li>)}
     </ul>
    </section>
    <section>
@@ -81,7 +82,7 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
     <div className="zd-access">
      <span className={`zd-access-ic is-${access}`}>{access==='restricted'?<Lock size={17}/>:access==='team'?<Users size={17}/>:<Globe2 size={17}/>}</span>
      <div className="zd-access-main">
-      <Dropdown variant="inline" label="General access" value={access} onChange={v=>{touch();setAccess(v as Access);}} options={[{value:'restricted',label:'Restricted'},{value:'team',label:'Everyone on the team'},{value:'anyone',label:'Anyone with the link'}]}/>
+      <Dropdown variant="inline" disabled={!canShare} label="General access" value={access} onChange={v=>{touch();setAccess(v as Access);}} options={[{value:'restricted',label:'Restricted'},{value:'team',label:'Everyone on the team'},{value:'anyone',label:'Anyone with the link'}]}/>
       <small>{accessHint}</small>
      </div>
      {access!=='restricted'&&<Dropdown variant="inline" label="Team access" value={teamRole} onChange={v=>{touch();setTeamRole(v as 'view'|'edit');}} options={[{value:'view',label:'Team: Viewer'},{value:'edit',label:'Team: Editor'}]}/>}
@@ -99,7 +100,7 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
    {msg&&<p className="zn-note" role="status">{msg}</p>}
    <footer className="zd-share-foot">
     <button type="button" className="zn-btn" disabled={busy||!loaded||(!!password&&password.length<4)} onClick={()=>void copy()}>{copied?<Check size={15}/>:<Link2 size={15}/>}{copied?'Link copied':'Copy link'}</button>
-    <button type="button" className="zn-btn is-primary" disabled={busy||!loaded||(!!password&&password.length<4)} onClick={()=>void done()}>{dirty?(shared.length?'Save and notify':'Save'):'Done'}</button>
+    <button type="button" className="zn-btn is-primary" disabled={busy||!loaded||(!canShare&&dirty)||(!!password&&password.length<4)} onClick={()=>void done()}>{dirty?(shared.length?'Save and notify':'Save'):'Done'}</button>
    </footer>
    {access==='restricted'&&<p className="zd-share-tip">The copied link only opens for people with access. Pick Anyone with the link to share outside ZARN.</p>}
    {access!=='restricted'&&!dirty&&loaded&&<p className="zd-share-tip">Sharing this {what} with the team or by link doesn’t notify anyone. Add people above to notify them.</p>}

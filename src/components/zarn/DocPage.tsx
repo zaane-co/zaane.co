@@ -154,7 +154,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
  const toggleOutline=()=>setOutline(o=>{try{localStorage.setItem('zarn-doc-outline',o?'0':'1');}catch{}return !o;});
  const insertTable=()=>c().insertTable({rows:3,cols:3,withHeaderRow:true}).run();
  const menus:[string,MenuItem[]][]=ed?[
-  ['File',[...(canEdit?[{label:'New document',run:()=>void create(false)},{label:'Make a copy',run:()=>void create(true)},'-' as const]:[]),...(role==='owner'?[{label:'Share',run:()=>setSharing(true)}]:[]),
+  ['File',[...(canEdit?[{label:'New document',run:()=>void create(false)},{label:'Make a copy',run:()=>void create(true)},'-' as const]:[]),...(role==='owner'||role==='edit'?[{label:'Share',run:()=>setSharing(true)}]:[]),
    {label:'Download as Word (.doc)',run:()=>download('doc')},{label:'Download as web page (.html)',run:()=>download('html')},{label:'Download as plain text (.txt)',run:()=>download('txt')},
    {label:'Print or save as PDF',keys:'⌘P',run:()=>window.print()},...(role==='owner'?['-' as const,{label:'Move to trash',run:()=>void remove()}]:[])]],
   ['Edit',[{label:'Undo',keys:'⌘Z',run:()=>c().undo().run(),off:!canEdit},{label:'Redo',keys:'⌘⇧Z',run:()=>c().redo().run(),off:!canEdit},'-',{label:'Select all',keys:'⌘A',run:()=>c().selectAll().run()}]],
@@ -194,7 +194,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
    </div>
    <div className="zg-right">
     {here.length>0&&<span className="zd-here" title={here.map(u=>people[u]?.display_name??'Someone').join(', ')+' also has this open'}>{here.slice(0,4).map(u=><Avatar key={u} m={people[u]} size={28}/>)}{here.length>4&&<em>+{here.length-4}</em>}</span>}
-    {role==='owner'&&<button type="button" className="zg-share" onClick={()=>setSharing(true)}><Share2 size={15}/><span>Share</span></button>}
+    {(role==='owner'||role==='edit')&&<button type="button" className="zg-share" onClick={()=>setSharing(true)}><Share2 size={15}/><span>Share</span></button>}
    </div>
   </header>
   {canEdit&&ed&&<div className="zg-bar" role="toolbar" aria-label="Formatting" onClick={e=>e.stopPropagation()}>
