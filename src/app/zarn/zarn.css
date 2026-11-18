@@ -2464,3 +2464,20 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zp-table tr.is-done td.zp-name{color:var(--z-muted);text-decoration:line-through}
  .zp-empty-row{padding:16px;border-radius:16px;background:var(--z-panel);text-align:center}
 }
+/* Dialog forms never scroll sideways: fields shrink to fit (iOS gives date fields a fixed minimum width otherwise) */
+.zn-modal,.zn-modal-body{overflow-x:hidden}
+.zn-modal input,.zn-modal select,.zn-modal textarea{min-width:0;max-width:100%}
+.zn-modal input[type=date],.zn-modal input[type=time],.zn-modal input[type=datetime-local]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-height:44px;text-align:left}
+.zn-modal input[type=date]::-webkit-date-and-time-value{text-align:left}
+.zn-modal .zn-grid-2>*,.zn-modal .zn-grid-3>*,.zn-modal label{min-width:0}
+.zn-modal-body{touch-action:pan-y}
+/* Phones: bigger forms (like New task) open as a full page instead of a sheet */
+@media(pointer:coarse) and (max-width:760px){
+ .zn-modal-scrim:has(>.zn-modal-page){padding:0;background:var(--z-bg)}
+ .zn-modal-scrim>.zn-modal.zn-modal-page{border:0;border-radius:0;background:var(--z-bg);padding:calc(env(safe-area-inset-top) + 8px) 16px calc(16px + env(safe-area-inset-bottom));animation:zn-push .3s cubic-bezier(.32,.72,0,1)}
+ .zn-modal-page>.zn-modal-head{display:grid;grid-template-columns:42px 1fr 42px;align-items:center;margin:0 -4px 4px}
+ .zn-modal-page>.zn-modal-head h2{grid-column:2;grid-row:1;text-align:center;font-size:16px;font-weight:700}
+ .zn-modal-page>.zn-modal-head button{grid-column:1;grid-row:1;width:42px;height:42px;border-radius:50%;background:var(--z-panel-2);color:var(--z-fg)}
+ .zn-modal-page .zn-modal-foot .zn-btn{flex:1;height:48px;border-radius:14px}
+ .zn-modal-page .zn-modal-body>.zn-modal-foot,.zn-modal-page form.zn-modal-body .zn-modal-foot{background:var(--z-bg)}
+}
