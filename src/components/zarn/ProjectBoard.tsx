@@ -67,7 +67,7 @@ export default function ProjectBoard({id,leadId}:{id?:string;leadId?:string}){
  const [formMembers,setFormMembers]=useState<string[]|null>(null),[templates,setTemplates]=useState<{save?:boolean}|null>(null);
 
  useEffect(()=>{const v=new URLSearchParams(window.location.search).get('view');if(v==='kanban'||v==='timeline'||v==='list'||(mine&&v==='saved')||(!multi&&(v==='brief'||v==='chat'||v==='team'||v==='docs'||v==='vault')))setView(v);},[mine,multi]);
- const pick=(v:View)=>{setView(v);window.history.replaceState(null,'',`?view=${v}`);};
+ const pick=(v:View)=>{setView(v);window.history.replaceState(null,'',`?view=${v}`);requestAnimationFrame(()=>{const b=document.querySelector('.zp-body');if(b){b.scrollTop=0;b.scrollLeft=0;}const k=document.querySelector('.zp-kanban');if(k)k.scrollLeft=0;});};
  const everyone=useMemo(()=>team.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member').map(m=>m.user_id),[team]);
 
  const load=useCallback(async()=>{

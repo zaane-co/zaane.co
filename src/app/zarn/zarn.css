@@ -2486,8 +2486,7 @@ a.zn-act-row:hover{background:var(--z-hover)}
 @media(max-width:760px){
  .zp-tools .dd-toolbar,.zp-tools .zp-btn:not(.is-dark){padding:0 12px;font-size:13px;gap:5px}
  .zp-tools .dd-toolbar>svg:first-child,.zp-tools .zp-btn:not(.is-dark)>svg{display:none}
- .zp-body:has(>.zp-kanban){overflow-x:hidden}
- .zp-kanban{display:flex!important;min-width:0!important;height:auto;gap:12px;align-items:flex-start;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 16px;margin:0 -16px;padding:0 16px 8px;scrollbar-width:none;overscroll-behavior-x:contain}
+ .zp-kanban{display:flex!important;min-width:0!important;width:100%;height:auto;min-height:160px;gap:12px;align-items:flex-start;overflow-x:auto;overflow-y:visible;scroll-snap-type:x proximity;padding:0 0 8px;scrollbar-width:none}
  .zp-kanban::-webkit-scrollbar{display:none}
  .zp-kanban>.zp-col{flex:0 0 84%;max-height:none;min-height:120px;scroll-snap-align:start;padding:12px;border-radius:18px}
  .zp-kanban>.zp-addcol{flex:0 0 60%;scroll-snap-align:start}
