@@ -2635,3 +2635,11 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zdr-switch-sheet>button:active{background:var(--z-hover)}
  .zdr-switch-sheet>p{margin:10px 14px 4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--z-muted)}
 }
+/* Phones: one-line Drive rows: icon · name · date · ⋮ */
+@media(max-width:760px){
+ .zdr-table tr{grid-template-columns:40px minmax(0,1fr) auto auto!important;grid-template-rows:auto!important;padding:6px 8px!important;min-height:52px}
+ .zdr-name>.zdr-ic{grid-row:1!important}
+ .zdr-name>b{grid-column:2!important;grid-row:1!important;align-self:center!important}
+ .zdr-table td:nth-child(3){grid-column:3!important;grid-row:1!important;align-self:center!important;margin-left:10px!important;font-size:12.5px}
+ .zdr-table td:last-child{grid-column:4!important;grid-row:1!important}
+}
