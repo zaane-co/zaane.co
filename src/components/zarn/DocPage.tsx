@@ -23,6 +23,7 @@ import {DocSync} from './doc-sync';
 import {usePictureClick} from './ImageLightbox';
 import Image from '@tiptap/extension-image';
 import {imageTools} from './editor-images';
+import {plainToHtml} from './doc-paste';
 type Doc={id:string;title:string;content:string;owner_id:string;updated_at:string;drive:'my'|'team'|'client';folder_id:string|null;lead_id:string|null};
 type Role='owner'|'edit'|'view';
 // Opens a document: owners and editors can type, everyone else reads. Changes save by themselves.
@@ -105,7 +106,11 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
   immediatelyRender:false,shouldRerenderOnTransaction:true,editable:canEdit,...(sync?{}:{content:doc.content}),
   extensions:[StarterKit.configure({link:false,underline:false,...(sync?{undoRedo:false}:{})}),...(sync?[Collaboration.configure({document:sync.ydoc,field:'default'})]:[]),Underline,Image,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:canEdit?'Start typing…':''}),
    TextStyleKit,TextAlign.configure({types:['heading','paragraph']}),TaskList,TaskItem.configure({nested:true}),TableKit.configure({table:{resizable:true}}),DocAttrs],
-  editorProps:{attributes:{class:'zd-prose zg-prose','aria-label':'Document'},...tools.handlers},
+  editorProps:{attributes:{class:'zd-prose zg-prose','aria-label':'Document'},...tools.handlers,
+   handlePaste:(v:unknown,e:ClipboardEvent)=>{if(tools.handlers.handlePaste(v,e))return true;
+    const html=e.clipboardData?.getData('text/html')??'';if(/<(table|ul|ol)\b/i.test(html))return false;
+    const built=plainToHtml(e.clipboardData?.getData('text/plain')??'');if(!built||!editorRef.current)return false;
+    e.preventDefault();editorRef.current.chain().focus().insertContent(built).run();return true;}},
   onCreate:({editor:e})=>{editorRef.current=e;},
   onUpdate:({editor:e})=>{latest.current.content=e.getHTML();queue();},
  });
