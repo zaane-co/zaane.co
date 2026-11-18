@@ -36,7 +36,7 @@ export default function Drive(){
  const pick=useRef<HTMLInputElement>(null),pickDir=useRef<HTMLInputElement>(null),searchRef=useRef<HTMLInputElement>(null);
  const [keysOpen,setKeysOpen]=useState(false);
  const guest=me.account_type==='guest';
- useEffect(()=>{setLayout(loadPref('zarn-drive-layout','grid'));setSort(loadPref('zarn-drive-sort','updated'));},[]);
+ useEffect(()=>{setLayout(loadPref('zarn-drive-layout',matchMedia('(max-width:760px)').matches?'list':'grid'));setSort(loadPref('zarn-drive-sort','updated'));},[]);
 
  // Where we are, from the URL: ?v=team | ?v=client&l=<lead> | ?v=shared|recent|starred|trash|chats, plus ?f=<folder>.
  const v=params.get('v')??'my',folderParam=params.get('f'),leadParam=params.get('l');
@@ -303,7 +303,7 @@ export default function Drive(){
       {trail.map(f=><span key={f.id} className="zdr-crumb"><ChevronRight size={16}/><button type="button" onClick={()=>router.push(`/zarn/drive?f=${f.id}`)} {...dropOn(asPlace(f),`b:${f.id}`)} data-over={dragOver===`b:${f.id}`||undefined}>{f.name}</button></span>)}
      </>:<h1>{q?`Results for “${q}”`:heading}</h1>}
     </div>
-    <label className="zdr-search"><Search size={15}/><input ref={searchRef} placeholder="Search in Drive (press /)" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search in Drive"/></label>
+    <label className="zdr-search"><Search size={15}/><input ref={searchRef} placeholder="Search in Drive" value={q} onChange={e=>setQ(e.target.value)} aria-label="Search in Drive"/></label>
     <div className="zdr-tools">
      {list==='trash'&&<button type="button" className="zn-btn" onClick={()=>void emptyTrash()}>Empty trash</button>}
      <select className="zdr-sort" value={sort} aria-label="Sort by" onChange={e=>{const s=e.target.value as 'name'|'updated';setSort(s);savePref('zarn-drive-sort',s);}}><option value="updated">Last modified</option><option value="name">Name</option></select>
