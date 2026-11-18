@@ -2841,3 +2841,11 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zg-share{height:38px;padding:0 18px}
  .zg-bar{margin-top:0}
 }
+/* Docs header: one row (title, then the menus beside it) */
+@media(min-width:761px){
+ .zg-head{min-height:56px;padding:6px 20px}
+ .zg-meta{flex-direction:row;align-items:center;gap:14px}
+ .zg-row{flex:0 1 auto;min-width:0}
+ .zg-title{max-width:34vw;overflow:hidden;text-overflow:ellipsis}
+ .zg-menus{margin-left:0;padding-left:14px;border-left:1px solid var(--z-border);flex:none}
+}

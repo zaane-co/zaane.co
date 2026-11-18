@@ -114,7 +114,18 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
     e.preventDefault();editorRef.current.chain().focus().insertContent(built).run();return true;}},
   onCreate:({editor:e})=>{editorRef.current=e;},
   onUpdate:({editor:e})=>{latest.current.content=e.getHTML();queue();},
+  // Phones: selecting text (a long-press) brings up the formatting sheet, without the keyboard.
+  onSelectionUpdate:({editor:e})=>{if(canEdit&&!e.state.selection.empty&&e.isFocused&&matchMedia('(max-width:760px)').matches)setSheet(v=>v??'text');},
  });
+ // While the sheet is open the text area takes no keyboard, so selecting text never pops it up.
+ useEffect(()=>{const dom=editor?.view.dom as HTMLElement|undefined;if(!dom)return;
+  if(sheet){if(dom.getAttribute('inputmode')!=='none'){dom.setAttribute('inputmode','none');if(document.activeElement===dom){dom.blur();editor!.view.focus();}}}
+  else dom.removeAttribute('inputmode');},[sheet,editor]);
+ // A quick tap in the text while the sheet is open closes it and brings the keyboard back for typing.
+ const tap=useRef<{t:number;x:number;y:number}|null>(null);
+ const pageTouch={onTouchStart:(e:React.TouchEvent)=>{const p=e.touches[0]!;tap.current={t:Date.now(),x:p.clientX,y:p.clientY};},
+  onTouchEnd:(e:React.TouchEvent)=>{const s0=tap.current,p=e.changedTouches[0]!;tap.current=null;if(!sheet||!s0||!editor)return;
+   if(Date.now()-s0.t<350&&Math.hypot(p.clientX-s0.x,p.clientY-s0.y)<8){const dom=editor.view.dom as HTMLElement;dom.removeAttribute('inputmode');dom.blur();setSheet(null);}}};
  // Save anything pending when leaving the page.
  useEffect(()=>()=>{if(timer.current){clearTimeout(timer.current);void save();}},[save]);
  async function remove(){
@@ -222,7 +233,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
    {btn('Undo',<Undo2 size={19}/>,false,()=>c().undo().run())}{btn('Redo',<Redo2 size={19}/>,false,()=>c().redo().run())}<i/>
    {btn('Bold',<Bold size={19}/>,ed.isActive('bold'),()=>c().toggleBold().run())}{btn('Italic',<Italic size={19}/>,ed.isActive('italic'),()=>c().toggleItalic().run())}{btn('Underline',<UnderlineIcon size={19}/>,ed.isActive('underline'),()=>c().toggleUnderline().run())}
    {btn('Bulleted list',<List size={19}/>,ed.isActive('bulletList'),()=>c().toggleBulletList().run())}{btn('Checklist',<ListChecks size={19}/>,ed.isActive('taskList'),()=>c().toggleTaskList().run())}<i/>
-   <button type="button" className={`zg-aa${sheet?' is-open':''}`} aria-label="All formatting tools" aria-expanded={!!sheet} onMouseDown={e=>e.preventDefault()} onClick={()=>{if(!sheet)(document.activeElement as HTMLElement|null)?.blur();setSheet(v=>v?null:'text');}}><b>Aa</b>{sheet?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button>
+   <button type="button" className={`zg-aa${sheet?' is-open':''}`} aria-label="All formatting tools" aria-expanded={!!sheet} onMouseDown={e=>e.preventDefault()} onClick={()=>setSheet(v=>v?null:'text')}><b>Aa</b>{sheet?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button>
   </div>}
   {canEdit&&ed&&sheet&&<div className="zg-sheet" role="dialog" aria-label="Formatting" onClick={e=>e.stopPropagation()} onMouseDown={e=>{if((e.target as HTMLElement).tagName!=='SELECT')e.preventDefault();}}>
    <header><nav>{([['text','Text'],['para','Paragraph'],['insert','Insert']] as const).map(([k,l])=><button key={k} type="button" className={sheet===k?'is-on':''} onClick={()=>setSheet(k)}>{l}</button>)}</nav><button type="button" className="zg-sheet-x" aria-label="Close" onClick={()=>setSheet(null)}><X size={18}/></button></header>
@@ -258,7 +269,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
     <div className="zg-outline-list">{headings.length?headings.map((h,i)=><button key={i} type="button" title={h.text} className={`is-h${h.level}${i===activeH?' is-on':''}`} onClick={()=>{setActiveH(i);jump(h.pos);}}>{h.text}</button>):<p>Headings you add appear here.</p>}</div></aside>}
    <div className="zg-canvas" data-lenis-prevent ref={canvasRef} onScroll={e=>{if(!outline)return;const box=e.currentTarget,top=box.getBoundingClientRect().top+90;const hs=[...box.querySelectorAll('.zg-prose h1,.zg-prose h2,.zg-prose h3')].filter(h=>h.textContent?.trim());let k=0;hs.forEach((h,i)=>{if(h.getBoundingClientRect().top<=top)k=i;});if(k!==activeH)setActiveH(k);}}>
     {!outline&&<button type="button" className="zg-outline-btn" aria-label="Show outline" data-tip="Show outline" onClick={toggleOutline}><PanelLeft size={16}/></button>}
-    <div className="zg-page" style={{zoom:zoom/100}} onClick={canEdit?undefined:pics.onClick}><EditorContent editor={editor}/></div>{pics.node}
+    <div className="zg-page" style={{zoom:zoom/100}} onClick={canEdit?undefined:pics.onClick} {...pageTouch}><EditorContent editor={editor}/></div>{pics.node}
    </div>
   </div>
   <button type="button" className={`zg-words${outline?' with-outline':''}`} onClick={()=>setCounting(true)}>{words.toLocaleString()} word{words===1?'':'s'}</button>
