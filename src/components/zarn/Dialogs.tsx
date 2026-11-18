@@ -1,6 +1,6 @@
 'use client';
 import Dropdown from '@/components/ui/Dropdown';
-import {useEffect,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Check,FileText,Hash,HeartPulse,Lock,MessageSquare,Phone,Search as SearchIcon,Smile,UserRound,X} from 'lucide-react';
 const MessageSquareIcon=()=><MessageSquare size={15}/>;
@@ -10,8 +10,11 @@ import {Avatar,dayOf,plain,timeOf} from './format';
 import AssigneePicker from './AssigneePicker';
 
 export function Modal({title,onClose,children,wide}:{title:string;onClose:()=>void;children:React.ReactNode;wide?:boolean}){
+ const box=useRef<HTMLDivElement>(null);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[onClose]);
- return <div className="zn-modal-scrim" onClick={onClose}><div className={`zn-modal${wide?' zn-modal-lg':''}`} role="dialog" aria-label={title} data-lenis-prevent onClick={e=>e.stopPropagation()}>
+ // On phones the keyboard waits for a tap (as in iOS sheets) instead of popping up while the sheet slides in.
+ useLayoutEffect(()=>{if(matchMedia('(pointer:coarse)').matches&&box.current?.contains(document.activeElement))(document.activeElement as HTMLElement).blur();},[]);
+ return <div className="zn-modal-scrim" onClick={onClose}><div ref={box} className={`zn-modal${wide?' zn-modal-lg':''}`} role="dialog" aria-label={title} data-lenis-prevent onClick={e=>e.stopPropagation()}>
   <div className="zn-modal-head"><h2>{title}</h2><button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>{children}</div></div>;
 }
 
