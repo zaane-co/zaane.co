@@ -2826,3 +2826,18 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zg-head{position:relative}
 .zg-loc{display:inline-flex;align-items:center;gap:10px;min-width:0}
 @media(min-width:1100px){.zg-loc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:40vw;z-index:1}}
+/* Docs header polish */
+@media(min-width:761px){
+ .zg-head{min-height:64px;padding:8px 20px;gap:14px;border-bottom:1px solid var(--z-border);margin-bottom:8px}
+ .zg-logo{width:38px;height:38px}
+ .zg-meta{gap:2px}
+ .zg-title{font-size:17px;font-weight:600;letter-spacing:-.01em;padding:3px 6px}
+ .zg-menus{margin-left:-6px}
+ .zg-menu>button{height:26px;padding:0 7px;font-size:13.5px;color:var(--z-muted)}
+ .zg-menu>button:hover,.zg-menu>button.is-on{color:var(--z-fg)}
+ .zg-loc{height:34px;gap:0;padding:0 4px 0 2px;border:1px solid var(--z-border);border-radius:999px;background:var(--z-panel)}
+ .zg-loc .zg-where{background:none;height:auto;padding:0 10px 0 10px}
+ .zg-loc .zg-state{height:20px;padding:0 10px 0 10px;border-left:1px solid var(--z-border)}
+ .zg-share{height:38px;padding:0 18px}
+ .zg-bar{margin-top:0}
+}
