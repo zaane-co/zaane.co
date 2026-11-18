@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {Bookmark,Hash,ListPlus,Phone,Check,CheckCheck,ChevronLeft,ChevronRight,Clock3,Download,FileText,MessageSquareText,Pencil,Pin,SmilePlus,Trash2,TrendingUp,Receipt,UserPlus,X} from 'lucide-react';
@@ -21,6 +21,12 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
  const {me,people,members,db,membership,channels,emit,saved,toggleSaved}=useZarn(),{profile}=useShell(),call=useCall();
  const [viewer,setViewer]=useState<number|null>(null),[doc,setDoc]=useState<number|null>(null),[seenOpen,setSeenOpen]=useState(false);
  const [tapped,setTapped]=useState(false),[picker,setPicker]=useState(false),[editing,setEditing]=useState(false),[draft,setDraft]=useState(''),[tasking,setTasking]=useState(false);
+ const press=useRef<{t:number;x:number;y:number}|null>(null),box=useRef<HTMLDivElement>(null);
+ useEffect(()=>{const other=(e:Event)=>{if((e as CustomEvent<string>).detail!==m.id)setTapped(false);};window.addEventListener('zn-msg-open',other);return()=>window.removeEventListener('zn-msg-open',other);},[m.id]);
+ useEffect(()=>{if(!tapped)return;
+  const away=(e:Event)=>{if(!box.current?.querySelector('.zn-actions')?.contains(e.target as Node)&&!box.current?.querySelector('.zn-picker')?.contains(e.target as Node))setTapped(false);};
+  const t=setTimeout(()=>{document.addEventListener('pointerdown',away,true);document.addEventListener('scroll',away,true);},0);
+  return()=>{clearTimeout(t);document.removeEventListener('pointerdown',away,true);document.removeEventListener('scroll',away,true);};},[tapped]);
  const author=m.user_id?people[m.user_id]:undefined,mine=m.user_id===me.user_id,canAct=!!membership[m.channel_id];
  const groups=reactions.reduce<Record<string,string[]>>((g,r)=>{(g[r.emoji]??=[]).push(r.user_id);return g;},{});
  async function toggle(emoji:string){
@@ -51,8 +57,13 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
  if(m.deleted_at)return <div className={`zn-msg${compact?' is-compact':''}`}><div className="zn-gutter">{!compact&&<Avatar m={author} name={m.author_name}/>}</div><div className="zn-msg-main"><p className="zn-deleted">This message was deleted.</p></div></div>;
 
  // Touch screens have no hover: tapping a message (not a link or button) shows its action bar.
- const onTap=(e:React.MouseEvent)=>{if(!window.matchMedia('(hover: none)').matches)return;if((e.target as HTMLElement).closest('a,button,textarea,input,[data-uid]'))return;setTapped(v=>!v);};
- return <div className={`zn-msg${compact?' is-compact':''}${m.pinned_at?' is-pinned':''}${m.pending?' is-pending':''}${tapped?' is-tapped':''}`} id={`m-${m.id}`} onClick={onTap}>
+ // Phones: long-press a message to open its actions (like chat apps). Only one message is open at a time; a tap anywhere
+ // else, or scrolling, closes it.
+ const touchStart=(e:React.TouchEvent)=>{if((e.target as HTMLElement).closest('a,button,textarea,input,[data-uid],.zn-actions'))return;const p=e.touches[0]!;
+  press.current={x:p.clientX,y:p.clientY,t:window.setTimeout(()=>{press.current=null;window.dispatchEvent(new CustomEvent('zn-msg-open',{detail:m.id}));setTapped(true);try{navigator.vibrate?.(10);}catch{}},420)};};
+ const touchMove=(e:React.TouchEvent)=>{const p=e.touches[0]!,s=press.current;if(s&&Math.hypot(p.clientX-s.x,p.clientY-s.y)>8){clearTimeout(s.t);press.current=null;}};
+ const touchEnd=()=>{if(press.current){clearTimeout(press.current.t);press.current=null;}};
+ return <div ref={box} className={`zn-msg${compact?' is-compact':''}${m.pinned_at?' is-pinned':''}${m.pending?' is-pending':''}${tapped?' is-tapped':''}`} id={`m-${m.id}`} onTouchStart={touchStart} onTouchMove={touchMove} onTouchEnd={touchEnd} onTouchCancel={touchEnd} onContextMenu={e=>{if(window.matchMedia('(hover: none)').matches)e.preventDefault();}}>
   <div className="zn-gutter">{compact?<time className="zn-hover-time">{timeOf(m.created_at)}</time>:m.kind==='crm'?<span className="zn-crm-ico"><TrendingUp size={14}/></span>:<button type="button" className="zn-author-btn" aria-label={`${author?.display_name??'Member'}’s profile`} onClick={()=>m.user_id&&profile(m.user_id)}><Avatar m={author} name={m.author_name}/></button>}</div>
   <div className="zn-msg-main">
    {!compact&&<p className={`zn-msg-head${m.kind==='crm'?' is-crm':''}`}>{m.kind==='crm'?<b>CRM</b>:<button type="button" className="zn-author-name" onClick={()=>m.user_id&&profile(m.user_id)}>{author?.display_name??m.author_name??'Former member'}</button>}{m.kind!=='crm'&&<StatusMark m={author}/>}{m.kind==='crm'&&<span className="zn-app-tag">APP</span>}<time title={new Date(m.created_at).toLocaleString('en-GB')}>{timeOf(m.created_at)}</time>{m.pinned_at&&<span className="zn-pin-tag"><Pin size={11}/>Pinned</span>}</p>}
