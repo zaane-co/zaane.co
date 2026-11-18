@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useRouter,useSearchParams} from 'next/navigation';
-import {Briefcase,Check,FileSpreadsheet,FolderUp,Keyboard,CheckSquare,ChevronRight,X,Clock,Download,File as FileIcon,FileText,Folder,FolderInput,FolderPlus,HardDrive,LayoutGrid,List,Loader2,MessageSquare,MoreVertical,Pencil,Plus,RotateCcw,Search,Share2,Star,Trash2,Upload,Users} from 'lucide-react';
+import {Briefcase,Check,ChevronDown,FileSpreadsheet,FolderUp,Keyboard,CheckSquare,ChevronRight,X,Clock,Download,File as FileIcon,FileText,Folder,FolderInput,FolderPlus,HardDrive,LayoutGrid,List,Loader2,MessageSquare,MoreVertical,Pencil,Plus,RotateCcw,Search,Share2,Star,Trash2,Upload,Users} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import {Modal,PeoplePicker} from './Dialogs';
@@ -34,7 +34,7 @@ export default function Drive(){
  const [uploads,setUploads]=useState<{name:string;done:boolean;err?:string}[]>([]),[dragOver,setDragOver]=useState<string|null>(null);
  const bulkRef=useRef<(k:'trash'|'restore'|'star')=>Promise<void>>(async()=>{}),openRef=useRef<(i:Item)=>void>(()=>{}),newDocRef=useRef<(s:boolean)=>Promise<void>>(async()=>{});
  const pick=useRef<HTMLInputElement>(null),pickDir=useRef<HTMLInputElement>(null),searchRef=useRef<HTMLInputElement>(null);
- const [keysOpen,setKeysOpen]=useState(false);
+ const [keysOpen,setKeysOpen]=useState(false),[switching,setSwitching]=useState(false);
  const guest=me.account_type==='guest';
  useEffect(()=>{setLayout(loadPref('zarn-drive-layout',matchMedia('(max-width:760px)').matches?'list':'grid'));setSort(loadPref('zarn-drive-sort','updated'));},[]);
 
@@ -297,6 +297,7 @@ export default function Drive(){
   <section className="zdr-main" {...(place?dropOn(place,'here'):{})} data-over={dragOver==='here'||undefined} onContextMenu={e=>{if(!canAdd)return;e.preventDefault();setMenu(null);setBgMenu({x:e.clientX,y:e.clientY});}}>
    <header className="zdr-head">
     <div className="zdr-crumbs">
+     <button type="button" className="zdr-switch" aria-label="Switch drive" onClick={e=>{e.stopPropagation();setSwitching(true);}}>{list||!place?(q?'Search':heading):rootLabel(place)}<ChevronDown size={18}/></button>
      {place&&!q?<>
       <button type="button" onClick={()=>router.push(rootHref(place))} {...dropOn({...place,folder:null},'root')} data-over={dragOver==='root'||undefined}>{rootLabel(place)}</button>
       {!place.folder&&<span className="zdr-who">{place.drive==='team'?'Everyone on the team':place.drive==='client'?'Everyone in this client’s space':'Only you'}</span>}
@@ -357,6 +358,11 @@ export default function Drive(){
    {uploads.length>0&&<div className="zdr-uploads" role="status"><b>{uploads.every(u=>u.done)?'Uploads finished':`Uploading ${uploads.filter(u=>!u.done).length}…`}</b>{uploads.map((u,i)=><p key={i}>{u.done?u.err?<span className="zdr-bad">!</span>:<span className="zdr-ok">✓</span>:<Loader2 size={13} className="zn-spin"/>}<span>{u.name}</span>{u.err&&<small>{u.err}</small>}</p>)}{uploads.every(u=>u.done)&&<button type="button" className="zn-btn" onClick={()=>setUploads([])}>Close</button>}</div>}
   </section>}
 
+  {switching&&<div className="zdr-switch-scrim" onClick={e=>{e.stopPropagation();setSwitching(false);}}><div className="zdr-switch-sheet" role="dialog" aria-label="Drives" onClick={e=>e.stopPropagation()}>
+   <span className="zdr-switch-grab"/>
+   {nav.map(([href,label,ic,on])=><button key={href} type="button" className={on?'is-on':''} onClick={()=>{setSwitching(false);router.push(href);}}>{ic}<span>{label}</span>{on&&<Check size={18}/>}</button>)}
+   {clients.length>0&&<><p>Client drives</p>{clients.map(c=>{const on=!list&&place?.drive==='client'&&place.lead===c.lead;return <button key={c.lead} type="button" className={on?'is-on':''} onClick={()=>{setSwitching(false);router.push(`/zarn/drive?v=client&l=${c.lead}`);}}><Briefcase size={18}/><span>{c.name}</span>{on&&<Check size={18}/>}</button>;})}</>}
+  </div></div>}
   {menu&&<ItemMenu item={menu.item} x={menu.x} y={menu.y} starred={stars.has(`${menu.item.kind}:${menu.item.id}`)} mine={menu.item.owner_id===me.user_id} picked={sel.has(keyOf(menu.item))} onPick={()=>toggle(menu.item)}
    onOpen={()=>open(menu.item)} onRename={()=>setRenaming(menu.item)} onMove={()=>setMoving([menu.item])} onStar={()=>void toggleStar(menu.item)}
    onColor={c=>void recolor(menu.item,c)} onShare={()=>{const it=menu.item;if(it.drive!=='my'&&!(it.kind==='doc'&&it.owner_id===me.user_id))setAccessItem(it);else if(it.kind==='doc')setSharingDoc(it.id);else if(it.owner_id===me.user_id)setSharingItem(it);else setAccessItem(it);}} onTrash={()=>void trash(menu.item)} onRestore={()=>void trash(menu.item,true)} onDestroy={()=>void destroy([menu.item])} close={()=>setMenu(null)}/>}
