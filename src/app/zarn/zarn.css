@@ -2938,3 +2938,18 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zpg-fab:active{transform:scale(.94)}
 }
 @media (max-width:760px){.zpg-head .zpg-more{width:30px;height:30px;background:none;color:var(--z-muted)}}
+
+/* Project page on phones: one compact nav row beside the back button (badge, name, invite, menu), segmented tabs below. */
+@media (max-width:760px){
+ .zarn.is-deep .zp-head{flex-wrap:nowrap;align-items:center;gap:8px;min-height:42px;padding:11px 12px 0 62px!important}
+ .zarn.is-deep .zp-title{flex:1;min-width:0;gap:10px}
+ .zarn.is-deep .zp-title>div{min-width:0}
+ .zarn.is-deep .zp-title .zp-badge{width:34px;height:34px;border-radius:10px;font-size:15px;flex:none}
+ .zarn.is-deep .zp-title h1{font-size:19px;line-height:1.2;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .zarn.is-deep .zp-head-right{gap:8px;flex:none}
+ .zarn.is-deep .zp-members{display:none}
+ .zarn.is-deep .zp-head-right>.zp-btn{width:42px;height:42px;padding:0;justify-content:center;gap:0;border:0;border-radius:50%;background:var(--z-panel-2);font-size:0}
+ .zarn.is-deep .zp-head-right>.zp-btn svg{width:18px;height:18px}
+ .zarn.is-deep .zp-head-right .zp-icon-btn{width:42px;height:42px;border-radius:50%;background:var(--z-panel-2);color:var(--z-fg)}
+ .zarn.is-deep .zp-tabs{margin-top:10px}
+}
