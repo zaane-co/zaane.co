@@ -3,7 +3,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Folder,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Underline,Undo2,WrapText,X,Eraser} from 'lucide-react';
+import {ChevronUp,CloudCheck,CloudOff,AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Folder,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Underline,Undo2,WrapText,X,Eraser} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import ShareDoc from './ShareDoc';
@@ -32,6 +32,7 @@ export default function SheetPage({id}:{id:string}){
  const [sel,setSel]=useState<[number,number]>([0,0]),[anchor,setAnchor]=useState<[number,number]|null>(null);
  const [editing,setEditing]=useState<string|null>(null),[editMode,setEditMode]=useState<'type'|'edit'>('edit'),[editIn,setEditIn]=useState<'cell'|'bar'>('cell'),[pick,setPick]=useState(0);
  const [state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[crumbs,setCrumbs]=useState<{name:string;href:string}[]>([]);
+ const [toolSheet,setToolSheet]=useState(false);
  const [menu,setMenu]=useState<string|null>(null),[pop,setPop]=useState<string|null>(null),[ctx,setCtx]=useState<{x:number;y:number}|null>(null),[tabMenu,setTabMenu]=useState<string|null>(null),[renamingTab,setRenamingTab]=useState<string|null>(null);
  const [zoom,setZoom]=useState(1),[grid,setGrid]=useState(true),[find,setFind]=useState<{q:string;rep:string;at:number}|null>(null),[help,setHelp]=useState<'keys'|'fx'|null>(null);
  const [scroll,setScroll]=useState({top:0,h:800}),[drafts,setDrafts]=useState<Record<string,number>>({}),[fill,setFill]=useState<[number,number]|null>(null),[peers,setPeers]=useState<Record<string,Peer>>({}),[hl,setHl]=useState({u:0,r:0});
@@ -316,8 +317,8 @@ export default function SheetPage({id}:{id:string}){
    <Link href={crumbs.at(-1)?.href??'/zarn/drive'} className="zs2-logo" aria-label="Back to Drive" data-tip="Back to Drive"><FileSpreadsheet size={26}/></Link>
    <div className="zs2-titles">
     <div className="zs2-titlerow"><input ref={titleIn} className="zs2-title" value={title} readOnly={!canEdit} maxLength={200} placeholder="Untitled sheet" aria-label="Title" onChange={e=>{setTitle(e.target.value);latest.current.title=e.target.value;queue();}} size={Math.max(6,(title||"Untitled sheet").length)}/>
-     <span className="zs2-crumbs" title="Location in Drive"><Folder size={13}/>{crumbs.map((c,i)=><span key={c.href}>{i>0&&<ChevronRight size={12}/>}<Link href={c.href}>{c.name}</Link></span>)}</span>
-     <span className={`zs2-state${state==='error'?' is-error':''}`}>{!canEdit?'View only':state==='saving'?<><Loader2 size={12} className="zn-spin"/>Saving…</>:state==='error'?'Not saved':<><Check size={12}/>Saved to Drive</>}</span></div>
+     <span className="zs2-loc">     <span className="zs2-crumbs" title="Location in Drive"><Folder size={13}/>{crumbs.map((c,i)=><span key={c.href}>{i>0&&<ChevronRight size={12}/>}<Link href={c.href}>{c.name}</Link></span>)}</span>
+     <span className={`zs2-state${state==='error'?' is-error':''}`}>{!canEdit?'View only':state==='saving'?<><Loader2 size={13} className="zn-spin"/>Saving…</>:state==='error'?<><CloudOff size={14}/>Not saved</>:<><CloudCheck size={14}/>Saved</>}</span></span></div>
     <nav className="zs2-menubar" onClick={e=>e.stopPropagation()}>{Object.keys(menus).map(m=><span key={m} className="zs2-mwrap"><button type="button" className={menu===m?'is-on':''} onClick={()=>setMenu(x=>x===m?null:m)} onMouseEnter={()=>{if(menu&&menu!==m)setMenu(m);}}>{m}</button>
      {menu===m&&<div className="zs2-menu" role="menu">{renderItems(menus[m])}</div>}</span>)}</nav>
    </div>
@@ -327,7 +328,8 @@ export default function SheetPage({id}:{id:string}){
    </div>
   </header>
 
-  <div className="zs2-toolbar" onClick={e=>e.stopPropagation()}>
+  <div className={`zs2-toolbar${toolSheet?' is-sheet':''}`} onClick={e=>e.stopPropagation()}>
+   <div className="zs2-sheet-head"><b>Format</b><button type="button" aria-label="Close" onClick={()=>{setToolSheet(false);setPop(null);}}><ChevronDown size={18}/></button></div>
    <button type="button" data-tip="Undo (⌘Z)" aria-label="Undo" disabled={!hl.u} onClick={undo}><Undo2 size={16}/></button>
    <button type="button" data-tip="Redo (⌘⇧Z)" aria-label="Redo" disabled={!hl.r} onClick={redo}><Redo2 size={16}/></button>
    <button type="button" data-tip="Print" aria-label="Print" onClick={print}><Printer size={16}/></button>
@@ -361,6 +363,15 @@ export default function SheetPage({id}:{id:string}){
     {pop==='fx'&&<div className="zs2-menu">{['SUM','AVERAGE','COUNT','MAX','MIN'].map(n=><button key={n} type="button" onClick={()=>{setPop(null);if(box.r1>box.r0||box.c1>box.c0){const target=box.r1+1<ROWS?ref(box.c0,box.r1+1):ref(box.c1+1,box.r0);setCells([{tab:tab.id,k:target,v:`=${n}(${ref(box.c0,box.r0)}:${ref(box.c1,box.r1)})`}]);}else startEdit(`=${n}(`,'edit');}}><span className="zs2-mcheck"/><span>{n}</span></button>)}<hr/><button type="button" onClick={()=>{setPop(null);setHelp('fx');}}><span className="zs2-mcheck"/><span>All functions…</span></button></div>}</span>
   </div>
 
+  {canEdit&&<div className="zs2-mbar" onClick={e=>e.stopPropagation()}>
+   <button type="button" aria-label="Undo" disabled={!hl.u} onClick={undo}><Undo2 size={19}/></button>
+   <button type="button" aria-label="Redo" disabled={!hl.r} onClick={redo}><Redo2 size={19}/></button><i/>
+   <button type="button" aria-label="Bold" className={st.b?'is-on':''} onClick={()=>toggle('b')}><Bold size={19}/></button>
+   <button type="button" aria-label="Italic" className={st.i?'is-on':''} onClick={()=>toggle('i')}><Italic size={19}/></button>
+   <button type="button" aria-label="Align centre" className={st.h==='c'?'is-on':''} onClick={()=>styleKeys(keysIn(box),s=>({...s,h:s.h==='c'?undefined:'c'}))}><AlignCenter size={19}/></button>
+   <button type="button" aria-label="Wrap text" className={st.wrap?'is-on':''} onClick={()=>styleKeys(keysIn(box),s=>({...s,wrap:s.wrap?undefined:1}))}><WrapText size={19}/></button>
+   <button type="button" className={`zs2-aa${toolSheet?' is-open':''}`} aria-label="All formatting tools" aria-expanded={toolSheet} onClick={()=>{setPop(null);setToolSheet(v=>!v);}}><b>Aa</b>{toolSheet?<ChevronDown size={16}/>:<ChevronUp size={16}/>}</button>
+  </div>}
   <div className="zs2-fbar">
    <input className="zs2-name" aria-label="Name box" defaultValue={box.c0===box.c1&&box.r0===box.r1?k:`${ref(box.c0,box.r0)}:${ref(box.c1,box.r1)}`} key={`${k}-${box.c0}-${box.r0}-${box.c1}-${box.r1}`}
     onKeyDown={e=>{if(e.key!=='Enter')return;const v=e.currentTarget.value.toUpperCase().trim();const [a,b]=v.split(':');const p=parseRef(a),q=b?parseRef(b):null;if(p){if(q){setAnchor(p);setSel(q);}else{setAnchor(null);setSel(p);}gridRef.current?.focus();}}}/>
