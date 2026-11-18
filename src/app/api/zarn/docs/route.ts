@@ -3,6 +3,7 @@ import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
 import {hashPassword,newToken} from '@/lib/doc-share';
 import {siteUrl} from '@/lib/newsletter';
+import {pushTo} from '@/lib/zarn-push';
 // Sharing for documents. Only the owner can change who has access or manage links.
 const id=z.uuid();
 const actions=z.discriminatedUnion('action',[
@@ -31,10 +32,20 @@ export async function POST(request:Request){
   if(error)return fail('Could not save sharing.');
   const {data:active}=await db.from('zarn_members').select('user_id').in('user_id',b.members.map(m=>m.user_id)).is('deactivated_at',null);
   const ok=new Set((active??[]).map(a=>a.user_id));
-  await db.from('zarn_doc_members').delete().eq('doc_id',b.id);
+  const {data:before}=await db.from('zarn_doc_members').select('user_id').eq('doc_id',b.id);
+  const had=new Set((before??[]).map(r=>r.user_id));
   const rows=b.members.filter(m=>ok.has(m.user_id)&&m.user_id!==me.user_id).map(m=>({doc_id:b.id,user_id:m.user_id,role:m.role}));
-  if(rows.length)await db.from('zarn_doc_members').insert(rows);
-  return Response.json({ok:true});
+  const {error:delErr}=await db.from('zarn_doc_members').delete().eq('doc_id',b.id);
+  if(delErr)return fail('Could not save sharing.');
+  if(rows.length){const {error:insErr}=await db.from('zarn_doc_members').insert(rows);if(insErr)return fail('Could not save sharing.');}
+  // Tell people who were just added, the way Google emails them.
+  const added=rows.filter(r=>!had.has(r.user_id)).map(r=>r.user_id);
+  if(added.length){
+   const {data:doc}=await db.from('zarn_docs').select('title,kind').eq('id',b.id).maybeSingle();
+   const sheet=doc?.kind==='sheet',what=sheet?'a sheet':'a document';
+   await pushTo(added,{title:`${me.display_name} shared ${what} with you`,body:doc?.title||'Untitled',tag:`doc-${b.id}`,url:`/zarn/${sheet?'sheets':'docs'}/${b.id}`}).catch(()=>0);
+  }
+  return Response.json({ok:true,added:added.length});
  }
  if(b.action==='links'){
   const {data}=await db.from('zarn_doc_links').select('id,token,password_hash,expires_at,views,created_at').eq('doc_id',b.id).is('revoked_at',null).order('created_at',{ascending:false});

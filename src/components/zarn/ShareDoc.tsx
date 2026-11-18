@@ -14,7 +14,7 @@ const api=async(body:object)=>{const r=await fetch('/api/zarn/docs',{method:'POS
 export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}){
  const {db,me,members,channels,title,people}=useZarn(),confirm=useConfirm();
  const [visibility,setVisibility]=useState<'private'|'team'>('private'),[teamRole,setTeamRole]=useState<'view'|'edit'>('view'),[lead,setLead]=useState(''),[shared,setShared]=useState<Person[]>([]);
- const [links,setLinks]=useState<Link[]>([]),[password,setPassword]=useState(''),[days,setDays]=useState('0'),[busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[copied,setCopied]=useState('');
+ const [links,setLinks]=useState<Link[]>([]),[password,setPassword]=useState(''),[days,setDays]=useState('0'),[busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[copied,setCopied]=useState(''),[dirty,setDirty]=useState(false);
  const clients=channels.filter(c=>c.kind==='client'&&c.lead_id&&!c.archived_at);
  const candidates=useMemo(()=>members.filter(m=>!m.deactivated_at&&m.joined_at&&m.account_type==='member'&&m.user_id!==me.user_id).map(m=>m.user_id),[members,me.user_id]);
  const loadLinks=useCallback(async()=>{try{const d=await api({action:'links',id:docId});setLinks(d.links??[]);}catch{}},[docId]);
@@ -32,7 +32,8 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
  },[db,docId,loadLinks]);
  async function saveAccess(){
   setBusy(true);setMsg('');
-  try{await api({action:'share',id:docId,visibility,team_role:teamRole,lead_id:lead||null,members:shared});setMsg('Sharing saved.');}
+  try{const d=await api({action:'share',id:docId,visibility,team_role:teamRole,lead_id:lead||null,members:shared});setDirty(false);
+   setMsg(d.added?`Shared. ${d.added===1?'They have':'They have each'} been notified and will find it in Drive under Shared with me.`:'Sharing saved.');}
   catch(e){setMsg(e instanceof Error?e.message:'Could not save.');}
   setBusy(false);
  }
@@ -46,19 +47,21 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
   if(!await confirm({title:'Turn off this link?',message:'Anyone using it will lose access straight away.',confirm:'Turn off link',danger:true}))return;
   await api({action:'link_revoke',link_id:l.id});await loadLinks();
  }
- const toggle=(uid:string)=>setShared(s=>s.some(p=>p.user_id===uid)?s.filter(p=>p.user_id!==uid):[...s,{user_id:uid,role:'view'}]);
- return <Modal title="Share document" onClose={onClose} wide>
+ const toggle=(uid:string)=>{setDirty(true);setShared(s=>s.some(p=>p.user_id===uid)?s.filter(p=>p.user_id!==uid):[...s,{user_id:uid,role:'view'}]);};
+ async function close(){if(dirty&&!await confirm({title:'Discard sharing changes?',message:'The people you picked won’t get access unless you save.',confirm:'Discard'}))return;onClose();}
+ return <Modal title="Share document" onClose={()=>void close()} wide>
   <div className="zn-modal-body zd-share">
    <section>
     <h3>Who can open it</h3>
     <div className="zn-form-row">
-     <div className="zn-label">Team<Dropdown label="Team access" value={visibility} onChange={v=>setVisibility(v as 'private'|'team')} options={[{value:'private',label:'Only me and people below'},{value:'team',label:'Everyone on the team'}]}/></div>
-     <div className="zn-label">Team and client can<Dropdown label="Access level" value={teamRole} onChange={v=>setTeamRole(v as 'view'|'edit')} options={[{value:'view',label:'View'},{value:'edit',label:'Edit'}]}/></div>
+     <div className="zn-label">Team<Dropdown label="Team access" value={visibility} onChange={v=>{setDirty(true);setVisibility(v as 'private'|'team');}} options={[{value:'private',label:'Only me and people below'},{value:'team',label:'Everyone on the team'}]}/></div>
+     <div className="zn-label">Team and client can<Dropdown label="Access level" value={teamRole} onChange={v=>{setDirty(true);setTeamRole(v as 'view'|'edit');}} options={[{value:'view',label:'View'},{value:'edit',label:'Edit'}]}/></div>
     </div>
-    {clients.length>0&&<div className="zn-label">Also share with a client’s team<Dropdown label="Client" value={lead} onChange={setLead} placeholder="No client" options={[{value:'',label:'No client'},...clients.map(c=>({value:c.lead_id!,label:title(c)}))]}/></div>}
+    {clients.length>0&&<div className="zn-label">Also share with a client’s team<Dropdown label="Client" value={lead} onChange={v=>{setDirty(true);setLead(v);}} placeholder="No client" options={[{value:'',label:'No client'},...clients.map(c=>({value:c.lead_id!,label:title(c)}))]}/></div>}
     <div className="zn-label">People<AssigneePicker candidates={candidates} value={shared.map(p=>p.user_id)} onToggle={toggle}/></div>
-    {shared.length>0&&<ul className="zd-people">{shared.map(p=><li key={p.user_id}><Avatar m={people[p.user_id]} size={26}/><span>{people[p.user_id]?.display_name??'Member'}</span><Dropdown variant="inline" label="Access" value={p.role} onChange={v=>setShared(s=>s.map(x=>x.user_id===p.user_id?{...x,role:v as 'view'|'edit'}:x))} options={[{value:'view',label:'Can view'},{value:'edit',label:'Can edit'}]}/></li>)}</ul>}
-    <button type="button" className="zn-btn is-primary" disabled={busy} onClick={()=>void saveAccess()}>Save sharing</button>
+    {shared.length>0&&<ul className="zd-people">{shared.map(p=><li key={p.user_id}><Avatar m={people[p.user_id]} size={26}/><span>{people[p.user_id]?.display_name??'Member'}</span><Dropdown variant="inline" label="Access" value={p.role} onChange={v=>{setDirty(true);setShared(s=>s.map(x=>x.user_id===p.user_id?{...x,role:v as 'view'|'edit'}:x));}} options={[{value:'view',label:'Can view'},{value:'edit',label:'Can edit'}]}/></li>)}</ul>}
+    <button type="button" className="zn-btn is-primary" disabled={busy} onClick={()=>void saveAccess()}>{dirty?'Save and notify':'Save sharing'}</button>
+    {dirty&&<p className="zn-note">Changes aren’t saved until you press Save.</p>}
    </section>
    <section>
     <h3><Link2 size={14}/>Share with anyone by link</h3>
