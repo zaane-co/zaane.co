@@ -2,8 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {AtSign,Briefcase,Loader2,Paperclip,Send,X,Mic,Trash2} from 'lucide-react';
 import {optimizeImage} from '@/components/admin/blog/shared';
-import type {ZAttachment,ZLead,ZMember} from '@/lib/zarn';
-import {Modal} from './Dialogs';
+import type {ZAttachment,ZMember} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar,textToTokens} from './format';
 import {registerDrop} from './drop';
@@ -16,7 +15,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
  const isDm=channels.find(c=>c.id===channelId)?.kind==='dm';
  const [text,setText]=useState(''),[files,setFiles]=useState<Upload[]>([]),[leadId,setLeadId]=useState<string|null>(null);
  const [mention,setMention]=useState<{q:string;start:number}|null>(null),[pick,setPick]=useState(0);
- const [leadPicker,setLeadPicker]=useState(false),[error,setError]=useState(''),[sending,setSending]=useState(false);
+ const [error,setError]=useState(''),[sending,setSending]=useState(false);
  const box=useRef<HTMLTextAreaElement>(null),fileInput=useRef<HTMLInputElement>(null);
  const draftKey=`zarn-draft-${channelId}-${parentId??''}`;
  // Drafts: kept on this device instantly and in the database (zarn_drafts) so they follow you to other devices.
@@ -187,7 +186,6 @@ function micDown(e:React.PointerEvent){
    <button type="button" aria-label="Attach files" data-tip="Attach files (4 MB each)" onClick={()=>fileInput.current?.click()}><Paperclip size={17}/></button>
    <input ref={fileInput} type="file" multiple hidden onChange={e=>{void addFiles(e.target.files);e.target.value='';}}/>
    {!isDm&&<button type="button" aria-label="Mention someone" data-tip="Mention someone" onClick={()=>{const el=box.current!;const pos=el.selectionStart;const v=text.slice(0,pos)+(pos&&!/\s$/.test(text.slice(0,pos))?' @':'@')+text.slice(pos);onChange(v,v.length-(text.length-pos));el.focus();}}><AtSign size={17}/></button>}
-   {(me.zarnAdmin||me.staffRole==='sales')&&channels.find(c=>c.id===channelId)?.kind!=='client'&&<button type="button" aria-label="Attach a CRM lead" data-tip="Share a CRM lead" onClick={()=>setLeadPicker(true)}><Briefcase size={17}/></button>}
    <small className="zn-hint">*bold* _italic_ `code` · Shift+Enter for a new line</small>
    {hasContent
     ?<button type="button" className="zn-send" aria-label="Send" disabled={sending} onMouseDown={e=>e.preventDefault()} onClick={()=>void send()}><Send size={17}/></button>
@@ -195,23 +193,6 @@ function micDown(e:React.PointerEvent){
   </div>
   </>}
   {error&&<p className="zn-error">{error}</p>}
-  {leadPicker&&<LeadPicker onClose={()=>setLeadPicker(false)} onPick={id=>{setLeadId(id);setLeadPicker(false);box.current?.focus();}}/>}
  </div>;
 }
 
-export function LeadPicker({onClose,onPick}:{onClose:()=>void;onPick:(id:string)=>void}){
- const {db,loadLead}=useZarn();
- const [q,setQ]=useState(''),[rows,setRows]=useState<ZLead[]>([]);
- useEffect(()=>{
-  const t=setTimeout(async()=>{
-   let query=db.from('zarn_leads').select('*').order('last_activity_at',{ascending:false}).limit(20);
-   const s=q.trim().replace(/[%,()]/g,'');if(s)query=query.or(`name.ilike.%${s}%,company.ilike.%${s}%`);
-   const {data}=await query;setRows((data??[]) as ZLead[]);
-  },200);return()=>clearTimeout(t);
- },[q,db]);
- return <Modal title="Share a CRM lead" onClose={onClose}>
-  <input className="zn-input" autoFocus placeholder="Search by name or company" value={q} onChange={e=>setQ(e.target.value)}/>
-  <ul className="zn-list zn-list-scroll">{rows.map(l=><li key={l.id}><button type="button" onClick={()=>{loadLead(l.id);onPick(l.id);}}><span className="zn-stage-dot" style={{background:l.stage_color??'#52525b'}}/><span><b>{l.name}</b><small>{[l.company,l.stage_label].filter(Boolean).join(' · ')}</small></span></button></li>)}
-   {!rows.length&&<li className="zn-empty-row">No leads found.</li>}</ul>
- </Modal>;
-}
