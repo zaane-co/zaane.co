@@ -3,6 +3,10 @@ export type Style={b?:1;i?:1;u?:1;s?:1;color?:string;bg?:string;h?:'l'|'c'|'r';v
 // Conditional formatting: a style when a condition holds, or a colour scale across the range.
 export type CfCond='empty'|'notEmpty'|'contains'|'notContains'|'startsWith'|'endsWith'|'is'|'gt'|'gte'|'lt'|'lte'|'eq'|'neq'|'between'|'notBetween'|'before'|'after'|'onDate'|'checked'|'formula';
 export type CfRule={id:string;range:string;cond:CfCond;a?:string;b?:string;fmt?:{bg?:string;color?:string;b?:1;i?:1;s?:1;u?:1};scale?:{min:string;mid?:string;max:string}};
+// Comment threads on cells, and things floating over the grid (charts and pictures). x/y/w/h are pixels at 100% zoom.
+export type Cmt={id:string;u:string;t:string;at:string;re?:{u:string;t:string;at:string}[];done?:1};
+export type ChartType='column'|'bar'|'line'|'area'|'pie'|'scatter';
+export type Obj={id:string;kind:'chart'|'image';x:number;y:number;w:number;h:number;src?:string;range?:string;type?:ChartType;title?:string;head?:1;lab?:1;stack?:1};
 // Data validation, like Google Sheets: tick boxes, or a dropdown of options shown as coloured chips.
 export type Opt={v:string;c?:string};
 export type Rule={id:string;range:string;t:'check'|'list';opts?:Opt[];strict?:1};
@@ -13,6 +17,7 @@ export function ruleAt(rules:Rule[]|undefined,c:number,r:number):Rule|undefined{
 export type Tab={id:string;name:string;cells:Record<string,string>;style?:Record<string,Style>;widths?:Record<string,number>;freeze?:{r:number;c:number};color?:string;valid?:Rule[];
  /** filter: the range (header row first) and, per column index, the values hidden */ filter?:{range:string;hide:Record<string,string[]>};hRows?:number[];hCols?:number[];
  /** merged ranges like 'A1:C2' */ merges?:string[];cf?:CfRule[];
+ notes?:Record<string,string>;comments?:Record<string,Cmt>;objs?:Obj[];
  /** legacy */ bold?:Record<string,boolean>;/** legacy */ align?:Record<string,'l'|'c'|'r'>};
 export type SheetData={tabs:Tab[]};
 export const COLS=52,ROWS=1000,COL_W=104,ROW_H=24;
@@ -98,6 +103,7 @@ export const FUNCTIONS:Record<string,{fn:(a:V[])=>V;help:string}>={
  FIND:{fn:a=>{const i=text(a[1]).indexOf(text(a[0]));if(i<0)throw new Err('#VALUE!');return i+1;},help:'FIND(search_for, text_to_search)'},
  TODAY:{fn:()=>serial(new Date()),help:'TODAY()'},
  HYPERLINK:{fn:a=>text(a[1]??a[0]??''),help:'HYPERLINK(url, [link_label])'},
+ IMAGE:{fn:a=>text(a[0]??''),help:'IMAGE(url)'},
  NOW:{fn:()=>{const d=new Date();return serial(d)+(d.getHours()*3600+d.getMinutes()*60+d.getSeconds())/86400;},help:'NOW()'},
  DATE:{fn:a=>serial(new Date(num(a[0]),num(a[1])-1,num(a[2]))),help:'DATE(year, month, day)'},
  YEAR:{fn:a=>toDate(a[0]).getUTCFullYear(),help:'YEAR(date)'},MONTH:{fn:a=>toDate(a[0]).getUTCMonth()+1,help:'MONTH(date)'},DAY:{fn:a=>toDate(a[0]).getUTCDate(),help:'DAY(date)'},

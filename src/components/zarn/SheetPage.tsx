@@ -3,13 +3,14 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {ChevronUp,CloudCheck,CloudOff,AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Folder,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Pencil,Underline,Undo2,WrapText,X,Eraser,SquareCheckBig,SquareChevronDown,Trash2,Filter,ListFilter,ArrowDownAZ,ArrowUpZA,TableCellsMerge,Highlighter,Link as LinkIcon,CalendarDays,ExternalLink,Unlink,ChevronLeft,Grid2x2} from 'lucide-react';
+import {ChevronUp,CloudCheck,CloudOff,AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Folder,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Pencil,Underline,Undo2,WrapText,X,Eraser,SquareCheckBig,SquareChevronDown,Trash2,Filter,ListFilter,ArrowDownAZ,ArrowUpZA,TableCellsMerge,Highlighter,Link as LinkIcon,CalendarDays,ExternalLink,Unlink,ChevronLeft,Grid2x2,ChartColumnBig,ChartBarBig,ChartLine,ChartPie,ChartArea,ChartScatter,ImagePlus,MessageSquarePlus,CircleCheck} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import ShareDoc from './ShareDoc';
 import {Modal} from './Dialogs';
 import {Avatar} from './format';
-import {CHIP_COLORS,COLS,COL_W,FUNCTIONS,FUNCTION_NAMES,ROWS,ROW_H,adjustRefs,blankTab,chipInk,colName,dateToSerial,evaluate,exprEval,linkOf,parseDateText,serialToDate,isError,parseRange,parseRef,readSheet,ref,shiftRefs,show,type CfRule,type Rule,type SheetData,type Style,type Tab} from '@/lib/sheet';
+import {uploadEditorImage} from './editor-images';
+import {CHIP_COLORS,COLS,COL_W,FUNCTIONS,FUNCTION_NAMES,ROWS,ROW_H,adjustRefs,blankTab,chipInk,colName,dateToSerial,evaluate,exprEval,linkOf,parseDateText,serialToDate,isError,parseRange,parseRef,readSheet,ref,shiftRefs,show,type ChartType,type CfRule,type Cmt,type Obj,type Rule,type SheetData,type Style,type Tab} from '@/lib/sheet';
 
 type Row={id:string;title:string;content:string;owner_id:string;kind:string;drive:'my'|'team'|'client';folder_id:string|null;lead_id:string|null};
 type Role='owner'|'edit'|'view';
@@ -35,7 +36,8 @@ export default function SheetPage({id}:{id:string}){
  const [sel,setSel]=useState<[number,number]>([0,0]),[anchor,setAnchor]=useState<[number,number]|null>(null);
  const [editing,setEditing]=useState<string|null>(null),[editMode,setEditMode]=useState<'type'|'edit'>('edit'),[editIn,setEditIn]=useState<'cell'|'bar'>('cell'),[pick,setPick]=useState(0);
  const [state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[crumbs,setCrumbs]=useState<{name:string;href:string}[]>([]);
- const [toolSheet,setToolSheet]=useState(false),[dd,setDd]=useState<string|null>(null),[ruleEdit,setRuleEdit]=useState<Rule|null>(null),[warn,setWarn]=useState(''),[fpop,setFpop]=useState<{c:number;x:number;y:number}|null>(null),[bdLine,setBdLine]=useState('1px solid'),[bdColor,setBdColor]=useState('currentColor'),[cfOpen,setCfOpen]=useState(false),[linkEdit,setLinkEdit]=useState<{text:string;url:string}|null>(null);
+ const [toolSheet,setToolSheet]=useState(false),[dd,setDd]=useState<string|null>(null),[ruleEdit,setRuleEdit]=useState<Rule|null>(null),[warn,setWarn]=useState(''),[fpop,setFpop]=useState<{c:number;x:number;y:number}|null>(null),[bdLine,setBdLine]=useState('1px solid'),[bdColor,setBdColor]=useState('currentColor'),[cfOpen,setCfOpen]=useState(false),[linkEdit,setLinkEdit]=useState<{text:string;url:string}|null>(null),[noteEdit,setNoteEdit]=useState<string|null>(null),[cmtOpen,setCmtOpen]=useState<string|null>(null),[cmtPanel,setCmtPanel]=useState(false),[objSel,setObjSel]=useState<string|null>(null),[objDraft,setObjDraft]=useState<{id:string;x:number;y:number;w:number;h:number}|null>(null),[chartEdit,setChartEdit]=useState<string|null>(null),[imgBusy,setImgBusy]=useState(false);
+ const imgIn=useRef<HTMLInputElement>(null),imgMode=useRef<'cell'|'over'>('cell'),objDrag=useRef<{id:string;mode:'move'|'size';sx:number;sy:number;o:{x:number;y:number;w:number;h:number}}|null>(null);
  const [menu,setMenu]=useState<string|null>(null),[pop,setPop]=useState<string|null>(null),[ctx,setCtx]=useState<{x:number;y:number}|null>(null),[tabMenu,setTabMenu]=useState<string|null>(null),[renamingTab,setRenamingTab]=useState<string|null>(null);
  const [zoom,setZoom]=useState(1),[grid,setGrid]=useState(true),[find,setFind]=useState<{q:string;rep:string;at:number}|null>(null),[help,setHelp]=useState<'keys'|'fx'|null>(null);
  const [scroll,setScroll]=useState({top:0,h:800}),[drafts,setDrafts]=useState<Record<string,number>>({}),[fill,setFill]=useState<[number,number]|null>(null),[peers,setPeers]=useState<Record<string,Peer>>({}),[hl,setHl]=useState({u:0,r:0});
@@ -165,6 +167,36 @@ export default function SheetPage({id}:{id:string}){
    if(cfTest(rule,v,tab.style?.[x],()=>cfEval?cfEval(shiftRefs(`=${(rule.a??'').replace(/^=/,'')}`,c-b.c0,r-b.r0)):false)){const f=rule.fmt??{};
     return {...(f.bg?{background:f.bg}:{}),...(f.color?{color:f.color}:f.bg?{color:chipInk(f.bg)}:{}),...(f.b?{fontWeight:700}:{}),...(f.i?{fontStyle:'italic'}:{}),...(f.s||f.u?{textDecoration:[f.u?'underline':'',f.s?'line-through':''].join(' ').trim()}:{})};}}
   return undefined;}
+ // ---------- Notes, comments ----------
+ const notes=tab.notes??{},comments=tab.comments??{};
+ function saveNote(x:string,t:string){setNoteEdit(null);if(!canEdit)return;const v=t.trim();if((notes[x]??'')===v)return;setTab(tab.id,tb=>{const n={...(tb.notes??{})};if(v)n[x]=v.slice(0,5000);else delete n[x];return {...tb,notes:n};});gridRef.current?.focus();}
+ const putCmt=(x:string,fn:(c:Cmt|undefined)=>Cmt|undefined)=>setTab(tab.id,tb=>{const all={...(tb.comments??{})};const n=fn(all[x]);if(n)all[x]=n;else delete all[x];return {...tb,comments:all};});
+ function addComment(x:string,t:string){const v=t.trim().slice(0,4000);if(!v)return;const at=new Date().toISOString();
+  putCmt(x,c=>c&&!c.done?{...c,re:[...(c.re??[]),{u:me.user_id,t:v,at}]}:{id:newId(),u:me.user_id,t:v,at});}
+ const openCmts=Object.entries(comments).filter(([,c])=>!c.done);
+ // ---------- Charts and pictures over the grid ----------
+ const objs=tab.objs??[];
+ const putObj=(id:string,fn:(o:Obj)=>Obj|null)=>setTab(tab.id,tb=>({...tb,objs:(tb.objs??[]).flatMap(o=>{if(o.id!==id)return [o];const n=fn(o);return n?[n]:[];})}));
+ function insertChart(){if(!canEdit)return;
+  const b=box.c0!==box.c1||box.r0!==box.r1?{...box,r1:Math.min(box.r1,Math.max(used.mr,box.r0))}:{c0:0,c1:Math.max(0,used.mc),r0:0,r1:Math.max(0,used.mr)};
+  const firstRowText=keysIn({...b,r1:b.r0}).some(x=>{const v=values[x];return typeof v==='string'&&v!=='';});
+  const firstColText=b.r1>b.r0&&keysIn({...b,c1:b.c0,r0:b.r0+1}).some(x=>{const v=values[x];return typeof v==='string'&&v!=='';});
+  const o:Obj={id:newId(),kind:'chart',type:'column',range:`${ref(b.c0,b.r0)}:${ref(b.c1,b.r1)}`,x:leftOf(Math.min(COLS-1,b.c1+1))+16,y:HEAD_H+Math.max(0,vIndex[b.r0])*ROW_H,w:520,h:320,...(firstRowText?{head:1 as const}:{}),...(firstColText?{lab:1 as const}:{}),title:''};
+  setTab(tab.id,tb=>({...tb,objs:[...(tb.objs??[]),o]}));setObjSel(o.id);setChartEdit(o.id);}
+ async function insertImage(file:File){if(!canEdit)return;setImgBusy(true);
+  try{const url=await uploadEditorImage(file,'doc',id);
+   if(imgMode.current==='cell')setCells([{tab:tab.id,k,v:`=IMAGE("${url.replace(/"/g,'""')}")`}]);
+   else{const dim=await new Promise<{w:number;h:number}>(res=>{const im=new Image();im.onload=()=>res({w:im.naturalWidth,h:im.naturalHeight});im.onerror=()=>res({w:400,h:300});im.src=url;});
+    const sc=Math.min(1,420/dim.w,320/dim.h),o:Obj={id:newId(),kind:'image',src:url,x:leftOf(sel[0])+8,y:HEAD_H+Math.max(0,vIndex[sel[1]])*ROW_H+8,w:Math.round(dim.w*sc),h:Math.round(dim.h*sc)};
+    setTab(tab.id,tb=>({...tb,objs:[...(tb.objs??[]),o]}));setObjSel(o.id);}}
+  catch(e){flash(e instanceof Error?e.message:'Could not upload the picture.');}finally{setImgBusy(false);}}
+ const pickImage=(mode:'cell'|'over')=>{imgMode.current=mode;imgIn.current?.click();};
+ useEffect(()=>{
+  const mv=(e:MouseEvent)=>{const d=objDrag.current;if(!d)return;const dx=(e.clientX-d.sx)/zoom,dy=(e.clientY-d.sy)/zoom;
+   setObjDraft(d.mode==='move'?{id:d.id,...d.o,x:Math.max(ROWHEAD_W,Math.round(d.o.x+dx)),y:Math.max(HEAD_H,Math.round(d.o.y+dy))}:{id:d.id,...d.o,w:Math.max(120,Math.round(d.o.w+dx)),h:Math.max(80,Math.round(d.o.h+dy))});};
+  const up=()=>{const d=objDrag.current;objDrag.current=null;setObjDraft(dr=>{if(d&&dr&&dr.id===d.id&&(dr.x!==d.o.x||dr.y!==d.o.y||dr.w!==d.o.w||dr.h!==d.o.h))putObj(d.id,o=>({...o,x:dr.x,y:dr.y,w:dr.w,h:dr.h}));return null;});};
+  window.addEventListener('mousemove',mv);window.addEventListener('mouseup',up);return()=>{window.removeEventListener('mousemove',mv);window.removeEventListener('mouseup',up);};
+ });
  // ---------- Links ----------
  function saveLink(text:string,url:string){setLinkEdit(null);if(!canEdit)return;const u=url.trim(),t2=text.trim();
   const v=!u?t2:t2&&t2!==u?`=HYPERLINK("${u.replace(/"/g,'""')}","${t2.replace(/"/g,'""')}")`:u;setCells([{tab:tab.id,k,v}]);gridRef.current?.focus();}
@@ -273,7 +305,7 @@ export default function SheetPage({id}:{id:string}){
    const mv=(arr:number[]|undefined,ax:'r'|'c')=>arr?.flatMap(n=>ax!==axis?[n]:delta<0&&n>=at&&n<at-delta?[]:[n>=at?n+delta:n]);
    let filter=t.filter;if(filter){const range=adjustRefs(`=${filter.range}`,axis,at,delta).slice(1);if(range.includes('#REF!'))filter=undefined;else{let hide=filter.hide;if(axis==='c'){hide={};for(const [c,v] of Object.entries(filter.hide)){let n=Number(c);if(delta<0&&n>=at&&n<at-delta)continue;if(n>=at)n+=delta;hide[n]=v;}}filter={range,hide};}}
    const adj=(x:string)=>adjustRefs(`=${x}`,axis,at,delta).slice(1);const merges2=t.merges?.map(adj).filter(x=>!x.includes('#REF!'));const cf2=t.cf?.map(x=>({...x,range:adj(x.range)})).filter(x=>!x.range.includes('#REF!'));
-   const out:Tab={...t,cells,style:move(t.style),widths,...(merges2?{merges:merges2}:{}),...(cf2?{cf:cf2}:{}),...(valid?{valid}:{}),...(t.hRows?{hRows:mv(t.hRows,'r')}:{}),...(t.hCols?{hCols:mv(t.hCols,'c')}:{})};if(filter)out.filter=filter;else delete out.filter;return out;});
+   const out:Tab={...t,cells,style:move(t.style),...(t.notes?{notes:move(t.notes)}:{}),...(t.comments?{comments:move(t.comments)}:{}),widths,...(merges2?{merges:merges2}:{}),...(cf2?{cf:cf2}:{}),...(valid?{valid}:{}),...(t.hRows?{hRows:mv(t.hRows,'r')}:{}),...(t.hCols?{hCols:mv(t.hCols,'c')}:{})};if(filter)out.filter=filter;else delete out.filter;return out;});
  }
  function sort(dir:1|-1,whole:boolean){
   if(!canEdit)return;
@@ -297,6 +329,11 @@ export default function SheetPage({id}:{id:string}){
  // ---------- Keyboard ----------
  function onKey(e:React.KeyboardEvent){
   if(editing!==null||renamingTab)return;
+  // Keys typed in a note, comment or other box inside the grid belong to that box.
+  if(e.target!==e.currentTarget&&(e.target as HTMLElement).closest('textarea,input,select'))return;
+  if(objSel){if((e.key==='Delete'||e.key==='Backspace')&&canEdit){e.preventDefault();putObj(objSel,()=>null);setObjSel(null);return;}if(e.key==='Escape'){setObjSel(null);return;}}
+  if(e.key==='F2'&&e.shiftKey){e.preventDefault();if(canEdit)setNoteEdit(k);return;}
+  if((e.metaKey||e.ctrlKey)&&e.altKey&&e.key.toLowerCase()==='m'){e.preventDefault();setCmtOpen(k);return;}
   const mod=e.metaKey||e.ctrlKey,key=e.key.toLowerCase();
   if(mod&&key==='z'){e.preventDefault();if(e.shiftKey)redo();else undo();return;}
   if(mod&&key==='y'){e.preventDefault();redo();return;}
@@ -331,6 +368,7 @@ export default function SheetPage({id}:{id:string}){
 
  // ---------- Mouse ----------
  function cellDown(e:React.MouseEvent,c:number,r:number){
+  setObjSel(null);
   if(e.button===2){if(!(c>=box.c0&&c<=box.c1&&r>=box.r0&&r<=box.r1)){setAnchor(null);setSel([c,r]);}return;}
   if(pointing&&editing!==null){e.preventDefault();const add=ref(c,r);drag.current={kind:'fx',start:[c,r],at:editing.length,len:add.length};setEditing(editing+add);return;}
   if(editing!==null)commitEdit();
@@ -409,8 +447,8 @@ export default function SheetPage({id}:{id:string}){
   Edit:[{label:'Undo',key:'⌘Z',run:undo,off:!hl.u},{label:'Redo',key:'⌘⇧Z',run:redo,off:!hl.r},'-',{label:'Cut',key:'⌘X',run:()=>void menuCopy(true),off:!canEdit},{label:'Copy',key:'⌘C',run:()=>void menuCopy(false)},{label:'Paste',key:'⌘V',run:()=>void menuPaste(),off:!canEdit},'-',{label:'Delete values',key:'Del',run:()=>setCells(keysIn(box).filter(x=>tab.cells[x]).map(x=>({tab:tab.id,k:x,v:''}))),off:!canEdit},{label:'Fill down',key:'⌘D',run:()=>fillDown(false),off:!canEdit},{label:'Fill right',key:'⌘R',run:()=>fillDown(true),off:!canEdit},'-',{label:'Find and replace',key:'⌘F',run:()=>setFind({q:'',rep:'',at:-1})}],
   View:[{head:'Freeze'},{label:'No rows',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:0}})),on:!freeze.r,off:!canEdit},{label:'1 row',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:1}})),on:freeze.r===1,off:!canEdit},{label:'2 rows',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:2}})),on:freeze.r===2,off:!canEdit},{label:`Up to row ${sel[1]+1}`,run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:Math.min(sel[1]+1,20)}})),off:!canEdit},
    {label:'No columns',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:0}})),on:!freeze.c,off:!canEdit},{label:'1 column',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:1}})),on:freeze.c===1,off:!canEdit},{label:`Up to column ${colName(sel[0])}`,run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:Math.min(sel[0]+1,10)}})),off:!canEdit},
-   '-',{label:'Gridlines',run:()=>setGrid(g=>!g),on:grid},'-',{label:'Show all hidden rows',run:()=>setTab(tab.id,t=>({...t,hRows:[]})),off:!canEdit||!manualRows.size},{label:'Show all hidden columns',run:()=>setTab(tab.id,t=>({...t,hCols:[]})),off:!canEdit||!hCols.size},'-',{head:'Zoom'},...zooms.map(z=>({label:`${Math.round(z*100)}%`,run:()=>setZoom(z),on:zoom===z}) as Item)],
-  Insert:[{label:`Row above`,run:()=>shift('r',box.r0,1),off:!canEdit},{label:'Row below',run:()=>shift('r',box.r1+1,1),off:!canEdit},{label:'Column left',run:()=>shift('c',box.c0,1),off:!canEdit},{label:'Column right',run:()=>shift('c',box.c1+1,1),off:!canEdit},'-',{label:'New tab',run:addTab,off:!canEdit},'-',{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Dropdown',run:openDropdown,off:!canEdit},{label:'Date',run:()=>{styleKeys(keysIn(box),s2=>({...s2,fmt:'date'}));startEdit(tab.cells[k]??'','edit');},off:!canEdit},{label:'Link',key:'⌘K',run:openLinkEditor,off:!canEdit},'-',{head:'Function'},...['SUM','AVERAGE','COUNT','MAX','MIN','IF','VLOOKUP'].map(n=>({label:n,run:()=>startEdit(`=${n}(`,'edit'),off:!canEdit}) as Item)],
+   '-',{label:'Gridlines',run:()=>setGrid(g=>!g),on:grid},'-',{label:`Comments${openCmts.length?` (${openCmts.length})`:''}`,run:()=>setCmtPanel(true)},'-',{label:'Show all hidden rows',run:()=>setTab(tab.id,t=>({...t,hRows:[]})),off:!canEdit||!manualRows.size},{label:'Show all hidden columns',run:()=>setTab(tab.id,t=>({...t,hCols:[]})),off:!canEdit||!hCols.size},'-',{head:'Zoom'},...zooms.map(z=>({label:`${Math.round(z*100)}%`,run:()=>setZoom(z),on:zoom===z}) as Item)],
+  Insert:[{label:`Row above`,run:()=>shift('r',box.r0,1),off:!canEdit},{label:'Row below',run:()=>shift('r',box.r1+1,1),off:!canEdit},{label:'Column left',run:()=>shift('c',box.c0,1),off:!canEdit},{label:'Column right',run:()=>shift('c',box.c1+1,1),off:!canEdit},'-',{label:'New tab',run:addTab,off:!canEdit},'-',{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Dropdown',run:openDropdown,off:!canEdit},{label:'Date',run:()=>{styleKeys(keysIn(box),s2=>({...s2,fmt:'date'}));startEdit(tab.cells[k]??'','edit');},off:!canEdit},{label:'Link',key:'⌘K',run:openLinkEditor,off:!canEdit},'-',{label:'Chart',run:insertChart,off:!canEdit},{label:'Image in cell',run:()=>pickImage('cell'),off:!canEdit},{label:'Image over cells',run:()=>pickImage('over'),off:!canEdit},'-',{label:'Note',key:'⇧F2',run:()=>setNoteEdit(k),off:!canEdit},{label:'Comment',key:'⌘⌥M',run:()=>setCmtOpen(k)},'-',{head:'Function'},...['SUM','AVERAGE','COUNT','MAX','MIN','IF','VLOOKUP'].map(n=>({label:n,run:()=>startEdit(`=${n}(`,'edit'),off:!canEdit}) as Item)],
   Format:[...fmtItems,'-',{head:'Text'},{label:'Bold',key:'⌘B',run:()=>toggle('b'),on:!!st.b,off:!canEdit},{label:'Italic',key:'⌘I',run:()=>toggle('i'),on:!!st.i,off:!canEdit},{label:'Underline',key:'⌘U',run:()=>toggle('u'),on:!!st.u,off:!canEdit},{label:'Strikethrough',run:()=>toggle('s'),on:!!st.s,off:!canEdit},'-',{head:'Alignment'},{label:'Left',run:()=>styleKeys(keysIn(box),s=>({...s,h:'l'})),on:st.h==='l',off:!canEdit},{label:'Centre',run:()=>styleKeys(keysIn(box),s=>({...s,h:'c'})),on:st.h==='c',off:!canEdit},{label:'Right',run:()=>styleKeys(keysIn(box),s=>({...s,h:'r'})),on:st.h==='r',off:!canEdit},{label:'Wrap text',run:()=>styleKeys(keysIn(box),s=>({...s,wrap:s.wrap?undefined:1})),on:!!st.wrap,off:!canEdit},'-',{head:'Merge cells'},{label:'Merge all',run:()=>void mergeCells('all'),off:!canEdit},{label:'Merge horizontally',run:()=>void mergeCells('h'),off:!canEdit},{label:'Merge vertically',run:()=>void mergeCells('v'),off:!canEdit},{label:'Unmerge',run:()=>void mergeCells('un'),off:!canEdit},'-',{label:'Conditional formatting…',run:()=>setCfOpen(true),off:!canEdit},'-',{label:'Clear formatting',key:'⌘\\',run:()=>styleKeys(keysIn(box),()=>({})),off:!canEdit}],
   Data:[filt?{label:'Remove filter',run:removeFilter,off:!canEdit}:{label:'Create a filter',run:createFilter,off:!canEdit},'-',{label:`Sort sheet by column ${colName(sel[0])}, A → Z`,run:()=>sort(1,true),off:!canEdit},{label:`Sort sheet by column ${colName(sel[0])}, Z → A`,run:()=>sort(-1,true),off:!canEdit},'-',{label:'Sort range A → Z',run:()=>sort(1,false),off:!canEdit},{label:'Sort range Z → A',run:()=>sort(-1,false),off:!canEdit},'-',{label:'Dropdown…',run:openDropdown,off:!canEdit},{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Remove dropdowns and checkboxes',run:clearRules,off:!canEdit||!rules.length}],
   Help:[{label:'Keyboard shortcuts',key:'⌘/',run:()=>setHelp('keys')},{label:'Function list',run:()=>setHelp('fx')}],
@@ -432,6 +470,7 @@ export default function SheetPage({id}:{id:string}){
 
  return <div className={`zn-page zs2${grid?'':' no-grid'}`} onContextMenu={e=>{if((e.target as HTMLElement).closest('.zs2-grid td'))e.preventDefault();}}>
   {sharing&&<ShareDoc docId={id} onClose={()=>setSharing(false)}/>}
+  <input ref={imgIn} type="file" accept="image/*" hidden onChange={e=>{const f=e.target.files?.[0];if(f)void insertImage(f);e.target.value='';}}/>
   <input ref={csvIn} type="file" accept=".csv,text/csv" hidden onChange={e=>{const f=e.target.files?.[0];if(f)importCsv(f);e.target.value='';}}/>
 
   <header className="zs2-top">
@@ -492,6 +531,10 @@ export default function SheetPage({id}:{id:string}){
     {pop==='merge'&&<div className="zs2-menu" ref={fitMenu}>{renderItems([{label:'Merge all',run:()=>void mergeCells('all')},{label:'Merge horizontally',run:()=>void mergeCells('h')},{label:'Merge vertically',run:()=>void mergeCells('v')},{label:'Unmerge',run:()=>void mergeCells('un')}])}</div>}</span>
    <button type="button" data-tip="Conditional formatting" aria-label="Conditional formatting" disabled={!canEdit} onClick={()=>setCfOpen(true)}><Highlighter size={16}/></button>
    <button type="button" data-tip="Insert link (⌘K)" aria-label="Insert link" disabled={!canEdit} onClick={openLinkEditor}><LinkIcon size={16}/></button>
+   <button type="button" data-tip="Insert chart" aria-label="Insert chart" disabled={!canEdit} onClick={insertChart}><ChartColumnBig size={16}/></button>
+   <span className="zs2-popwrap"><button type="button" data-tip="Insert image" aria-label="Insert image" disabled={!canEdit||imgBusy} onClick={()=>setPop(p=>p==='img'?null:'img')}>{imgBusy?<Loader2 size={16} className="zn-spin"/>:<ImagePlus size={16}/>}<ChevronDown size={12}/></button>
+    {pop==='img'&&<div className="zs2-menu" ref={fitMenu}>{renderItems([{label:'Image in cell',run:()=>pickImage('cell')},{label:'Image over cells',run:()=>pickImage('over')}])}</div>}</span>
+   <button type="button" data-tip="Add comment (⌘⌥M)" aria-label="Add comment" onClick={()=>setCmtOpen(k)}><MessageSquarePlus size={16}/></button>
    <button type="button" data-tip="Insert date" aria-label="Insert date" disabled={!canEdit} onClick={()=>{styleKeys(keysIn(box),s2=>({...s2,fmt:'date'}));startEdit(tab.cells[k]??'','edit');}}><CalendarDays size={16}/></button>
    <i className="zs2-sep"/>
    <button type="button" data-tip={filt?'Remove filter':'Create a filter'} aria-label={filt?'Remove filter':'Create a filter'} disabled={!canEdit} className={filt?'is-on':''} onClick={()=>filt?removeFilter():createFilter()}><Filter size={16}/></button>
@@ -540,10 +583,15 @@ export default function SheetPage({id}:{id:string}){
        {Array.from({length:COLS},(_,c)=>{if(hCols.has(c))return null;const mg=mergeAt(c,r);const x=ref(c,r),s=tab.style?.[x],v=values[x],rule=ruleOf(c,r),cur=c===sel[0]&&r===sel[1],inside=c>=box.c0&&c<=box.c1&&r>=box.r0&&r<=box.r1,peer=others.find(p=>p.s===x);
         const fillTarget=fill&&(()=>{const down=Math.abs(fill[1]-box.r1)>=Math.abs(fill[0]-box.c1);return down?(c>=box.c0&&c<=box.c1&&((fill[1]>box.r1&&r>box.r1&&r<=fill[1])||(fill[1]<box.r0&&r<box.r0&&r>=fill[1]))):(r>=box.r0&&r<=box.r1&&((fill[0]>box.c1&&c>box.c1&&c<=fill[0])||(fill[0]<box.c0&&c<box.c0&&c>=fill[0])));})();
         const edges=inside?`${r===box.r0?' t':''}${r===box.r1?' b':''}${c===box.c0?' l':''}${c===box.c1?' r':''}`:'';
-        return <td key={c} className={`${mg?(mg.c0===c&&mg.r0===r?' is-manchor':' is-mcov'):''}${filt&&r===filt.b.r0&&c>=filt.b.c0&&c<=filt.b.c1?' is-fhead':''}${rule?` is-${rule.t}`:''}${inside&&!cur?' is-in':''}${edges?` is-edge${edges}`:''}${cur?' is-cur':''}${isError(v)?' is-err':''}${fillTarget?' is-fill':''}${c===freeze.c-1?' is-fz-c':''}${r===freeze.r-1?' is-fz-r':''}`} style={{...cellStyle(s,c,r,typeof v==='number'),...cfFor(c,r,x,v)}}
+        return <td key={c} className={`${notes[x]?' has-note':''}${comments[x]&&!comments[x].done?' has-cmt':''}${mg?(mg.c0===c&&mg.r0===r?' is-manchor':' is-mcov'):''}${filt&&r===filt.b.r0&&c>=filt.b.c0&&c<=filt.b.c1?' is-fhead':''}${rule?` is-${rule.t}`:''}${inside&&!cur?' is-in':''}${edges?` is-edge${edges}`:''}${cur?' is-cur':''}${isError(v)?' is-err':''}${fillTarget?' is-fill':''}${c===freeze.c-1?' is-fz-c':''}${r===freeze.r-1?' is-fz-r':''}`} style={{...cellStyle(s,c,r,typeof v==='number'),...cfFor(c,r,x,v)}}
          onMouseDown={e=>cellDown(e,c,r)} onMouseEnter={()=>cellEnter(c,r)} onDoubleClick={()=>{const rl=ruleOf(c,r);if(rl?.t==='check')return;if(rl?.t==='list'&&canEdit){setDd(x);return;}startEdit(tab.cells[x]??'','edit');}} onContextMenu={e=>{e.preventDefault();setCtx({x:e.clientX,y:e.clientY});}}>
+         {notes[x]&&<span className="zs2-tri is-note"/>}{comments[x]&&!comments[x].done&&<span className="zs2-tri is-cmt"/>}
+         {notes[x]&&!(cur&&noteEdit===x)&&<span className="zs2-notebub">{notes[x]}</span>}
+         {cur&&noteEdit===x&&<NoteEdit init={notes[x]??''} onDone={t=>saveNote(x,t)}/>}
+         {cur&&editing===null&&noteEdit!==x&&(cmtOpen===x||(comments[x]&&!comments[x].done))&&<CommentPop c={comments[x]&&!comments[x].done?comments[x]:undefined} me={me.user_id} people={people} canEdit={canEdit} onAdd={t=>addComment(x,t)} onResolve={()=>{putCmt(x,cc=>cc&&{...cc,done:1});setCmtOpen(null);}} onDelete={()=>{putCmt(x,()=>undefined);setCmtOpen(null);}} onClose={()=>setCmtOpen(null)}/>}
          {s?.bd&&<span className="zs2-bd" style={{borderTop:s.bd.t,borderRight:s.bd.r,borderBottom:s.bd.b,borderLeft:s.bd.l}}/>}
          {mg&&(mg.c0!==c||mg.r0!==r)?null:wrapMerge(mg,cur,{...cellStyle(s,c,r,typeof v==='number'),...cfFor(c,r,x,v)},<>{cur&&editing!==null&&editIn==='cell'?<input ref={cellIn} className="zs2-in" value={editing} onChange={e=>setEditing(e.target.value)} onKeyDown={onEditKey} onBlur={e=>{if(!drag.current.kind&&!(e.relatedTarget as HTMLElement|null)?.closest('.zs2-fbar,.zs2-suggest'))commitEdit();}}/>
+          :/^=IMAGE\(/i.test(tab.cells[x]??'')&&typeof v==='string'&&v?<img className="zs2-cimg" src={v} alt="" draggable={false}/* eslint-disable-line @next/next/no-img-element */ />
           :rule?.t==='check'?<span className={`zs2-check${isTrue(tab.cells[x])||v===true?' is-on':''}`} role="checkbox" aria-checked={isTrue(tab.cells[x])} onMouseDown={e=>{if(e.button!==0||!canEdit)return;e.stopPropagation();e.preventDefault();if(editing!==null)commitEdit();setAnchor(null);setSel([c,r]);toggleChecks([x]);gridRef.current?.focus();}}/>
           :rule?.t==='list'?<>{(()=>{const txt=show(v,s);if(!txt)return null;const o=rule.opts?.find(y=>y.v.toLowerCase()===txt.toLowerCase());return o?<span className="zs2-chip" style={{background:o.c??CHIP_COLORS[0],color:chipInk(o.c??CHIP_COLORS[0])}}>{txt}</span>:<span className="zs2-badval" title="Not one of the dropdown options">{txt}</span>;})()}
            <button type="button" tabIndex={-1} className="zs2-dd" aria-label="Open dropdown" onMouseDown={e=>{if(e.button!==0)return;e.stopPropagation();e.preventDefault();if(editing!==null)commitEdit();setAnchor(null);setSel([c,r]);if(canEdit)setDd(d=>d===x?null:x);}} onClick={e=>e.stopPropagation()}><ChevronDown size={13}/></button>
@@ -567,6 +615,14 @@ export default function SheetPage({id}:{id:string}){
      <tr style={{height:Math.max(0,(vis.length-1-last)*ROW_H)}}><td colSpan={COLS+1} className="zs2-spacer"/></tr>
     </tbody>
    </table>
+   <div className="zs2-objs" style={{zoom}}>{objs.map(o=>{const d=objDraft?.id===o.id?{...o,...objDraft}:o;const on=objSel===o.id;
+    return <div key={o.id} className={`zs2-obj is-${o.kind}${on?' is-on':''}`} style={{left:d.x,top:d.y,width:d.w,height:d.h}}
+     onMouseDown={e=>{if(e.button!==0)return;e.stopPropagation();e.preventDefault();if(editing!==null)commitEdit();setObjSel(o.id);gridRef.current?.focus();if(canEdit)objDrag.current={id:o.id,mode:'move',sx:e.clientX,sy:e.clientY,o:{x:o.x,y:o.y,w:o.w,h:o.h}};}}
+     onDoubleClick={()=>{if(o.kind==='chart'&&canEdit)setChartEdit(o.id);}}>
+     {o.kind==='image'?<img src={o.src} alt="" draggable={false}/* eslint-disable-line @next/next/no-img-element */ />:<ChartView o={o} values={values} tab={tab} w={d.w} h={d.h}/>}
+     {on&&canEdit&&<><span className="zs2-obj-size" onMouseDown={e=>{e.stopPropagation();e.preventDefault();objDrag.current={id:o.id,mode:'size',sx:e.clientX,sy:e.clientY,o:{x:o.x,y:o.y,w:o.w,h:o.h}};}}/>
+      <span className="zs2-obj-tools" onMouseDown={e=>e.stopPropagation()}>{o.kind==='chart'&&<button type="button" onClick={()=>setChartEdit(o.id)}><Pencil size={13}/>Edit chart</button>}<button type="button" aria-label="Delete" onClick={()=>{putObj(o.id,()=>null);setObjSel(null);}}><Trash2 size={13}/>Delete</button></span></>}
+    </div>;})}</div>
   </div>
 
   <footer className="zs2-foot" onClick={e=>e.stopPropagation()}>
@@ -594,6 +650,7 @@ export default function SheetPage({id}:{id:string}){
     ...(box.r0===0&&box.r1===ROWS-1?[]:[{label:box.r0===box.r1?`Hide row ${box.r0+1}`:`Hide rows ${box.r0+1} – ${box.r1+1}`,run:hideRows,off:!canEdit} as Item]),...(box.c0===0&&box.c1===COLS-1?[]:[{label:box.c0===box.c1?`Hide column ${colName(box.c0)}`:`Hide columns ${colName(box.c0)} – ${colName(box.c1)}`,run:hideCols,off:!canEdit} as Item]),'-',
     {label:'Clear contents',run:()=>setCells(keysIn(box).filter(x=>tab.cells[x]).map(x=>({tab:tab.id,k:x,v:''}))),off:!canEdit},'-',
     {label:'Dropdown',run:openDropdown,off:!canEdit},{label:'Checkbox',run:addCheckbox,off:!canEdit},'-',
+    {label:'Comment',key:'⌘⌥M',run:()=>setCmtOpen(k)},{label:notes[k]?'Edit note':'Insert note',key:'⇧F2',run:()=>setNoteEdit(k),off:!canEdit},...(notes[k]?[{label:'Clear note',run:()=>saveNote(k,''),off:!canEdit} as Item]:[]),'-',
     {label:'Sort range A → Z',run:()=>sort(1,false),off:!canEdit},{label:'Sort range Z → A',run:()=>sort(-1,false),off:!canEdit}])}
   </div>}
 
@@ -609,6 +666,8 @@ export default function SheetPage({id}:{id:string}){
   {fpop&&filt&&(()=>{const vals=new Map<string,number>();for(let r=filt.b.r0+1;r<=Math.min(filt.b.r1,used.mr);r++){const x=ref(fpop.c,r),t2=show(values[x],tab.style?.[x]);vals.set(t2,(vals.get(t2)??0)+1);}
    return <FilterPop key={fpop.c} x={fpop.x} y={fpop.y} col={tab.cells[ref(fpop.c,filt.b.r0)]||`Column ${colName(fpop.c)}`} values={[...vals.entries()].sort((a,b)=>a[0]===''?1:b[0]===''?-1:a[0].localeCompare(b[0],undefined,{numeric:true}))} hidden={filt.hide[fpop.c]??[]} canEdit={canEdit}
     onSort={d=>{setFpop(null);sortRange({...filt.b,r0:filt.b.r0+1,r1:Math.min(filt.b.r1,Math.max(used.mr,filt.b.r0+1))},fpop.c,d);}} onApply={h=>{setFpop(null);setFilterHide(fpop.c,h);}} onClose={()=>setFpop(null)}/>;})()}
+  {chartEdit&&(()=>{const o=objs.find(y=>y.id===chartEdit);return o?<ChartEditor o={o} values={values} tab={tab} onClose={()=>setChartEdit(null)} onSave={n=>{putObj(o.id,()=>n);setChartEdit(null);}}/>:null;})()}
+  {cmtPanel&&<Modal title="Comments" onClose={()=>setCmtPanel(false)}><div className="zn-modal-body"><ul className="zs2-cmtlist">{openCmts.length?openCmts.map(([x,c])=><li key={x}><button type="button" onClick={()=>{const pp=parseRef(x);if(pp){setAnchor(null);setSel(pp);}setCmtPanel(false);}}><b>{x}</b><span>{people[c.u]?.display_name??'Someone'}: {c.t}</span><small>{(c.re?.length??0)>0?`${c.re!.length} repl${c.re!.length===1?'y':'ies'}`:''}</small></button></li>):<li className="zn-nav-note">No open comments on this tab.</li>}</ul></div></Modal>}
   {cfOpen&&<CfPanel rules={tab.cf??[]} range={rangeOf(box)} onClose={()=>setCfOpen(false)} onChange={cf=>setTab(tab.id,t=>({...t,cf}))}/>}
   {linkEdit&&<LinkModal init={linkEdit} onClose={()=>{setLinkEdit(null);gridRef.current?.focus();}} onSave={saveLink}/>}
   {warn&&<div className="zs2-warn" role="alert">{warn}</div>}
@@ -758,4 +817,89 @@ function BorderGlyph({mode}:{mode:string}){
  const on=(k:string)=>({all:'tblrhv',inner:'hv',horizontal:'h',vertical:'v',outer:'tblr',left:'l',top:'t',right:'r',bottom:'b',clear:''} as Record<string,string>)[mode].includes(k);
  const L=(k:string,x1:number,y1:number,x2:number,y2:number)=><line key={k} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth={on(k)?2:1} strokeDasharray={on(k)?undefined:'1.5 2'} opacity={on(k)?1:.45}/>;
  return <svg width="18" height="18" viewBox="0 0 18 18">{L('t',2,2,16,2)}{L('b',2,16,16,16)}{L('l',2,2,2,16)}{L('r',16,2,16,16)}{L('h',2,9,16,9)}{L('v',9,2,9,16)}</svg>;
+}
+
+const CHART_COLORS=['#4285f4','#ea4335','#fbbc04','#34a853','#ff6d01','#46bdc6','#7baaf7','#f07b72','#fcd04f','#71c287'];
+type Series={name:string;vals:number[]};
+// Reads a chart's range: optional header row (series names) and first column (labels); other columns are numbers.
+function chartData(o:Obj,values:Record<string,unknown>,tab:Tab){
+ const b=parseRange(o.range??'');if(!b)return {labels:[] as string[],series:[] as Series[]};
+ let mr=-1;for(const x of Object.keys(tab.cells)){const p=parseRef(x);if(p&&p[0]>=b.c0&&p[0]<=b.c1&&p[1]>=b.r0&&p[1]<=b.r1)mr=Math.max(mr,p[1]);}
+ const r1=Math.min(b.r1,mr<0?b.r0:mr),r0=o.head?b.r0+1:b.r0,c0=o.lab?b.c0+1:b.c0;
+ const txt=(c:number,r:number)=>show(values[ref(c,r)] as never,tab.style?.[ref(c,r)]);
+ const labels:string[]=[];for(let r=r0;r<=r1;r++)labels.push(o.lab?txt(b.c0,r):String(r-r0+1));
+ const series:Series[]=[];for(let c=c0;c<=b.c1;c++){const vals:number[]=[];for(let r=r0;r<=r1;r++){const v=values[ref(c,r)];vals.push(typeof v==='number'?v:Number(v)||0);}series.push({name:o.head?txt(c,b.r0)||colName(c):colName(c),vals});}
+ return {labels,series:series.slice(0,10)};
+}
+const nice=(lo:number,hi:number)=>{if(lo===hi){hi=lo+1;}const span=hi-lo,step0=Math.pow(10,Math.floor(Math.log10(span/5))),step=[1,2,2.5,5,10].map(m=>m*step0).find(s=>span/s<=6)??step0*10;
+ const a=Math.floor(lo/step)*step,z=Math.ceil(hi/step)*step;const ticks:number[]=[];for(let t=a;t<=z+step/2;t+=step)ticks.push(Math.round(t*1e6)/1e6);return {a,z,ticks};};
+const fmtTick=(n:number)=>Math.abs(n)>=1e6?`${Math.round(n/1e5)/10}M`:Math.abs(n)>=1e3?`${Math.round(n/100)/10}K`:String(n);
+function ChartView({o,values,tab,w,h}:{o:Obj;values:Record<string,unknown>;tab:Tab;w:number;h:number}){
+ const {labels,series}=chartData(o,values,tab);const type=o.type??'column';
+ const top=o.title?34:14,legendH=series.length>1&&type!=='pie'?22:0,L=type==='bar'?Math.min(120,8+Math.max(20,...labels.map(l=>l.length*6.5))):44,R=16,B=type==='bar'?24:34,T=top+legendH;
+ const pw=Math.max(10,w-L-R),ph=Math.max(10,h-T-B);
+ if(!series.length||!labels.length)return <div className="zs2-chart-empty">Pick a range with numbers to chart.</div>;
+ const title=o.title?<text x={w/2} y={22} textAnchor="middle" className="zs2-ch-title">{o.title}</text>:null;
+ const legend=legendH?<g>{series.map((s2,i)=>{const x=L+i*Math.min(140,pw/series.length);return <g key={i} transform={`translate(${x},${top+4})`}><rect width={10} height={10} rx={2} fill={CHART_COLORS[i%10]}/><text x={14} y={9} className="zs2-ch-lab">{s2.name.slice(0,18)}</text></g>;})}</g>:null;
+ if(type==='pie'){const vals=series[0].vals.map(v=>Math.max(0,v)),sum=vals.reduce((a,b)=>a+b,0)||1;const cx=Math.min(w*0.4,w/2),cy=(h+top)/2,rad=Math.max(10,Math.min(cx-20,(h-top)/2-12));const arcs:[number,number][]=[];{let ang=-Math.PI/2;for(const v of vals){const a2=ang+v/sum*Math.PI*2;arcs.push([ang,a2]);ang=a2;}}
+  return <svg width={w} height={h} className="zs2-chart">{title}{vals.map((v,i)=>{const [ang,a2]=arcs[i];const large=a2-ang>Math.PI?1:0;const p=`M${cx},${cy} L${cx+rad*Math.cos(ang)},${cy+rad*Math.sin(ang)} A${rad},${rad} 0 ${large} 1 ${cx+rad*Math.cos(a2)},${cy+rad*Math.sin(a2)} Z`;const mid=(ang+a2)/2,pct=v/sum;
+   return <g key={i}><path d={vals.length===1?`M${cx-rad},${cy} a${rad},${rad} 0 1,0 ${rad*2},0 a${rad},${rad} 0 1,0 ${-rad*2},0`:p} fill={CHART_COLORS[i%10]} stroke="var(--z-panel)" strokeWidth={1}/>{pct>0.06&&<text x={cx+rad*0.62*Math.cos(mid)} y={cy+rad*0.62*Math.sin(mid)+4} textAnchor="middle" className="zs2-ch-pct">{Math.round(pct*100)}%</text>}</g>;})}
+   <g>{labels.slice(0,12).map((l,i)=><g key={i} transform={`translate(${cx+rad+24},${top+10+i*20})`}><rect width={10} height={10} rx={2} fill={CHART_COLORS[i%10]}/><text x={16} y={9} className="zs2-ch-lab">{l.slice(0,22)}</text></g>)}</g></svg>;}
+ const all=series.flatMap(s2=>s2.vals);const stacked=!!o.stack&&(type==='column'||type==='bar'||type==='area');
+ const sums=labels.map((_,i)=>series.reduce((a,s2)=>a+Math.max(0,s2.vals[i]??0),0));
+ const {a,z,ticks}=nice(Math.min(0,...all),stacked?Math.max(...sums,0):Math.max(0,...all));
+ const n=labels.length;
+ if(type==='bar'){const sc=(v:number)=>L+(v-a)/(z-a)*pw,band=ph/n,bw=stacked?band*0.7:band*0.7/series.length;
+  return <svg width={w} height={h} className="zs2-chart">{title}{legend}
+   {ticks.map(t=><g key={t}><line x1={sc(t)} x2={sc(t)} y1={T} y2={T+ph} className="zs2-ch-grid"/><text x={sc(t)} y={T+ph+16} textAnchor="middle" className="zs2-ch-lab">{fmtTick(t)}</text></g>)}
+   {labels.map((l,i)=><text key={i} x={L-6} y={T+band*i+band/2+4} textAnchor="end" className="zs2-ch-lab">{l.slice(0,16)}</text>)}
+   {series.map((s2,si)=>s2.vals.map((v,i)=>{const base=stacked?series.slice(0,si).reduce((acc,x)=>acc+Math.max(0,x.vals[i]??0),0):0;const y=T+band*i+band*0.15+(stacked?0:si*bw);const x1=sc(Math.min(base,base+v)),x2=sc(Math.max(base,base+v));return <rect key={`${si}-${i}`} x={x1} y={y} width={Math.max(0,x2-x1)} height={bw-1} rx={2} fill={CHART_COLORS[si%10]}><title>{`${l(labels,i)}: ${v}`}</title></rect>;}))}</svg>;}
+ const sy=(v:number)=>T+ph-(v-a)/(z-a)*ph,band=pw/n;
+ const xAt=(i:number)=>type==='column'?L+band*i+band/2:L+(n===1?pw/2:pw*i/(n-1));
+ const every=Math.max(1,Math.ceil(n/Math.max(1,Math.floor(pw/60))));
+ return <svg width={w} height={h} className="zs2-chart">{title}{legend}
+  {ticks.map(t=><g key={t}><line x1={L} x2={L+pw} y1={sy(t)} y2={sy(t)} className="zs2-ch-grid"/><text x={L-6} y={sy(t)+4} textAnchor="end" className="zs2-ch-lab">{fmtTick(t)}</text></g>)}
+  {labels.map((lb,i)=>i%every?null:<text key={i} x={xAt(i)} y={T+ph+18} textAnchor="middle" className="zs2-ch-lab">{lb.slice(0,12)}</text>)}
+  {type==='column'?series.map((s2,si)=>s2.vals.map((v,i)=>{const base=stacked?series.slice(0,si).reduce((acc,x)=>acc+Math.max(0,x.vals[i]??0),0):0;const bw=stacked?band*0.7:band*0.7/series.length;const x=L+band*i+band*0.15+(stacked?0:si*bw);const y1=sy(Math.max(base,base+v)),y2=sy(Math.min(base,base+v));return <rect key={`${si}-${i}`} x={x} y={y1} width={Math.max(1,bw-1)} height={Math.max(0,y2-y1)} rx={2} fill={CHART_COLORS[si%10]}><title>{`${l(labels,i)}: ${v}`}</title></rect>;}))
+  :series.map((s2,si)=>{const pts=s2.vals.map((v,i)=>{const base=stacked?series.slice(0,si).reduce((acc,x)=>acc+(x.vals[i]??0),0):0;return [xAt(i),sy(base+v)] as const;});const line=pts.map((p,i)=>`${i?'L':'M'}${p[0]},${p[1]}`).join(' ');
+   return <g key={si}>{type==='area'&&<path d={`${line} L${pts.at(-1)![0]},${sy(Math.max(a,0))} L${pts[0][0]},${sy(Math.max(a,0))} Z`} fill={CHART_COLORS[si%10]} opacity={0.25}/>}
+    {type!=='scatter'&&<path d={line} fill="none" stroke={CHART_COLORS[si%10]} strokeWidth={2}/>}
+    {(type==='scatter'||n<=40)&&pts.map((p,i)=><circle key={i} cx={p[0]} cy={p[1]} r={type==='scatter'?4:2.5} fill={CHART_COLORS[si%10]}><title>{`${l(labels,i)}: ${s2.vals[i]}`}</title></circle>)}</g>;})}
+  <line x1={L} x2={L+pw} y1={sy(Math.max(a,0))} y2={sy(Math.max(a,0))} className="zs2-ch-axis"/></svg>;
+}
+const l=(labels:string[],i:number)=>labels[i]??String(i+1);
+const CHART_TYPES:[ChartType,string,React.ReactNode][]=[['column','Column',<ChartColumnBig key="c" size={18}/>],['bar','Bar',<ChartBarBig key="b" size={18}/>],['line','Line',<ChartLine key="l" size={18}/>],['area','Area',<ChartArea key="a" size={18}/>],['pie','Pie',<ChartPie key="p" size={18}/>],['scatter','Scatter',<ChartScatter key="s" size={18}/>]];
+function ChartEditor({o,values,tab,onClose,onSave}:{o:Obj;values:Record<string,unknown>;tab:Tab;onClose:()=>void;onSave:(o:Obj)=>void}){
+ const [x,setX]=useState<Obj>(o),[err,setErr]=useState('');
+ const flag=(k2:'head'|'lab'|'stack',on:boolean)=>setX(y=>{const n={...y};if(on)n[k2]=1;else delete n[k2];return n;});
+ return <Modal title="Chart" onClose={onClose} wide><form className="zn-modal-body zs2-chartedit" onSubmit={e=>{e.preventDefault();if(!parseRange(x.range??'')){setErr('Enter a range like A1:D20.');return;}onSave(x);}}>
+  <div className="zs2-chart-preview"><ChartView o={x} values={values} tab={tab} w={520} h={260}/></div>
+  <div className="zs2-chart-types">{CHART_TYPES.map(([v,lbl,ic])=><button key={v} type="button" className={(x.type??'column')===v?'is-on':''} onClick={()=>setX({...x,type:v})}>{ic}<span>{lbl}</span></button>)}</div>
+  <label className="zn-label">Data range<input className="zn-input" value={x.range??''} onChange={e=>setX({...x,range:e.target.value})} spellCheck={false}/></label>
+  <label className="zn-label">Title<input className="zn-input" value={x.title??''} maxLength={100} onChange={e=>setX({...x,title:e.target.value})} placeholder="Chart title"/></label>
+  <label className="zs2-rule-check"><input type="checkbox" checked={!!x.head} onChange={e=>flag('head',e.target.checked)}/>Use the first row as headers</label>
+  <label className="zs2-rule-check"><input type="checkbox" checked={!!x.lab} onChange={e=>flag('lab',e.target.checked)}/>Use the first column as labels</label>
+  {(x.type==='column'||x.type==='bar'||x.type==='area'||!x.type)&&<label className="zs2-rule-check"><input type="checkbox" checked={!!x.stack} onChange={e=>flag('stack',e.target.checked)}/>Stacked</label>}
+  {err&&<p className="zn-error" role="alert">{err}</p>}
+  <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary">Done</button></div>
+ </form></Modal>;
+}
+function NoteEdit({init,onDone}:{init:string;onDone:(t:string)=>void}){
+ const [t,setT]=useState(init);
+ return <div className="zs2-noteedit" onMouseDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
+  <textarea autoFocus value={t} maxLength={5000} placeholder="Add a note" onChange={e=>setT(e.target.value)} onBlur={()=>onDone(t)} onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();onDone(init);}if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();onDone(t);}}}/>
+ </div>;
+}
+const ago=(iso:string)=>{const m=Math.round((Date.now()-new Date(iso).getTime())/6e4);return m<1?'Just now':m<60?`${m}m`:m<1440?`${Math.round(m/60)}h`:new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short'});};
+function CommentPop({c,me,people,canEdit,onAdd,onResolve,onDelete,onClose}:{c?:Cmt;me:string;people:Record<string,{display_name?:string|null}|undefined>;canEdit:boolean;onAdd:(t:string)=>void;onResolve:()=>void;onDelete:()=>void;onClose:()=>void}){
+ const [t,setT]=useState('');
+ const msgs=c?[{u:c.u,t:c.t,at:c.at},...(c.re??[])]:[];
+ return <div className="zs2-cmt" onMouseDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
+  {c&&<div className="zs2-cmt-head"><span>{msgs.length} comment{msgs.length===1?'':'s'}</span>{canEdit&&<button type="button" aria-label="Resolve" data-tip="Resolve" onClick={onResolve}><CircleCheck size={16}/></button>}{(c.u===me)&&<button type="button" aria-label="Delete thread" data-tip="Delete thread" onClick={onDelete}><Trash2 size={15}/></button>}</div>}
+  {msgs.map((m,i)=><div key={i} className="zs2-cmt-msg"><Avatar m={people[m.u] as never} size={24}/><div><p><b>{m.u===me?'You':people[m.u]?.display_name??'Someone'}</b><small>{ago(m.at)}</small></p><p>{m.t}</p></div></div>)}
+  <form onSubmit={e=>{e.preventDefault();if(!t.trim())return;onAdd(t);setT('');}}>
+   <textarea autoFocus={!c} value={t} rows={c?1:2} maxLength={4000} placeholder={c?'Reply':'Comment'} onChange={e=>setT(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(t.trim()){onAdd(t);setT('');}}if(e.key==='Escape')onClose();}}/>
+   {(t.trim()||!c)&&<div className="zs2-cmt-btns"><button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary" disabled={!t.trim()}>{c?'Reply':'Comment'}</button></div>}
+  </form>
+ </div>;
 }

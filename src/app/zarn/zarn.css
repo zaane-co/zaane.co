@@ -3108,3 +3108,63 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zs2-cf-scale{display:flex;flex-direction:column;gap:10px}
 .zs2-cf-scale .zs2-bcolors{margin-top:6px}
 .zs2-rule select.zn-input{appearance:auto}
+
+/* Sheets batch 3: notes, comments, pictures in cells, and charts/pictures floating over the grid. */
+.zs2-tri{position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 7px 7px 0;z-index:2;pointer-events:none}
+.zs2-tri.is-note{border-color:transparent var(--s-head-fg) transparent transparent}
+.zs2-tri.is-cmt{border-color:transparent #f9ab00 transparent transparent}
+.zs2-tri.is-note+.zs2-tri.is-cmt{right:9px}
+.zs2-notebub{display:none;position:absolute;left:calc(100% + 4px);top:0;z-index:30;width:220px;max-height:220px;overflow:auto;padding:8px 10px;border-radius:4px;background:#fef7cd;color:#202124;font-size:12.5px;line-height:1.45;white-space:pre-wrap;box-shadow:0 6px 18px rgba(0,0,0,.3);cursor:default}
+.zs2-grid td.has-note:hover{overflow:visible;z-index:6}
+.zs2-grid td.has-note:hover .zs2-notebub{display:block}
+.zs2-noteedit{position:absolute;left:calc(100% + 4px);top:0;z-index:31;cursor:default}
+.zs2-noteedit textarea{display:block;width:240px;height:130px;padding:8px 10px;border-radius:4px;border:0;outline:2px solid #f9ab00;background:#fef7cd;color:#202124;font:12.5px/1.45 inherit;resize:both}
+.zs2-cmt{position:absolute;left:calc(100% + 6px);top:0;z-index:31;width:300px;padding:10px;border-radius:10px;background:var(--z-panel);border:1px solid var(--z-border);box-shadow:0 12px 30px rgba(0,0,0,.4);cursor:default;white-space:normal;font-family:inherit;font-size:13px;color:var(--z-fg)}
+.zs2-cmt-head{display:flex;align-items:center;gap:2px;margin-bottom:6px;font-size:12px;color:var(--z-muted)}
+.zs2-cmt-head span{flex:1}
+.zs2-cmt-head button{width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:var(--z-muted)}
+.zs2-cmt-head button:hover{background:var(--z-hover);color:var(--z-fg)}
+.zs2-cmt-msg{display:flex;gap:8px;padding:6px 0}
+.zs2-cmt-msg>div{min-width:0;flex:1}
+.zs2-cmt-msg p{margin:0;line-height:1.45;overflow-wrap:anywhere;white-space:pre-wrap}
+.zs2-cmt-msg p:first-child{display:flex;align-items:baseline;gap:8px;white-space:normal}
+.zs2-cmt-msg small{font-size:11.5px;color:var(--z-muted)}
+.zs2-cmt form{margin-top:6px}
+.zs2-cmt textarea{width:100%;min-height:36px;padding:8px 10px;border-radius:8px;border:1px solid var(--z-border);background:var(--z-input);color:var(--z-fg);font:inherit;resize:vertical;outline:0}
+.zs2-cmt textarea:focus{border-color:var(--s-sel)}
+.zs2-cmt-btns{display:flex;justify-content:flex-end;gap:6px;margin-top:6px}
+.zs2-cmt-btns .zn-btn{height:30px;padding:0 12px;font-size:13px}
+.zs2-cmtlist{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.zs2-cmtlist button{width:100%;display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--z-panel-2);text-align:left}
+.zs2-cmtlist button:hover{background:var(--z-hover)}
+.zs2-cmtlist b{flex:none;min-width:36px;font-size:12px;color:var(--z-muted)}
+.zs2-cmtlist span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zs2-cmtlist small{font-size:12px;color:var(--z-muted)}
+.zs2-cimg{display:block;max-width:100%;max-height:100%;margin:0 auto;object-fit:contain;position:absolute;inset:1px 2px;width:calc(100% - 4px);height:calc(100% - 2px)}
+.zs2-objs{position:absolute;left:0;top:0;width:0;height:0;z-index:4}
+.zs2-obj{position:absolute;border-radius:6px;background:var(--z-panel);box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:move;user-select:none}
+.zs2-obj.is-image{background:none;box-shadow:none}
+.zs2-obj img{display:block;width:100%;height:100%;object-fit:fill;border-radius:2px;pointer-events:none}
+.zs2-obj.is-on{outline:2px solid var(--s-sel);outline-offset:1px}
+.zs2-obj-size{position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;border-radius:2px;background:var(--s-sel);border:2px solid var(--z-panel);cursor:nwse-resize}
+.zs2-obj-tools{position:absolute;right:0;top:-38px;display:flex;gap:4px;padding:3px;border-radius:8px;background:var(--z-panel);border:1px solid var(--z-border);box-shadow:0 6px 18px rgba(0,0,0,.3);cursor:default;white-space:nowrap}
+.zs2-obj-tools button{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:6px;font-size:12.5px;color:var(--z-fg)}
+.zs2-obj-tools button:hover{background:var(--z-hover)}
+.zs2-chart{display:block;font-family:Inter,system-ui,sans-serif;pointer-events:none}
+.zs2-chart rect,.zs2-chart circle{pointer-events:auto}
+.zs2-ch-title{font-size:14px;font-weight:700;fill:var(--z-fg)}
+.zs2-ch-lab{font-size:11px;fill:var(--z-muted)}
+.zs2-ch-pct{font-size:11px;font-weight:700;fill:#fff}
+.zs2-ch-grid{stroke:var(--z-border);stroke-width:1}
+.zs2-ch-axis{stroke:var(--z-muted);stroke-width:1}
+.zs2-chart-empty{display:grid;place-items:center;height:100%;padding:16px;text-align:center;font-size:13px;color:var(--z-muted)}
+.zs2-chartedit{display:flex;flex-direction:column;gap:12px}
+.zs2-chart-preview{display:grid;place-items:center;height:268px;border-radius:10px;background:var(--z-panel-2);overflow:hidden}
+.zs2-chart-types{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.zs2-chart-types button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:10px;border:1px solid var(--z-border);font-size:12px;color:var(--z-muted)}
+.zs2-chart-types button:hover{background:var(--z-hover)}
+.zs2-chart-types button.is-on{border-color:var(--s-sel,#1a73e8);color:var(--z-fg);background:var(--z-panel-2)}
+@media (max-width:760px){.zs2-chart-types{grid-template-columns:repeat(3,1fr)}.zs2-cmt,.zs2-noteedit,.zs2-notebub{left:0;top:calc(100% + 4px)}.zs2-cmt{width:min(300px,calc(100vw - 32px))}}
+.zs2-grid td.is-cur:has(.zs2-cmt,.zs2-noteedit,.zs2-ddpop,.zs2-cal,.zs2-linkcard,.zs2-suggest),.zs2-grid td.has-note:hover{z-index:7}
+.zs2-chart-preview{flex:none}
+.zs2-cmt,.zs2-noteedit,.zs2-notebub,.zs2-cal,.zs2-ddpop,.zs2-linkcard,.zs2-suggest{text-align:left;font-weight:400;font-style:normal;text-decoration:none}
