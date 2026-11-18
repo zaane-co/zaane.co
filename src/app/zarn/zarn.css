@@ -2796,3 +2796,10 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zg-dots button{flex-shrink:0}
 }
 .zn-doc-action{width:auto!important;height:34px;padding:0 14px!important;border-radius:999px!important;background:#2563eb!important;color:#fff!important;font-size:13.5px;font-weight:600;white-space:nowrap}
+/* Docs header: location as a folder pill, save state in words */
+.zg-where{gap:4px;height:24px;padding:0 10px 0 8px;border-radius:999px;background:var(--z-panel-2);color:var(--z-muted);flex:0 1 auto}
+.zg-where>svg{flex:none;color:var(--z-muted)}
+.zg-where a{color:var(--z-fg);font-weight:500}
+.zg-where span>svg{color:var(--z-faint)}
+.zg-state{gap:5px;font-size:12.5px;font-weight:500}
+.zg-state svg{flex:none}

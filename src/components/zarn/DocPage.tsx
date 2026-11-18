@@ -8,7 +8,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import LinkExt from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import {ImagePlus,Bold,Check,ChevronLeft,ChevronRight,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,ListChecks,Loader2,Quote,Redo2,Share2,Strikethrough,Underline as UnderlineIcon,Undo2,AlignLeft,AlignCenter,AlignRight,AlignJustify,Baseline,Highlighter,IndentIncrease,IndentDecrease,RemoveFormatting,Printer,Minus,Plus,Table2,Lock,FileText,PanelLeft,CloudOff,ChevronDown,ChevronUp,X} from 'lucide-react';
+import {ImagePlus,Bold,Check,ChevronLeft,ChevronRight,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,ListChecks,Loader2,Quote,Redo2,Share2,Strikethrough,Underline as UnderlineIcon,Undo2,AlignLeft,AlignCenter,AlignRight,AlignJustify,Baseline,Highlighter,IndentIncrease,IndentDecrease,RemoveFormatting,Printer,Minus,Plus,Table2,Lock,FileText,PanelLeft,CloudOff,CloudCheck,Folder,ChevronDown,ChevronUp,X} from 'lucide-react';
 import {Extension} from '@tiptap/core';
 import TextAlign from '@tiptap/extension-text-align';
 import {TextStyleKit} from '@tiptap/extension-text-style';
@@ -172,8 +172,8 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
    <div className="zg-meta">
     <div className="zg-row">
      <input className="zg-title" value={title} readOnly={!canEdit} maxLength={200} placeholder="Untitled document" aria-label="Title" size={Math.max(8,Math.min(48,(title||'Untitled document').length+1))} onChange={e=>{setTitle(e.target.value);latest.current.title=e.target.value;queue();}}/>
-     <nav className="zg-where" aria-label="Location">{crumbs.map((x,i)=><span key={x.href}>{i>0&&<ChevronRight size={12}/>}<Link href={x.href}>{x.name}</Link></span>)}</nav>
-     <span className={`zg-state${state==='error'?' is-error':''}`} data-tip={!canEdit?'You can view this document':state==='saving'?'Saving…':state==='error'?'Not saved yet. Keep typing to retry.':'All changes saved'}>{!canEdit?<><Lock size={13}/>View only</>:state==='saving'?<Loader2 size={14} className="zn-spin"/>:state==='error'?<CloudOff size={15}/>:<Check size={15}/>}</span>
+     {crumbs.length>0&&<nav className="zg-where" aria-label="Location"><Folder size={13}/>{crumbs.map((x,i)=><span key={x.href}>{i>0&&<ChevronRight size={12}/>}<Link href={x.href}>{x.name}</Link></span>)}</nav>}
+     <span className={`zg-state${state==='error'?' is-error':''}`} data-tip={!canEdit?'You can view this document':state==='saving'?'Saving…':state==='error'?'Not saved yet. Keep typing to retry.':'All changes saved'}>{!canEdit?<><Lock size={13}/>View only</>:state==='saving'?<><Loader2 size={14} className="zn-spin"/>Saving…</>:state==='error'?<><CloudOff size={15}/>Not saved</>:<><CloudCheck size={15}/>Saved</>}</span>
     </div>
     <nav className="zg-menus" onClick={e=>e.stopPropagation()}>{menus.map(([name,items])=><div key={name} className="zg-menu">
      <button type="button" className={menu===name?'is-on':''} onClick={()=>setMenu(m=>m===name?null:name)} onMouseEnter={()=>{if(menu&&menu!==name)setMenu(name);}}>{name}</button>
