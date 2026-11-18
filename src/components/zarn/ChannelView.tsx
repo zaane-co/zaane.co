@@ -119,7 +119,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
   <div className="zn-chan-main">
    {!embedded&&<header className="zn-chan-head">
     <div className="zn-chan-id">
-    <button type="button" className="zn-chan-title" onClick={()=>{const other=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];if(other.length===1)profile(other[0]!);else setDetails(true);}}>{channel.kind==='dm'?(dmPeer&&people[dmPeer]?<Avatar m={people[dmPeer]} size={28} online={z.online.has(dmPeer)}/>:null):channel.kind==='private'?<Lock size={16}/>:<Hash size={17}/>}<h1>{title(channel)}</h1></button>
+    <button type="button" className="zn-chan-title" onClick={()=>{const other=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];if(other.length===1)profile(other[0]!);else setDetails(true);}}>{channel.kind==='dm'?(dmPeer&&people[dmPeer]?<Avatar m={people[dmPeer]} size={28} online={z.online.has(dmPeer)}/>:null):<span className="zn-chan-ico">{channel.kind==='private'?<Lock size={16}/>:<Hash size={17}/>}</span>}<h1>{title(channel)}</h1></button>
     {(()=>{
      const dmOther=channel.kind==='dm'?(channel.dm_key??'').split(',').find(u=>u!==me.user_id):undefined;
      if(typers.length)return <p className="zn-topic is-typing">{channel.kind==='dm'?'typing':`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></p>;

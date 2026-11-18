@@ -2320,6 +2320,7 @@ a.zn-act-row:hover{background:var(--z-hover)}
 @keyframes zn-sheet-up{from{transform:translateY(100%)}to{transform:none}}
 @media(prefers-reduced-motion:reduce){.zn-modal-scrim>.zn-modal{animation:none!important}}
 .zn-chan-id{display:contents}
+.zn-chan-ico{display:inline-flex;flex:none}
 .zn-chan-head .zn-topic.is-names{display:none}
 /* Phones: chat header in the round-button style. Round back button, the channel icon in a circle, name with the
    member names under it, and the actions grouped in one rounded pill. Members and pins live in Details. */
@@ -2328,8 +2329,9 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zn-chan-head{display:flex!important;align-items:center;gap:8px;height:64px;padding:0 10px 0 60px!important;border-bottom:0}
  .zn-chan-id{display:block;position:relative;flex:1;min-width:0;padding-left:50px}
  .zn-chan-head .zn-chan-title{position:static;margin:0;padding:0;gap:0;background:none!important;max-width:100%;display:flex}
- .zn-chan-head .zn-chan-title>svg,.zn-chan-head .zn-chan-title>.zn-avatar{position:absolute;left:0;top:50%;transform:translateY(-50%);width:42px!important;height:42px!important;border-radius:50%!important;flex:none}
- .zn-chan-head .zn-chan-title>svg{box-sizing:border-box;padding:12px;background:var(--z-panel-2);color:var(--z-fg)}
+ .zn-chan-head .zn-chan-title>.zn-chan-ico,.zn-chan-head .zn-chan-title>.zn-avatar{position:absolute;left:0;top:50%;transform:translateY(-50%);width:42px!important;height:42px!important;border-radius:50%!important;flex:none}
+ .zn-chan-head .zn-chan-ico{display:grid;place-items:center;background:var(--z-panel-2);color:var(--z-fg)}
+ .zn-chan-head .zn-chan-ico svg{width:18px;height:18px}
  .zn-chan-head .zn-chan-title h1{font-size:17px;font-weight:700;line-height:1.2;letter-spacing:-.01em}
  .zn-chan-head .zn-topic{display:block!important;margin:1px 0 0;font-size:12.5px;line-height:1.25;color:var(--z-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
  .zn-chan-head .zn-topic.is-topic{display:none!important}
