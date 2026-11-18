@@ -322,7 +322,17 @@ export default function Drive(){
    {list==='trash'&&<p className="zdr-note">Items in the trash can be restored. Only the owner or a ZARN admin can delete things for good.</p>}
    {err&&<p className="zn-error zdr-err" role="alert">{err}</p>}
    <div className="zdr-body" data-lenis-prevent>
-    {items===null?<p className="zn-loading">Loading…</p>:!shown.length?<div className="zn-empty-state"><h2>{q?'Nothing matches':list==='trash'?'Trash is empty':list==='starred'?'No starred items':list==='shared'?'Nothing shared with you yet':place?.folder?'This folder is empty':'Nothing here yet'}</h2><p>{q?'Try another name.':canAdd?'Use New to add a folder, a doc or files, or drop files here.':'Items will show up here.'}</p></div>
+    {items===null?<p className="zn-loading">Loading…</p>:!shown.length?(()=>{
+     const e=q?{ic:<Search size={26}/>,t:'Nothing matches',p:`No names or doc text match “${q}”.`}
+      :list==='trash'?{ic:<Trash2 size={26}/>,t:'Trash is empty',p:'Things you delete land here for 30 days before they’re gone for good.'}
+      :list==='starred'?{ic:<Star size={26}/>,t:'No starred items',p:'Star the files and folders you use most to find them fast.'}
+      :list==='shared'?{ic:<Share2 size={26}/>,t:'Nothing shared with you yet',p:'When teammates share files or folders with you, they appear here.'}
+      :list==='recent'?{ic:<Clock size={26}/>,t:'Nothing recent',p:'Files and docs you open will show up here.'}
+      :place?.folder?{ic:<Folder size={26}/>,t:'This folder is empty',p:'Add a folder, a doc or a sheet, or drop files here.'}
+      :{ic:place?.drive==='team'?<Users size={26}/>:place?.drive==='client'?<Briefcase size={26}/>:<HardDrive size={26}/>,t:'Nothing here yet',p:'Create your first folder, doc or sheet, or drop files here.'};
+     return <div className="zdr-empty"><span className="zdr-empty-ic">{e.ic}</span><h2>{e.t}</h2><p>{e.p}</p>
+      {canAdd&&!q&&!list&&<div className="zdr-empty-acts"><button type="button" onClick={()=>setNaming(true)}><FolderPlus size={15}/>New folder</button><button type="button" onClick={()=>void newDoc()}><FileText size={15}/>New doc</button><button type="button" onClick={()=>void newDoc(true)}><FileSpreadsheet size={15}/>New sheet</button><button type="button" onClick={()=>pick.current?.click()}><Upload size={15}/>Upload</button></div>}
+      {q&&<button type="button" className="zdr-empty-link" onClick={()=>setQ('')}>Clear search</button>}</div>;})()
     :layout==='grid'?<>
      {shown.some(i=>i.kind==='folder')&&<><p className="zdr-group">Folders</p><div className="zdr-folders">{shown.filter(i=>i.kind==='folder').map(f=><div key={f.id} role="button" tabIndex={0} className={`zdr-folder${sel.has(keyOf(f))?' is-sel':''}`} {...dragProps(f)} {...(f.trashed_at?{}:dropOn(asPlace(f),`f:${f.id}`))} data-over={dragOver===`f:${f.id}`||undefined} onClick={e=>click(e,f)} onKeyDown={e=>{if(e.key==='Enter')open(f);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:f,x:e.clientX,y:e.clientY});}}>
       <span className="zdr-fic">{icon(f)}{checkBox(f)}</span><span className="zdr-fname">{f.name}</span>{f.shared&&<Users size={13} className="zdr-faint"/>}{stars.has(`folder:${f.id}`)&&<Star size={12} className="zdr-star" fill="currentColor"/>}
