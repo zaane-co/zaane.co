@@ -63,7 +63,10 @@ export async function pdfToHtml(data:ArrayBuffer):Promise<string>{
   endTable();
   const ratio=l.size/body,short=l.text.length<90&&!/[.,;:]$/.test(l.text),isItem=BULLET.test(l.text)||NUMBER.test(l.text);
   const tag=ratio>=1.5?'h1':ratio>=1.2?'h2':(l.bold&&short&&ratio>=.95&&!isItem)?'h3':null;
-  if(tag){endAll();out.push(`<${tag}>${esc(l.text)}</${tag}>`);prev=null;continue;}
+  // A heading that wraps onto a second line stays one heading.
+  const lastOut=out[out.length-1]??'';
+  if(tag&&prev&&prev.page===l.page&&lastOut.startsWith(`<${tag}>`)&&prev.y-l.y<=l.size*1.6&&!para&&!list&&!table){out[out.length-1]=lastOut.replace(`</${tag}>`,` ${esc(l.text)}</${tag}>`);prev=l;continue;}
+  if(tag){endAll();out.push(`<${tag}>${esc(l.text)}</${tag}>`);prev=l;continue;}
   if(isItem){endPara();const num=NUMBER.test(l.text)&&!BULLET.test(l.text);if(list&&list.num!==num)endList();
    if(!list)list={num,items:[],x:l.x};list.items.push(l.text.replace(num?NUMBER:BULLET,'').trim());prev=l;continue;}
   if(list&&tight&&l.x>list.x+1){list.items[list.items.length-1]+=` ${l.text}`;prev=l;continue;}

@@ -2803,3 +2803,22 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zg-where span>svg{color:var(--z-faint)}
 .zg-state{gap:5px;font-size:12.5px;font-weight:500}
 .zg-state svg{flex:none}
+/* Docs outline: clear levels, a guide line, the current section highlighted, nothing clipped */
+.zg-outline{width:260px;padding:14px 8px 70px 14px;gap:0}
+.zg-outline header{padding:0 4px;margin-bottom:10px}
+.zg-outline header b{font-size:13px;font-weight:700;color:var(--z-fg)}
+.zg-outline-list{display:flex;flex-direction:column;gap:1px;border-left:1px solid var(--z-border);margin-left:6px}
+.zg-outline-list>button{position:relative;display:block;width:100%;text-align:left;padding:6px 10px 6px 12px;margin-left:-1px;border-left:2px solid transparent;border-radius:0 8px 8px 0;font-size:13px;line-height:1.4;color:var(--z-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zg-outline-list>button:hover{background:var(--z-hover);color:var(--z-fg)}
+.zg-outline-list>button.is-h1{font-weight:600;color:var(--z-fg);margin-top:8px}
+.zg-outline-list>button.is-h1:first-child{margin-top:0}
+.zg-outline-list>button.is-h2{padding-left:24px}
+.zg-outline-list>button.is-h3{padding-left:36px;font-size:12.5px}
+.zg-outline-list>button.is-on{border-left-color:#2563eb;background:var(--z-panel-2);color:var(--z-fg)}
+.zg-outline-list>p{font-size:12.5px;color:var(--z-muted);padding:4px 12px}
+.zg-words.with-outline{left:284px}
+.zg-row{align-items:center}
+.zg-where{display:inline-flex;align-items:center;line-height:1;align-self:center}
+.zg-where span,.zg-where a{display:inline-flex;align-items:center;line-height:1}
+.zg-where svg{display:block}
+.zg-state{display:inline-flex;align-items:center;line-height:1;align-self:center}

@@ -91,7 +91,8 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
  },[db,doc.id,meId]);
  const canEdit=role==='owner'||role==='edit';
  const [title,setTitle]=useState(doc.title),[state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
- const [menu,setMenu]=useState<string|null>(null),[pop,setPop]=useState<'color'|'hl'|null>(null),[zoom,setZoom]=useState(100),[outline,setOutline]=useState(()=>{try{return localStorage.getItem('zarn-doc-outline')==='1';}catch{return false;}}),[counting,setCounting]=useState(false),[sheet,setSheet]=useState<null|'text'|'para'|'insert'>(null);
+ const [menu,setMenu]=useState<string|null>(null),[pop,setPop]=useState<'color'|'hl'|null>(null),[zoom,setZoom]=useState(100),[outline,setOutline]=useState(()=>{try{return localStorage.getItem('zarn-doc-outline')==='1';}catch{return false;}}),[counting,setCounting]=useState(false),[sheet,setSheet]=useState<null|'text'|'para'|'insert'>(null),[activeH,setActiveH]=useState(0);
+ const canvasRef=useRef<HTMLDivElement>(null);
  const editorRef=useRef<Editor|null>(null),fileRef=useRef<HTMLInputElement>(null);
  const [img,setImg]=useState({busy:false,error:''});
  const tools=imageTools('doc',doc.id,()=>editorRef.current,setImg);
@@ -254,13 +255,13 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
   {(img.busy||img.error)&&<p className={`zd-imgstate${img.error?' is-error':''}`} role="status">{img.busy?'Uploading picture…':img.error}</p>}
   <div className="zg-body">
    {outline&&<aside className="zg-outline"><header><button type="button" aria-label="Hide outline" data-tip="Hide outline" onClick={toggleOutline}><PanelLeft size={16}/></button><b>Outline</b></header>
-    {headings.length?headings.map((h,i)=><button key={i} type="button" className={`is-h${h.level}`} onClick={()=>jump(h.pos)}>{h.text}</button>):<p>Headings you add appear here.</p>}</aside>}
-   <div className="zg-canvas" data-lenis-prevent>
+    <div className="zg-outline-list">{headings.length?headings.map((h,i)=><button key={i} type="button" title={h.text} className={`is-h${h.level}${i===activeH?' is-on':''}`} onClick={()=>{setActiveH(i);jump(h.pos);}}>{h.text}</button>):<p>Headings you add appear here.</p>}</div></aside>}
+   <div className="zg-canvas" data-lenis-prevent ref={canvasRef} onScroll={e=>{if(!outline)return;const box=e.currentTarget,top=box.getBoundingClientRect().top+90;const hs=[...box.querySelectorAll('.zg-prose h1,.zg-prose h2,.zg-prose h3')].filter(h=>h.textContent?.trim());let k=0;hs.forEach((h,i)=>{if(h.getBoundingClientRect().top<=top)k=i;});if(k!==activeH)setActiveH(k);}}>
     {!outline&&<button type="button" className="zg-outline-btn" aria-label="Show outline" data-tip="Show outline" onClick={toggleOutline}><PanelLeft size={16}/></button>}
     <div className="zg-page" style={{zoom:zoom/100}} onClick={canEdit?undefined:pics.onClick}><EditorContent editor={editor}/></div>{pics.node}
    </div>
   </div>
-  <button type="button" className="zg-words" onClick={()=>setCounting(true)}>{words.toLocaleString()} word{words===1?'':'s'}</button>
+  <button type="button" className={`zg-words${outline?' with-outline':''}`} onClick={()=>setCounting(true)}>{words.toLocaleString()} word{words===1?'':'s'}</button>
   {counting&&ed&&<div className="zn-modal-scrim" onClick={()=>setCounting(false)}><div className="zn-modal zn-confirm zg-count" role="dialog" aria-label="Word count" onClick={e=>e.stopPropagation()}>
    <h2>Word count</h2><dl><dt>Pages</dt><dd>{Math.max(1,Math.ceil(words/500))}</dd><dt>Words</dt><dd>{words.toLocaleString()}</dd><dt>Characters</dt><dd>{ed.getText().length.toLocaleString()}</dd><dt>Characters without spaces</dt><dd>{ed.getText().replace(/\s/g,'').length.toLocaleString()}</dd></dl>
    <div className="zn-modal-foot"><button type="button" className="zn-btn is-primary" onClick={()=>setCounting(false)}>OK</button></div></div></div>}
