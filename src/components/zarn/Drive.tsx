@@ -299,6 +299,7 @@ export default function Drive(){
     <div className="zdr-crumbs">
      {place&&!q?<>
       <button type="button" onClick={()=>router.push(rootHref(place))} {...dropOn({...place,folder:null},'root')} data-over={dragOver==='root'||undefined}>{rootLabel(place)}</button>
+      {!place.folder&&<span className="zdr-who">{place.drive==='team'?'· Everyone on the team':place.drive==='client'?'· Everyone in this client’s space':'· Only you'}</span>}
       {trail.map(f=><span key={f.id} className="zdr-crumb"><ChevronRight size={16}/><button type="button" onClick={()=>router.push(`/zarn/drive?f=${f.id}`)} {...dropOn(asPlace(f),`b:${f.id}`)} data-over={dragOver===`b:${f.id}`||undefined}>{f.name}</button></span>)}
      </>:<h1>{q?`Results for “${q}”`:heading}</h1>}
     </div>
@@ -318,25 +319,15 @@ export default function Drive(){
     :<><button type="button" onClick={()=>setMoving(picked)}><FolderInput size={15}/>Move</button><button type="button" onClick={()=>void bulk('star')}><Star size={15}/>Star</button><button type="button" className="zdr-danger" onClick={()=>void bulk('trash')}><Trash2 size={15}/>Trash</button></>}
     <button type="button" onClick={()=>setSel(new Set(shown.map(keyOf)))}><CheckSquare size={15}/>Select all</button>
    </div>}
-   {place&&!q&&<div className="zdr-intro">
-    <p className="zdr-access">{place.drive==='team'?<><Users size={14}/>Everyone on the team can open and edit what’s here.</>:place.drive==='client'?<><Briefcase size={14}/>Everyone in {clientName(place.lead)}’s space can open and edit what’s here.</>:place.folder&&folder&&folder.owner_id!==me.user_id?<><Share2 size={14}/>Shared with you by {people[folder.owner_id]?.display_name??'someone'}.</>:<><HardDrive size={14}/>Only you can see this, unless you share something.</>}</p>
-    {canAdd&&<div className="zdr-quick">
-     <button type="button" onClick={()=>setNaming(true)}><span className="zdr-qi is-folder"><FolderPlus size={18}/></span>New folder</button>
-     <button type="button" onClick={()=>void newDoc()}><span className="zdr-qi is-doc"><FileText size={18}/></span>New doc</button>
-     <button type="button" onClick={()=>void newDoc(true)}><span className="zdr-qi is-sheet"><FileSpreadsheet size={18}/></span>New sheet</button>
-     <button type="button" onClick={()=>pick.current?.click()}><span className="zdr-qi is-up"><Upload size={18}/></span>Upload files</button>
-    </div>}
-   </div>}
    {list==='trash'&&<p className="zdr-note">Items in the trash can be restored. Only the owner or a ZARN admin can delete things for good.</p>}
    {err&&<p className="zn-error zdr-err" role="alert">{err}</p>}
    <div className="zdr-body" data-lenis-prevent>
     {items===null?<p className="zn-loading">Loading…</p>:!shown.length?<div className="zn-empty-state"><h2>{q?'Nothing matches':list==='trash'?'Trash is empty':list==='starred'?'No starred items':list==='shared'?'Nothing shared with you yet':place?.folder?'This folder is empty':'Nothing here yet'}</h2><p>{q?'Try another name.':canAdd?'Use New to add a folder, a doc or files, or drop files here.':'Items will show up here.'}</p></div>
     :layout==='grid'?<>
      {shown.some(i=>i.kind==='folder')&&<><p className="zdr-group">Folders</p><div className="zdr-folders">{shown.filter(i=>i.kind==='folder').map(f=><div key={f.id} role="button" tabIndex={0} className={`zdr-folder${sel.has(keyOf(f))?' is-sel':''}`} {...dragProps(f)} {...(f.trashed_at?{}:dropOn(asPlace(f),`f:${f.id}`))} data-over={dragOver===`f:${f.id}`||undefined} onClick={e=>click(e,f)} onKeyDown={e=>{if(e.key==='Enter')open(f);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:f,x:e.clientX,y:e.clientY});}}>
-      {checkBox(f)}<span className="zdr-ftile" style={f.color?{color:f.color}:undefined}>{icon(f,20)}</span><span className="zdr-fname"><b>{f.name}</b><small>{(()=>{const n=(items??[]).filter(x=>x.folder_id===f.id&&!x.trashed_at).length;return n?`${n} item${n===1?'':'s'}`:'Empty';})()}</small></span>{f.shared&&<Users size={13} className="zdr-faint"/>}{stars.has(`folder:${f.id}`)&&<Star size={12} className="zdr-star" fill="currentColor"/>}
+      <span className="zdr-fic">{icon(f)}{checkBox(f)}</span><span className="zdr-fname">{f.name}</span>{f.shared&&<Users size={13} className="zdr-faint"/>}{stars.has(`folder:${f.id}`)&&<Star size={12} className="zdr-star" fill="currentColor"/>}
       <button type="button" className="zdr-dots" aria-label={`More for ${f.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({item:f,x:r.right,y:r.bottom});}}><MoreVertical size={16}/></button>
      </div>)}</div></>}
-     {!shown.some(i=>i.kind!=='folder')&&canAdd&&!q&&<div className="zdr-dropzone"><Upload size={18}/>Drop files here, or use Upload files above.</div>}
      {shown.some(i=>i.kind!=='folder')&&<><p className="zdr-group">Files</p><div className="zdr-grid">{shown.filter(i=>i.kind!=='folder').map(it=><div key={`${it.kind}:${it.id}`} role="button" tabIndex={0} className={`zdr-card${sel.has(keyOf(it))?' is-sel':''}`} {...dragProps(it)} onClick={e=>click(e,it)} onKeyDown={e=>{if(e.key==='Enter')open(it);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:it,x:e.clientX,y:e.clientY});}}>
       <div className="zdr-card-top">{checkBox(it)}{icon(it,16)}<b title={it.name}>{it.name}</b><button type="button" className="zdr-dots" aria-label={`More for ${it.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({item:it,x:r.right,y:r.bottom});}}><MoreVertical size={16}/></button></div>
       <div className={`zdr-thumb is-${it.sheet?'sheet':it.kind}`}>{it.kind==='file'&&isImage(it.type)?<img src={`/api/zarn/files?f=${it.id}`} alt="" loading="lazy"/>:it.sheet?<FileSpreadsheet size={42}/>:it.kind==='doc'?<FileText size={42}/>:<em>{ext(it.name)}</em>}</div>
