@@ -2357,3 +2357,5 @@ a.zn-act-row:hover{background:var(--z-hover)}
 @keyframes zn-fade{from{opacity:0}to{opacity:1}}
 /* The message box hint always stays on one line */
 .zn-composer textarea::placeholder{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Phones: Star lives in Details (the i button), so the chat name has room */
+@media(max-width:760px){.zn-chan-head .zn-head-actions button[aria-label="Star"],.zn-chan-head .zn-head-actions button[aria-label="Unstar"]{display:none}}
