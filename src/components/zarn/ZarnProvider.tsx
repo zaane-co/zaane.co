@@ -114,6 +114,14 @@ export default function ZarnProvider({me,initial,children}:{me:Me;initial:{membe
  // Initial unread + live updates.
  // eslint-disable-next-line react-hooks/set-state-in-effect -- state is set after the fetch resolves, not synchronously
  useEffect(()=>{void loadUnread();},[loadUnread]);
+ // Phones drop the realtime socket while ZARN is in the background, so messages and new conversations that arrived meanwhile
+ // (the ones a push notification announced) never reach the chat list. Re-read the list and unread counts on return.
+ useEffect(()=>{
+  let last=Date.now();
+  const sync=()=>{if(document.visibilityState!=='visible'||Date.now()-last<3000)return;last=Date.now();void reload();void loadUnread();};
+  document.addEventListener('visibilitychange',sync);window.addEventListener('online',sync);window.addEventListener('focus',sync);window.addEventListener('pageshow',sync);
+  return()=>{document.removeEventListener('visibilitychange',sync);window.removeEventListener('online',sync);window.removeEventListener('focus',sync);window.removeEventListener('pageshow',sync);};
+ },[reload,loadUnread]);
  useEffect(()=>{
   const ch=db.channel('zarn-db')
    .on('postgres_changes',{event:'*',schema:'public',table:'zarn_messages'},(p:Change)=>{
