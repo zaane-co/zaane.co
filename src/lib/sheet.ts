@@ -8,6 +8,7 @@ export const chipInk=(bg?:string)=>{if(!bg)return '#202124';const h=bg.replace('
 export const parseRange=(s:string)=>{const [a,b]=s.toUpperCase().replace(/\$/g,'').trim().split(':');const p=parseRef(a??''),q=b?parseRef(b):p;if(!p||!q)return null;return {c0:Math.min(p[0],q[0]),c1:Math.max(p[0],q[0]),r0:Math.min(p[1],q[1]),r1:Math.max(p[1],q[1])};};
 export function ruleAt(rules:Rule[]|undefined,c:number,r:number):Rule|undefined{if(!rules)return;for(let i=rules.length-1;i>=0;i--){const b=parseRange(rules[i].range);if(b&&c>=b.c0&&c<=b.c1&&r>=b.r0&&r<=b.r1)return rules[i];}}
 export type Tab={id:string;name:string;cells:Record<string,string>;style?:Record<string,Style>;widths?:Record<string,number>;freeze?:{r:number;c:number};color?:string;valid?:Rule[];
+ /** filter: the range (header row first) and, per column index, the values hidden */ filter?:{range:string;hide:Record<string,string[]>};hRows?:number[];hCols?:number[];
  /** legacy */ bold?:Record<string,boolean>;/** legacy */ align?:Record<string,'l'|'c'|'r'>};
 export type SheetData={tabs:Tab[]};
 export const COLS=52,ROWS=1000,COL_W=104,ROW_H=24;
