@@ -29,6 +29,9 @@ const savePref=(k:string,v:string)=>{try{localStorage.setItem(k,v);}catch{}};
 // Google-Drive-style home for docs, uploaded files and folders: My Drive, the team drive and one drive per client.
 export default function Drive(){
  const {db,me,people,channels,title}=useZarn(),confirm=useConfirm(),router=useRouter(),params=useSearchParams();
+ // Folder changes only change the query string, so tell the shell to remember the new spot.
+ const spot=params.toString();
+ useEffect(()=>{window.dispatchEvent(new Event('zarn-drive-moved'));},[spot]);
  const [items,setItems]=useState<Item[]|null>(null),[stars,setStars]=useState<Set<string>>(new Set()),[err,setErr]=useState('');
  const [q,setQ]=useState(''),[layout,setLayout]=useState<'grid'|'list'>('grid'),[sort,setSort]=useState<'name'|'updated'>('updated');
  const [menu,setMenu]=useState<{item:Item;x:number;y:number}|null>(null),[newMenu,setNewMenu]=useState(false),[bgMenu,setBgMenu]=useState<{x:number;y:number}|null>(null),[sel,setSel]=useState<Set<string>>(new Set());

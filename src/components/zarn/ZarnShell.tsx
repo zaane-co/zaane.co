@@ -48,6 +48,14 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  const router=useRouter();
  const {mode:installMode,install}=useInstall(),sound=useSound(),soundCfg=useSoundSettings(),push=usePushState(),[soundOpen,setSoundOpen]=useState(false),[installDone,setInstallDone]=useState(false);
  const routeArea=areaOf(pathname);
+ // Drive remembers where you were (a folder, or an open doc or sheet), so leaving to answer a chat and coming back returns you there.
+ const [driveLast,setDriveLast]=useState('/zarn/drive');
+ useEffect(()=>{
+  const save=()=>{if(areaOf(location.pathname)==='drive')setDriveLast(location.pathname+location.search);};
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the address bar, which only exists after render
+  if(routeArea==='drive')save();
+  window.addEventListener('zarn-drive-moved',save);return()=>window.removeEventListener('zarn-drive-moved',save);
+ },[pathname,routeArea]);
  const [area,setArea]=useState<Area>(routeArea);
  // Follow the route's area whenever the route changes.
  const [seenPath,setSeenPath]=useState(pathname),[fileDrag,setFileDrag]=useState(false);
@@ -96,7 +104,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  // Home on a computer opens #general (or the first open channel), like it does on sign-in.
  const homeHref=()=>{const c=channels.find(x=>x.name==='general'&&!x.archived_at&&z.membership[x.id])??channels.find(x=>x.kind!=='dm'&&!x.archived_at&&z.membership[x.id]);return c?`/zarn/c/${c.id}`:'/zarn';};
  const railBtn=(a:Area,icon:React.ReactNode,label:string,badge:number)=><button type="button" className={`zn-rail-btn${area===a?' is-on':''}`} aria-pressed={area===a} onClick={()=>{setArea(a);if(a==='projects'&&pathname!=='/zarn/projects')router.push('/zarn/projects');else if(routeArea==='drive')router.push(a==='chat'?homeHref():`/zarn/${a}`);}}><span className="zn-rail-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small>{label}</small></button>;
- const tab=(href:string,icon:React.ReactNode,label:string,badge:number)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={href} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small className="zn-tab-label">{label}</small></Link>;};
+ const tab=(href:string,icon:React.ReactNode,label:string,badge:number,go=href)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={go} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small className="zn-tab-label">{label}</small></Link>;};
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
  // A profile is its own step in the back history, so iOS swipe-back (or Android back) closes it instead of leaving the chat.
@@ -109,7 +117,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
    <nav className="zn-rail" aria-label="Areas">
     <button type="button" className="zn-rail-logo" aria-label="Workspace menu" onClick={()=>setMenu(v=>!v)}><img src="/zarn%20logo2.png" alt="ZARN"/></button>
     {railBtn('chat',<MessageSquare size={20}/>,'Home',badges.home+badges.dms)}
-    <button type="button" className={`zn-rail-btn${area==='drive'?' is-on':''}`} aria-pressed={area==='drive'} onClick={()=>{setArea('drive');if(!pathname.startsWith('/zarn/drive'))router.push('/zarn/drive');}}><span className="zn-rail-icon"><HardDrive size={20}/></span><small>Drive</small></button>
+    <button type="button" className={`zn-rail-btn${area==='drive'?' is-on':''}`} aria-pressed={area==='drive'} onClick={()=>{setArea('drive');if(routeArea!=='drive')router.push(driveLast);else if(!pathname.startsWith('/zarn/drive'))router.push('/zarn/drive');}}><span className="zn-rail-icon"><HardDrive size={20}/></span><small>Drive</small></button>
     {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',badges.projects)}
     {canBusiness&&railBtn('business',<TrendingUp size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
@@ -217,7 +225,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
    <nav className="zn-tabbar" aria-label="ZARN">
     {tab('/zarn/home',<Home size={24}/>,'Home',badges.home+badges.dms)}
     {!guest&&tab('/zarn/todos',<ListChecks size={24}/>,'To-do',z.dueTasks)}
-    {tab('/zarn/drive',<HardDrive size={24}/>,'Drive',0)}
+    {tab('/zarn/drive',<HardDrive size={24}/>,'Drive',0,routeArea==='drive'?'/zarn/drive':driveLast)}
     {!guest&&tab('/zarn/projects',<FolderKanban size={24}/>,'Projects',badges.projects)}
     {!guest&&tab('/zarn/clients',<Briefcase size={24}/>,'Clients',badges.clients)}
    </nav>
