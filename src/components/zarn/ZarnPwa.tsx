@@ -28,13 +28,16 @@ export default function ZarnPwa(){
  useEffect(()=>{
   const vv=window.visualViewport;if(!vv)return;
   const root=document.documentElement;
-  const set=()=>{
-   root.style.setProperty('--zvh',`${vv.height}px`);root.style.setProperty('--zvt',`${vv.offsetTop}px`);
-   root.toggleAttribute('data-kb',window.innerHeight-vv.height>120);
-   if(window.scrollY)window.scrollTo(0,0);
+  // Follow the keyboard once per frame, and never scroll the page back ourselves: fighting iOS's own pan made the screen bounce.
+  let raf=0,h=-1,t=-1;
+  const apply=()=>{raf=0;
+   const nh=Math.round(vv.height),nt=Math.round(vv.offsetTop);
+   if(nh!==h){h=nh;root.style.setProperty('--zvh',`${nh}px`);root.toggleAttribute('data-kb',window.innerHeight-nh>120);}
+   if(nt!==t){t=nt;root.style.setProperty('--zvt',`${nt}px`);}
   };
-  set();vv.addEventListener('resize',set);vv.addEventListener('scroll',set);
-  return()=>{vv.removeEventListener('resize',set);vv.removeEventListener('scroll',set);['--zvh','--zvt'].forEach(k=>root.style.removeProperty(k));root.removeAttribute('data-kb');};
+  const set=()=>{if(!raf)raf=requestAnimationFrame(apply);};
+  apply();vv.addEventListener('resize',set);vv.addEventListener('scroll',set);
+  return()=>{cancelAnimationFrame(raf);vv.removeEventListener('resize',set);vv.removeEventListener('scroll',set);['--zvh','--zvt'].forEach(k=>root.style.removeProperty(k));root.removeAttribute('data-kb');};
  },[]);
  // Tapping a notification goes to that exact conversation: a message from the service worker (app already open) or a saved target (app was closed).
  useEffect(()=>{

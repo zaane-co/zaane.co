@@ -123,7 +123,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
      const dmOther=channel.kind==='dm'?(channel.dm_key??'').split(',').find(u=>u!==me.user_id):undefined;
      if(typers.length)return <p className="zn-topic is-typing">{channel.kind==='dm'?'typing':`${typers.join(', ')} ${typers.length>1?'are':'is'} typing`}<i className="zn-dots"><b/><b/><b/></i></p>;
      if(dmOther)return <p className="zn-topic">{z.online.has(dmOther)?<span className="zn-online">online</span>:lastSeen(people[dmOther]?.last_seen_at)}</p>;
-     return channel.topic?<p className="zn-topic" title={channel.topic}>{channel.topic}</p>:null;
+     return channel.topic?<p className="zn-topic is-topic" title={channel.topic}>{channel.topic}</p>:null;
     })()}
     <div className="zn-head-actions">
      <button type="button" aria-label="Search this conversation" data-tip="Search here" onClick={()=>setSearching(true)}><Search size={16}/></button>

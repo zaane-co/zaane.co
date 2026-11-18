@@ -2319,3 +2319,5 @@ a.zn-act-row:hover{background:var(--z-hover)}
 }
 @keyframes zn-sheet-up{from{transform:translateY(100%)}to{transform:none}}
 @media(prefers-reduced-motion:reduce){.zn-modal-scrim>.zn-modal{animation:none!important}}
+/* Phones: a clean channel header (name + actions). The topic lives in channel details. */
+@media(max-width:760px){.zn-chan-head .zn-topic.is-topic{display:none}}
