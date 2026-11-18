@@ -2335,3 +2335,16 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zn-chan-head .zn-head-actions button.is-on{color:#f59e0b}
  .zn-chan-head .zn-head-actions .zn-head-faces,.zn-chan-head .zn-head-actions button[data-tip="Pinned messages"]{display:none}
 }
+/* Phones: search takes the whole screen, like iOS search. Nothing floats or moves when the keyboard opens. */
+@media(pointer:coarse) and (max-width:760px){
+ .zn-modal-scrim.zn-srch-scrim{padding:0;background:var(--z-panel)}
+ .zn-srch-scrim>.zn-srch{flex:1 1 auto;min-height:0;width:100%;max-width:none;max-height:none;border:0;border-radius:0;box-shadow:none;padding-top:env(safe-area-inset-top);animation:zn-fade .18s ease-out}
+ .zn-srch .zn-srch-bar{padding:10px 12px 10px 16px;gap:8px}
+ .zn-srch .zn-srch-bar input{font-size:16px}
+ .zn-srch .zn-srch-scope{height:24px;font-size:12px;padding:0 4px 0 9px}
+ .zn-srch .zn-srch-bar>button:last-child{width:36px;height:36px}
+ .zn-srch .zn-srch-tabs{padding:0 8px}
+ .zn-srch .zn-srch-list{padding:6px 6px calc(12px + env(safe-area-inset-bottom))}
+ html[data-kb] .zn-srch .zn-srch-list{padding-bottom:calc(100lvh - var(--zvh,100lvh))}
+}
+@keyframes zn-fade{from{opacity:0}to{opacity:1}}
