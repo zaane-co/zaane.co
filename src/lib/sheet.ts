@@ -1,6 +1,13 @@
 // ZARN sheets: the stored shape, cell formatting, and a formula engine. Used by the editor and the read-only link page.
 export type Style={b?:1;i?:1;u?:1;s?:1;color?:string;bg?:string;h?:'l'|'c'|'r';v?:'t'|'m'|'b';wrap?:1;fmt?:'auto'|'num'|'cur'|'pct'|'date'|'text';cur?:string;dec?:number;size?:number};
-export type Tab={id:string;name:string;cells:Record<string,string>;style?:Record<string,Style>;widths?:Record<string,number>;freeze?:{r:number;c:number};color?:string;
+// Data validation, like Google Sheets: tick boxes, or a dropdown of options shown as coloured chips.
+export type Opt={v:string;c?:string};
+export type Rule={id:string;range:string;t:'check'|'list';opts?:Opt[];strict?:1};
+export const CHIP_COLORS=['#e8eaed','#c6dafc','#b7e1cd','#fce8b2','#f4c7c3','#e6d4f5','#d2e3fc','#fad2cf','#0b57d0','#188038','#b06000','#c5221f','#8430ce','#e37400','#007b83','#5f6368'];
+export const chipInk=(bg?:string)=>{if(!bg)return '#202124';const h=bg.replace('#','');const n=parseInt(h.length===3?h.split('').map(x=>x+x).join(''):h,16);const l=(0.299*(n>>16&255)+0.587*(n>>8&255)+0.114*(n&255));return l>150?'#202124':'#fff';};
+export const parseRange=(s:string)=>{const [a,b]=s.toUpperCase().replace(/\$/g,'').trim().split(':');const p=parseRef(a??''),q=b?parseRef(b):p;if(!p||!q)return null;return {c0:Math.min(p[0],q[0]),c1:Math.max(p[0],q[0]),r0:Math.min(p[1],q[1]),r1:Math.max(p[1],q[1])};};
+export function ruleAt(rules:Rule[]|undefined,c:number,r:number):Rule|undefined{if(!rules)return;for(let i=rules.length-1;i>=0;i--){const b=parseRange(rules[i].range);if(b&&c>=b.c0&&c<=b.c1&&r>=b.r0&&r<=b.r1)return rules[i];}}
+export type Tab={id:string;name:string;cells:Record<string,string>;style?:Record<string,Style>;widths?:Record<string,number>;freeze?:{r:number;c:number};color?:string;valid?:Rule[];
  /** legacy */ bold?:Record<string,boolean>;/** legacy */ align?:Record<string,'l'|'c'|'r'>};
 export type SheetData={tabs:Tab[]};
 export const COLS=52,ROWS=1000,COL_W=104,ROW_H=24;
@@ -102,7 +109,8 @@ export function evaluate(tab:Tab,tabs:Tab[]=[tab]):Record<string,V>{
   const key=`${t.id}!${k}`;if(cache.has(key))return cache.get(key)!;
   if(busy.has(key))throw new Err('#CYCLE!');
   const src=t.cells[k]??'';let v:V;
-  if(!src.startsWith('=')||src.length<2){v=src!==''&&/^\s*-?[\d,]*\.?\d+(e[-+]?\d+)?\s*%?\s*$/i.test(src)?(src.trim().endsWith('%')?Number(src.replace(/[%,\s]/g,''))/100:Number(src.replace(/[,\s]/g,''))):src;}
+  if(/^(true|false)$/i.test(src))v=src.toUpperCase()==='TRUE';
+  else if(!src.startsWith('=')||src.length<2){v=src!==''&&/^\s*-?[\d,]*\.?\d+(e[-+]?\d+)?\s*%?\s*$/i.test(src)?(src.trim().endsWith('%')?Number(src.replace(/[%,\s]/g,''))/100:Number(src.replace(/[,\s]/g,''))):src;}
   else{busy.add(key);try{v=formula(src.slice(1),(tn,k2)=>{const tt=tn?byName(tn):t;if(!tt)throw new Err('#REF!');return cell(tt,k2);});}catch(e){v=e instanceof Err?e.message:'#ERROR!';}finally{busy.delete(key);}}
   cache.set(key,v);return v;
  };

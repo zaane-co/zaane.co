@@ -2850,3 +2850,7 @@ body:has(.za-admin,.admin-login,.za-invoice-page,.zarn,.zarn-auth) [data-edge-bl
 .docpub-body td p,.docpub-body th p{margin:0}
 .docpub-body ul[data-type=taskList]{list-style:none;padding-left:.2em}.docpub-body ul[data-type=taskList] li{display:flex;gap:8px}
 .docpub-body ul[data-type=taskList] li[data-checked=true]>div{text-decoration:line-through;color:#71717a}
+.docpub-check{display:inline-block;width:13px;height:13px;border:2px solid #9aa0a6;border-radius:3px;vertical-align:middle;position:relative}
+.docpub-check.is-on{background:#1a73e8;border-color:#1a73e8}
+.docpub-check.is-on::after{content:"";position:absolute;left:3px;top:0;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.docpub-chip{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;line-height:17px}

@@ -3,13 +3,13 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {ChevronUp,CloudCheck,CloudOff,AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Folder,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Underline,Undo2,WrapText,X,Eraser} from 'lucide-react';
+import {ChevronUp,CloudCheck,CloudOff,AlignCenter,AlignLeft,AlignRight,Bold,Check,ChevronDown,ChevronRight,FileSpreadsheet,Folder,Italic,Loader2,Menu,PaintBucket,Percent,Plus,Printer,Redo2,Search,Share2,Sigma,Strikethrough,Pencil,Underline,Undo2,WrapText,X,Eraser,SquareCheckBig,SquareChevronDown,Trash2} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import ShareDoc from './ShareDoc';
 import {Modal} from './Dialogs';
 import {Avatar} from './format';
-import {COLS,COL_W,FUNCTIONS,FUNCTION_NAMES,ROWS,ROW_H,adjustRefs,blankTab,colName,evaluate,isError,parseRef,readSheet,ref,shiftRefs,show,type SheetData,type Style,type Tab} from '@/lib/sheet';
+import {CHIP_COLORS,COLS,COL_W,FUNCTIONS,FUNCTION_NAMES,ROWS,ROW_H,adjustRefs,blankTab,chipInk,colName,evaluate,isError,parseRange,parseRef,readSheet,ref,shiftRefs,show,type Rule,type SheetData,type Style,type Tab} from '@/lib/sheet';
 
 type Row={id:string;title:string;content:string;owner_id:string;kind:string;drive:'my'|'team'|'client';folder_id:string|null;lead_id:string|null};
 type Role='owner'|'edit'|'view';
@@ -22,6 +22,7 @@ const peerColors=['#e8710a','#9334e6','#12b5cb','#d93025','#188038','#f9ab00','#
 const colorOf=(id:string)=>peerColors[[...id].reduce((a,ch)=>a+ch.charCodeAt(0),0)%peerColors.length];
 const fontSizes=[8,9,10,11,12,13,14,16,18,20,24,28,36];
 const zooms=[0.5,0.75,0.9,1,1.25,1.5,2];
+const newId=()=>Math.random().toString(36).slice(2,10);
 
 // A spreadsheet in Drive, built to feel like Google Sheets: menus, a full toolbar, the name box and formula bar,
 // a fast grid with frozen rows/columns, fill handle and resizable columns, formulas with suggestions, and live co-editing.
@@ -32,7 +33,7 @@ export default function SheetPage({id}:{id:string}){
  const [sel,setSel]=useState<[number,number]>([0,0]),[anchor,setAnchor]=useState<[number,number]|null>(null);
  const [editing,setEditing]=useState<string|null>(null),[editMode,setEditMode]=useState<'type'|'edit'>('edit'),[editIn,setEditIn]=useState<'cell'|'bar'>('cell'),[pick,setPick]=useState(0);
  const [state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[crumbs,setCrumbs]=useState<{name:string;href:string}[]>([]);
- const [toolSheet,setToolSheet]=useState(false);
+ const [toolSheet,setToolSheet]=useState(false),[dd,setDd]=useState<string|null>(null),[ruleEdit,setRuleEdit]=useState<Rule|null>(null),[warn,setWarn]=useState('');
  const [menu,setMenu]=useState<string|null>(null),[pop,setPop]=useState<string|null>(null),[ctx,setCtx]=useState<{x:number;y:number}|null>(null),[tabMenu,setTabMenu]=useState<string|null>(null),[renamingTab,setRenamingTab]=useState<string|null>(null);
  const [zoom,setZoom]=useState(1),[grid,setGrid]=useState(true),[find,setFind]=useState<{q:string;rep:string;at:number}|null>(null),[help,setHelp]=useState<'keys'|'fx'|null>(null);
  const [scroll,setScroll]=useState({top:0,h:800}),[drafts,setDrafts]=useState<Record<string,number>>({}),[fill,setFill]=useState<[number,number]|null>(null),[peers,setPeers]=useState<Record<string,Peer>>({}),[hl,setHl]=useState({u:0,r:0});
@@ -93,10 +94,32 @@ export default function SheetPage({id}:{id:string}){
  const st=tab.style?.[k]??{};
  const width=(c:number)=>drafts[c]??tab.widths?.[c]??COL_W;
  const freeze=tab.freeze??{r:0,c:0};
+ // ---------- Checkboxes and dropdowns (data validation) ----------
+ const rules=useMemo(()=>(tab.valid??[]).map(x=>({x,b:parseRange(x.range)})).filter((y):y is {x:Rule;b:Box}=>!!y.b),[tab.valid]);
+ const ruleOf=(c:number,r:number)=>{for(let i=rules.length-1;i>=0;i--){const {x,b}=rules[i];if(c>=b.c0&&c<=b.c1&&r>=b.r0&&r<=b.r1)return x;}return undefined;};
+ const isTrue=(raw?:string)=>(raw??'').trim().toUpperCase()==='TRUE';
+ const rangeOf=(b:Box)=>b.c0===b.c1&&b.r0===b.r1?ref(b.c0,b.r0):`${ref(b.c0,b.r0)}:${ref(b.c1,b.r1)}`;
+ const flash=(m:string)=>{setWarn(m);setTimeout(()=>setWarn(w=>w===m?'':w),2800);};
+ function toggleChecks(keys:string[]){const ks=keys.filter(x=>{const p=parseRef(x);return p&&ruleOf(p[0],p[1])?.t==='check';});if(!ks.length||!canEdit)return false;
+  const on=!ks.every(x=>isTrue(tab.cells[x]));setCells(ks.map(x=>({tab:tab.id,k:x,v:on?'TRUE':'FALSE'})));return true;}
+ function saveRule(rule:Rule){if(!canEdit)return;setTab(tab.id,t=>({...t,valid:[...(t.valid??[]).filter(x=>x.id!==rule.id),rule]}));}
+ function dropRule(id:string){setTab(tab.id,t=>({...t,valid:(t.valid??[]).filter(x=>x.id!==id)}));}
+ // Removing validation from a selection takes off every checkbox/dropdown rule that touches it.
+ function clearRules(){if(!canEdit)return;setTab(tab.id,t=>({...t,valid:(t.valid??[]).filter(x=>{const b=parseRange(x.range);return !b||b.c1<box.c0||b.c0>box.c1||b.r1<box.r0||b.r0>box.r1;})}));}
+ function addCheckbox(){if(!canEdit)return;saveRule({id:newId(),range:rangeOf(box),t:'check'});}
+ // A new dropdown starts from the values already in the selection, like Google Sheets does.
+ function openDropdown(){if(!canEdit)return;const cur=ruleOf(sel[0],sel[1]);if(cur){setRuleEdit(cur);return;}
+  const seen:string[]=[];for(const x of keysIn(box)){const v=(tab.cells[x]??'').trim();if(v&&!v.startsWith('=')&&!seen.some(y=>y.toLowerCase()===v.toLowerCase())&&seen.length<30)seen.push(v);}
+  const opts=(seen.length?seen:['Option 1','Option 2']).map((v,i)=>({v,c:CHIP_COLORS[i%8]}));
+  setRuleEdit({id:newId(),range:rangeOf(box),t:'list',opts});}
+ const pickOpt=(x:string,v:string)=>{setDd(null);if(canEdit&&(tab.cells[x]??'')!==v)setCells([{tab:tab.id,k:x,v}]);gridRef.current?.focus();};
 
  // ---------- Editing ----------
  const startEdit=(v:string,mode:'type'|'edit',where:'cell'|'bar'='cell')=>{if(!canEdit)return;setEditing(v);setEditMode(mode);setEditIn(where);setPick(0);};
- const commitEdit=(v:string|null=editing)=>{if(v===null)return;if(canEdit&&(tab.cells[k]??'')!==v)setCells([{tab:tab.id,k,v}]);setEditing(null);gridRef.current?.focus();};
+ const commitEdit=(raw:string|null=editing)=>{if(raw===null)return;let v=raw;const typed=raw.trim().toLowerCase();
+  const rl=ruleOf(sel[0],sel[1]);
+  if(rl?.t==='list'&&typed&&!v.startsWith('=')){const hit=rl.opts?.find(o=>o.v.toLowerCase()===typed);if(hit)v=hit.v;else if(rl.strict){flash(`“${v.trim()}” isn't one of the options for this cell.`);setEditing(null);gridRef.current?.focus();return;}}
+  if(canEdit&&(tab.cells[k]??'')!==v)setCells([{tab:tab.id,k,v}]);setEditing(null);gridRef.current?.focus();};
  const move=(dc:number,dr:number,extend=false)=>{if(extend&&!anchor)setAnchor(sel);if(!extend)setAnchor(null);setSel(([c,r])=>[Math.max(0,Math.min(COLS-1,c+dc)),Math.max(0,Math.min(ROWS-1,r+dr))]);};
  useEffect(()=>{if(editing!==null)(editIn==='cell'?cellIn:barIn).current?.focus();},[editing===null,editIn]); // eslint-disable-line react-hooks/exhaustive-deps
  // Formula help: suggestions while typing a function name, and the signature of the function you're inside.
@@ -166,7 +189,8 @@ export default function SheetPage({id}:{id:string}){
      if(c>=0&&c<COLS&&r>=0&&r<ROWS)out[ref(c,r)]=v;}return out;};
    const cells=move(t.cells);for(const x of Object.keys(cells))cells[x]=adjustRefs(cells[x],axis,at,delta);
    let widths=t.widths;if(axis==='c'&&widths){const w:Record<string,number>={};for(const [c,v] of Object.entries(widths)){let n=Number(c);if(delta<0&&n>=at&&n<at-delta)continue;if(n>=at)n+=delta;w[n]=v;}widths=w;}
-   return {...t,cells,style:move(t.style),widths};});
+   const valid=t.valid?.map(x=>({...x,range:adjustRefs(`=${x.range}`,axis,at,delta).slice(1)})).filter(x=>!x.range.includes('#REF!'));
+   return {...t,cells,style:move(t.style),widths,...(valid?{valid}:{})};});
  }
  function sort(dir:1|-1,whole:boolean){
   if(!canEdit)return;const b=whole||(box.r0===box.r1&&box.c0===box.c1)?{r0:0,r1:Math.max(0,used.mr),c0:0,c1:Math.max(0,used.mc)}:box;const col=sel[0];
@@ -199,10 +223,13 @@ export default function SheetPage({id}:{id:string}){
   if(e.key==='ArrowUp'){e.preventDefault();jump(0,-1);}else if(e.key==='ArrowDown'){e.preventDefault();jump(0,1);}
   else if(e.key==='ArrowLeft'){e.preventDefault();jump(-1,0);}else if(e.key==='ArrowRight'){e.preventDefault();jump(1,0);}
   else if(e.key==='Tab'){e.preventDefault();move(e.shiftKey?-1:1,0);}
+  else if(e.key===' '&&!mod&&toggleChecks(keysIn(box))){e.preventDefault();}
+  else if((e.key==='Enter'&&!e.shiftKey||e.altKey&&e.key==='ArrowDown')&&ruleOf(sel[0],sel[1])?.t==='list'&&canEdit){e.preventDefault();setDd(k);}
+  else if(e.key==='Enter'&&ruleOf(sel[0],sel[1])?.t==='check'){e.preventDefault();toggleChecks([k]);}
   else if(e.key==='Enter'){e.preventDefault();if(e.shiftKey)move(0,-1);else startEdit(tab.cells[k]??'','edit');}
   else if(e.key==='F2'){e.preventDefault();startEdit(tab.cells[k]??'','edit');}
   else if((e.key==='Delete'||e.key==='Backspace')&&canEdit){e.preventDefault();setCells(keysIn(box).filter(x=>tab.cells[x]).map(x=>({tab:tab.id,k:x,v:''})));}
-  else if(e.key==='Escape'){setAnchor(null);clip.current=null;}
+  else if(e.key==='Escape'){setAnchor(null);clip.current=null;setDd(null);}
   else if(!mod&&!e.altKey&&e.key.length===1&&canEdit){e.preventDefault();startEdit(e.key,'type');}
  }
  function onEditKey(e:React.KeyboardEvent<HTMLInputElement>){
@@ -235,7 +262,7 @@ export default function SheetPage({id}:{id:string}){
   const mv=(e:MouseEvent)=>{const d=drag.current;if(d.kind==='resize'&&d.col!==undefined)setDrafts({[d.col]:Math.max(30,Math.round((d.w??COL_W)+(e.clientX-(d.x??0))/zoom))});};
   window.addEventListener('mouseup',up);window.addEventListener('mousemove',mv);return()=>{window.removeEventListener('mouseup',up);window.removeEventListener('mousemove',mv);};
  });
- useEffect(()=>{const close=()=>{setMenu(null);setPop(null);setCtx(null);setTabMenu(null);};window.addEventListener('click',close);return()=>window.removeEventListener('click',close);},[]);
+ useEffect(()=>{const close=()=>{setMenu(null);setPop(null);setCtx(null);setTabMenu(null);setDd(null);};window.addEventListener('click',close);return()=>window.removeEventListener('click',close);},[]);
 
  // ---------- Virtual scrolling: only the rows on screen are drawn ----------
  const rowH=ROW_H*zoom;
@@ -289,9 +316,9 @@ export default function SheetPage({id}:{id:string}){
   View:[{head:'Freeze'},{label:'No rows',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:0}})),on:!freeze.r,off:!canEdit},{label:'1 row',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:1}})),on:freeze.r===1,off:!canEdit},{label:'2 rows',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:2}})),on:freeze.r===2,off:!canEdit},{label:`Up to row ${sel[1]+1}`,run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,r:Math.min(sel[1]+1,20)}})),off:!canEdit},
    {label:'No columns',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:0}})),on:!freeze.c,off:!canEdit},{label:'1 column',run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:1}})),on:freeze.c===1,off:!canEdit},{label:`Up to column ${colName(sel[0])}`,run:()=>setTab(tab.id,t=>({...t,freeze:{...freeze,c:Math.min(sel[0]+1,10)}})),off:!canEdit},
    '-',{label:'Gridlines',run:()=>setGrid(g=>!g),on:grid},'-',{head:'Zoom'},...zooms.map(z=>({label:`${Math.round(z*100)}%`,run:()=>setZoom(z),on:zoom===z}) as Item)],
-  Insert:[{label:`Row above`,run:()=>shift('r',box.r0,1),off:!canEdit},{label:'Row below',run:()=>shift('r',box.r1+1,1),off:!canEdit},{label:'Column left',run:()=>shift('c',box.c0,1),off:!canEdit},{label:'Column right',run:()=>shift('c',box.c1+1,1),off:!canEdit},'-',{label:'New tab',run:addTab,off:!canEdit},'-',{head:'Function'},...['SUM','AVERAGE','COUNT','MAX','MIN','IF','VLOOKUP'].map(n=>({label:n,run:()=>startEdit(`=${n}(`,'edit'),off:!canEdit}) as Item)],
+  Insert:[{label:`Row above`,run:()=>shift('r',box.r0,1),off:!canEdit},{label:'Row below',run:()=>shift('r',box.r1+1,1),off:!canEdit},{label:'Column left',run:()=>shift('c',box.c0,1),off:!canEdit},{label:'Column right',run:()=>shift('c',box.c1+1,1),off:!canEdit},'-',{label:'New tab',run:addTab,off:!canEdit},'-',{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Dropdown',run:openDropdown,off:!canEdit},'-',{head:'Function'},...['SUM','AVERAGE','COUNT','MAX','MIN','IF','VLOOKUP'].map(n=>({label:n,run:()=>startEdit(`=${n}(`,'edit'),off:!canEdit}) as Item)],
   Format:[...fmtItems,'-',{head:'Text'},{label:'Bold',key:'⌘B',run:()=>toggle('b'),on:!!st.b,off:!canEdit},{label:'Italic',key:'⌘I',run:()=>toggle('i'),on:!!st.i,off:!canEdit},{label:'Underline',key:'⌘U',run:()=>toggle('u'),on:!!st.u,off:!canEdit},{label:'Strikethrough',run:()=>toggle('s'),on:!!st.s,off:!canEdit},'-',{head:'Alignment'},{label:'Left',run:()=>styleKeys(keysIn(box),s=>({...s,h:'l'})),on:st.h==='l',off:!canEdit},{label:'Centre',run:()=>styleKeys(keysIn(box),s=>({...s,h:'c'})),on:st.h==='c',off:!canEdit},{label:'Right',run:()=>styleKeys(keysIn(box),s=>({...s,h:'r'})),on:st.h==='r',off:!canEdit},{label:'Wrap text',run:()=>styleKeys(keysIn(box),s=>({...s,wrap:s.wrap?undefined:1})),on:!!st.wrap,off:!canEdit},'-',{label:'Clear formatting',key:'⌘\\',run:()=>styleKeys(keysIn(box),()=>({})),off:!canEdit}],
-  Data:[{label:`Sort sheet by column ${colName(sel[0])}, A → Z`,run:()=>sort(1,true),off:!canEdit},{label:`Sort sheet by column ${colName(sel[0])}, Z → A`,run:()=>sort(-1,true),off:!canEdit},'-',{label:'Sort range A → Z',run:()=>sort(1,false),off:!canEdit},{label:'Sort range Z → A',run:()=>sort(-1,false),off:!canEdit}],
+  Data:[{label:`Sort sheet by column ${colName(sel[0])}, A → Z`,run:()=>sort(1,true),off:!canEdit},{label:`Sort sheet by column ${colName(sel[0])}, Z → A`,run:()=>sort(-1,true),off:!canEdit},'-',{label:'Sort range A → Z',run:()=>sort(1,false),off:!canEdit},{label:'Sort range Z → A',run:()=>sort(-1,false),off:!canEdit},'-',{label:'Dropdown…',run:openDropdown,off:!canEdit},{label:'Checkbox',run:addCheckbox,off:!canEdit},{label:'Remove dropdowns and checkboxes',run:clearRules,off:!canEdit||!rules.length}],
   Help:[{label:'Keyboard shortcuts',key:'⌘/',run:()=>setHelp('keys')},{label:'Function list',run:()=>setHelp('fx')}],
  };
  const renderItems=(items:Item[])=>items.map((it,i)=>it==='-'?<hr key={i}/>:'head' in it?<p key={i} className="zs2-mhead">{it.head}</p>:<button key={i} type="button" disabled={it.off} onClick={()=>{setMenu(null);setCtx(null);it.run?.();}}><span className="zs2-mcheck">{it.on&&<Check size={13}/>}</span><span>{it.label}</span>{it.key&&<kbd>{it.key}</kbd>}</button>);
@@ -359,6 +386,9 @@ export default function SheetPage({id}:{id:string}){
    <button type="button" data-tip="Wrap text" aria-label="Wrap text" disabled={!canEdit} className={st.wrap?'is-on':''} onClick={()=>styleKeys(keysIn(box),s=>({...s,wrap:s.wrap?undefined:1}))}><WrapText size={16}/></button>
    <button type="button" data-tip="Clear formatting" aria-label="Clear formatting" disabled={!canEdit} onClick={()=>styleKeys(keysIn(box),()=>({}))}><Eraser size={16}/></button>
    <i className="zs2-sep"/>
+   <button type="button" data-tip="Insert checkbox" aria-label="Insert checkbox" disabled={!canEdit} onClick={addCheckbox}><SquareCheckBig size={16}/></button>
+   <button type="button" data-tip="Insert dropdown" aria-label="Insert dropdown" disabled={!canEdit} onClick={openDropdown}><SquareChevronDown size={16}/></button>
+   <i className="zs2-sep"/>
    <span className="zs2-popwrap"><button type="button" data-tip="Functions" aria-label="Functions" disabled={!canEdit} onClick={()=>setPop(p=>p==='fx'?null:'fx')}><Sigma size={16}/><ChevronDown size={12}/></button>
     {pop==='fx'&&<div className="zs2-menu">{['SUM','AVERAGE','COUNT','MAX','MIN'].map(n=><button key={n} type="button" onClick={()=>{setPop(null);if(box.r1>box.r0||box.c1>box.c0){const target=box.r1+1<ROWS?ref(box.c0,box.r1+1):ref(box.c1+1,box.r0);setCells([{tab:tab.id,k:target,v:`=${n}(${ref(box.c0,box.r0)}:${ref(box.c1,box.r1)})`}]);}else startEdit(`=${n}(`,'edit');}}><span className="zs2-mcheck"/><span>{n}</span></button>)}<hr/><button type="button" onClick={()=>{setPop(null);setHelp('fx');}}><span className="zs2-mcheck"/><span>All functions…</span></button></div>}</span>
   </div>
@@ -397,12 +427,20 @@ export default function SheetPage({id}:{id:string}){
        <th className={`zs2-rh${r>=box.r0&&r<=box.r1?' is-hl':''}${box.c0===0&&box.c1===COLS-1&&r>=box.r0&&r<=box.r1?' is-full':''}${r===freeze.r-1?' is-freeze':''}`} style={r<freeze.r?{top:HEAD_H+r*ROW_H,zIndex:5}:undefined}
         onMouseDown={e=>{if(editing!==null)commitEdit();if(e.shiftKey&&anchor){setAnchor([0,anchor[1]]);setSel([COLS-1,r]);}else{setAnchor([0,r]);setSel([COLS-1,r]);}gridRef.current?.focus();}}
         onContextMenu={e=>{e.preventDefault();if(!(r>=box.r0&&r<=box.r1&&box.c0===0&&box.c1===COLS-1)){setAnchor([0,r]);setSel([COLS-1,r]);}setCtx({x:e.clientX,y:e.clientY});}}>{r+1}</th>
-       {Array.from({length:COLS},(_,c)=>{const x=ref(c,r),s=tab.style?.[x],v=values[x],cur=c===sel[0]&&r===sel[1],inside=c>=box.c0&&c<=box.c1&&r>=box.r0&&r<=box.r1,peer=others.find(p=>p.s===x);
+       {Array.from({length:COLS},(_,c)=>{const x=ref(c,r),s=tab.style?.[x],v=values[x],rule=ruleOf(c,r),cur=c===sel[0]&&r===sel[1],inside=c>=box.c0&&c<=box.c1&&r>=box.r0&&r<=box.r1,peer=others.find(p=>p.s===x);
         const fillTarget=fill&&(()=>{const down=Math.abs(fill[1]-box.r1)>=Math.abs(fill[0]-box.c1);return down?(c>=box.c0&&c<=box.c1&&((fill[1]>box.r1&&r>box.r1&&r<=fill[1])||(fill[1]<box.r0&&r<box.r0&&r>=fill[1]))):(r>=box.r0&&r<=box.r1&&((fill[0]>box.c1&&c>box.c1&&c<=fill[0])||(fill[0]<box.c0&&c<box.c0&&c>=fill[0])));})();
         const edges=inside?`${r===box.r0?' t':''}${r===box.r1?' b':''}${c===box.c0?' l':''}${c===box.c1?' r':''}`:'';
-        return <td key={c} className={`${inside&&!cur?'is-in':''}${edges?` is-edge${edges}`:''}${cur?' is-cur':''}${isError(v)?' is-err':''}${fillTarget?' is-fill':''}${c===freeze.c-1?' is-fz-c':''}${r===freeze.r-1?' is-fz-r':''}`} style={cellStyle(s,c,r,typeof v==='number')}
-         onMouseDown={e=>cellDown(e,c,r)} onMouseEnter={()=>cellEnter(c,r)} onDoubleClick={()=>startEdit(tab.cells[x]??'','edit')} onContextMenu={e=>{e.preventDefault();setCtx({x:e.clientX,y:e.clientY});}}>
-         {cur&&editing!==null&&editIn==='cell'?<input ref={cellIn} className="zs2-in" value={editing} onChange={e=>setEditing(e.target.value)} onKeyDown={onEditKey} onBlur={e=>{if(!drag.current.kind&&!(e.relatedTarget as HTMLElement|null)?.closest('.zs2-fbar,.zs2-suggest'))commitEdit();}}/>:show(v,s)}
+        return <td key={c} className={`${rule?` is-${rule.t}`:''}${inside&&!cur?' is-in':''}${edges?` is-edge${edges}`:''}${cur?' is-cur':''}${isError(v)?' is-err':''}${fillTarget?' is-fill':''}${c===freeze.c-1?' is-fz-c':''}${r===freeze.r-1?' is-fz-r':''}`} style={cellStyle(s,c,r,typeof v==='number')}
+         onMouseDown={e=>cellDown(e,c,r)} onMouseEnter={()=>cellEnter(c,r)} onDoubleClick={()=>{const rl=ruleOf(c,r);if(rl?.t==='check')return;if(rl?.t==='list'&&canEdit){setDd(x);return;}startEdit(tab.cells[x]??'','edit');}} onContextMenu={e=>{e.preventDefault();setCtx({x:e.clientX,y:e.clientY});}}>
+         {cur&&editing!==null&&editIn==='cell'?<input ref={cellIn} className="zs2-in" value={editing} onChange={e=>setEditing(e.target.value)} onKeyDown={onEditKey} onBlur={e=>{if(!drag.current.kind&&!(e.relatedTarget as HTMLElement|null)?.closest('.zs2-fbar,.zs2-suggest'))commitEdit();}}/>
+          :rule?.t==='check'?<span className={`zs2-check${isTrue(tab.cells[x])||v===true?' is-on':''}`} role="checkbox" aria-checked={isTrue(tab.cells[x])} onMouseDown={e=>{if(e.button!==0||!canEdit)return;e.stopPropagation();e.preventDefault();if(editing!==null)commitEdit();setAnchor(null);setSel([c,r]);toggleChecks([x]);gridRef.current?.focus();}}/>
+          :rule?.t==='list'?<>{(()=>{const txt=show(v,s);if(!txt)return null;const o=rule.opts?.find(y=>y.v.toLowerCase()===txt.toLowerCase());return o?<span className="zs2-chip" style={{background:o.c??CHIP_COLORS[0],color:chipInk(o.c??CHIP_COLORS[0])}}>{txt}</span>:<span className="zs2-badval" title="Not one of the dropdown options">{txt}</span>;})()}
+           <button type="button" tabIndex={-1} className="zs2-dd" aria-label="Open dropdown" onMouseDown={e=>{if(e.button!==0)return;e.stopPropagation();e.preventDefault();if(editing!==null)commitEdit();setAnchor(null);setSel([c,r]);if(canEdit)setDd(d=>d===x?null:x);}} onClick={e=>e.stopPropagation()}><ChevronDown size={13}/></button>
+           {dd===x&&cur&&<div className="zs2-ddpop" onMouseDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
+            <div className="zs2-ddlist">{(rule.opts??[]).map(o=><button key={o.v} type="button" className={show(v,s).toLowerCase()===o.v.toLowerCase()?'is-on':''} onClick={()=>pickOpt(x,o.v)}><span className="zs2-chip" style={{background:o.c??CHIP_COLORS[0],color:chipInk(o.c??CHIP_COLORS[0])}}>{o.v}</span>{show(v,s).toLowerCase()===o.v.toLowerCase()&&<Check size={14}/>}</button>)}</div>
+            <div className="zs2-ddfoot">{tab.cells[x]&&<button type="button" onClick={()=>pickOpt(x,'')}><X size={13}/>Clear</button>}<button type="button" onClick={()=>{setDd(null);setRuleEdit(rule);}}><Pencil size={13}/>Edit</button></div>
+           </div>}</>
+          :show(v,s)}
          {cur&&canEdit&&editing===null&&box.c0===box.c1&&box.r0===box.r1&&<span className="zs2-handle" onMouseDown={e=>{e.stopPropagation();e.preventDefault();drag.current={kind:'fill'};}}/>}
          {!cur&&c===box.c1&&r===box.r1&&canEdit&&editing===null&&(box.c0!==box.c1||box.r0!==box.r1)&&<span className="zs2-handle" onMouseDown={e=>{e.stopPropagation();e.preventDefault();drag.current={kind:'fill'};}}/>}
          {peer&&<span className="zs2-peer" style={{borderColor:colorOf(peer.u)}}><em style={{background:colorOf(peer.u)}}>{people[peer.u]?.display_name?.split(' ')[0]??'Someone'}</em></span>}
@@ -439,6 +477,7 @@ export default function SheetPage({id}:{id:string}){
     {label:`Insert ${box.c1-box.c0+1>1?`${box.c1-box.c0+1} columns`:'1 column'} left`,run:()=>shift('c',box.c0,box.c1-box.c0+1),off:!canEdit},{label:'Insert 1 column right',run:()=>shift('c',box.c1+1,1),off:!canEdit},'-',
     {label:box.r0===box.r1?`Delete row ${box.r0+1}`:`Delete rows ${box.r0+1} – ${box.r1+1}`,run:()=>shift('r',box.r0,-(box.r1-box.r0+1)),off:!canEdit},{label:box.c0===box.c1?`Delete column ${colName(box.c0)}`:`Delete columns ${colName(box.c0)} – ${colName(box.c1)}`,run:()=>shift('c',box.c0,-(box.c1-box.c0+1)),off:!canEdit},
     {label:'Clear contents',run:()=>setCells(keysIn(box).filter(x=>tab.cells[x]).map(x=>({tab:tab.id,k:x,v:''}))),off:!canEdit},'-',
+    {label:'Dropdown',run:openDropdown,off:!canEdit},{label:'Checkbox',run:addCheckbox,off:!canEdit},'-',
     {label:'Sort range A → Z',run:()=>sort(1,false),off:!canEdit},{label:'Sort range Z → A',run:()=>sort(-1,false),off:!canEdit}])}
   </div>}
 
@@ -450,6 +489,8 @@ export default function SheetPage({id}:{id:string}){
    <button type="button" aria-label="Close" onClick={()=>{setFind(null);gridRef.current?.focus();}}><X size={15}/></button>
   </div>}
 
+  {ruleEdit&&<RuleEditor rule={ruleEdit} exists={(tab.valid??[]).some(x=>x.id===ruleEdit.id)} onClose={()=>setRuleEdit(null)} onSave={x=>{saveRule(x);setRuleEdit(null);gridRef.current?.focus();}} onRemove={()=>{dropRule(ruleEdit.id);setRuleEdit(null);}}/>}
+  {warn&&<div className="zs2-warn" role="alert">{warn}</div>}
   {help==='keys'&&<Modal title="Keyboard shortcuts" onClose={()=>setHelp(null)} wide><div className="zn-modal-body"><dl className="zs2-keys">{([['Arrow keys','Move'],['Shift + arrows','Select a range'],['⌘ + arrows','Jump to the edge of the data'],['Enter / F2','Edit the cell'],['Type','Replace the cell'],['Tab / Shift+Tab','Move right / left'],['Delete','Clear the selection'],['⌘C / ⌘X / ⌘V','Copy / cut / paste'],['⌘Z / ⌘⇧Z','Undo / redo'],['⌘D / ⌘R','Fill down / right'],['⌘B / ⌘I / ⌘U','Bold / italic / underline'],['⌘A','Select all'],['⌘F','Find and replace'],['Drag the blue square','Fill or continue formulas'],['Click cells while typing =','Insert references']] as const).map(([a,b])=><div key={a}><dt><kbd>{a}</kbd></dt><dd>{b}</dd></div>)}</dl></div></Modal>}
   {help==='fx'&&<Modal title="Functions" onClose={()=>setHelp(null)} wide><div className="zn-modal-body"><ul className="zs2-fxlist">{FUNCTION_NAMES.map(n=><li key={n}><b>{n}</b><code>{FUNCTIONS[n].help}</code></li>)}</ul></div></Modal>}
  </div>;
@@ -458,4 +499,33 @@ export default function SheetPage({id}:{id:string}){
 // A row with an optional spacer before it (for the rows scrolled out of view between the frozen rows and the visible ones).
 function FragmentRow({gapBefore,children}:{gapBefore:number;children:React.ReactNode}){
  return <>{gapBefore>0&&<tr style={{height:gapBefore}}><td colSpan={COLS+1} className="zs2-spacer"/></tr>}{children}</>;
+}
+
+// Data validation panel: a dropdown's options (each with a chip colour) or a checkbox, and the cells it applies to.
+function RuleEditor({rule,exists,onClose,onSave,onRemove}:{rule:Rule;exists:boolean;onClose:()=>void;onSave:(r:Rule)=>void;onRemove:()=>void}){
+ const [t,setT]=useState<Rule['t']>(rule.t),[range,setRange]=useState(rule.range),[strict,setStrict]=useState(!!rule.strict);
+ const [opts,setOpts]=useState<{v:string;c?:string;key:string}[]>(()=>(rule.opts?.length?rule.opts:[{v:'',c:CHIP_COLORS[0]}]).map((o,i)=>({...o,key:`${i}-${o.v}`})));
+ const [colorAt,setColorAt]=useState<string|null>(null),[err,setErr]=useState('');
+ function save(e:React.FormEvent){e.preventDefault();const b=parseRange(range);if(!b){setErr('Enter a range like B2:B100.');return;}
+  const clean=opts.map(o=>({v:o.v.trim(),c:o.c})).filter(o=>o.v).filter((o,i,a)=>a.findIndex(y=>y.v.toLowerCase()===o.v.toLowerCase())===i);
+  if(t==='list'&&!clean.length){setErr('Add at least one option.');return;}
+  const r2=b.c0===b.c1&&b.r0===b.r1?ref(b.c0,b.r0):`${ref(b.c0,b.r0)}:${ref(b.c1,b.r1)}`;
+  onSave(t==='list'?{id:rule.id,range:r2,t,opts:clean,...(strict?{strict:1 as const}:{})}:{id:rule.id,range:r2,t});}
+ return <Modal title="Data validation" onClose={onClose}><form className="zn-modal-body zs2-rule" onSubmit={save}>
+  <label className="zn-label">Apply to range<input className="zn-input" value={range} onChange={e=>setRange(e.target.value)} spellCheck={false} autoCapitalize="characters"/></label>
+  <div className="zs2-rule-type" role="radiogroup" aria-label="Type">{([['list','Dropdown'],['check','Checkbox']] as const).map(([v,l])=><button key={v} type="button" role="radio" aria-checked={t===v} className={t===v?'is-on':''} onClick={()=>setT(v)}>{v==='list'?<SquareChevronDown size={15}/>:<SquareCheckBig size={15}/>}{l}</button>)}</div>
+  {t==='list'?<>
+   <div className="zn-label">Options</div>
+   <ul className="zs2-rule-opts">{opts.map((o,i)=><li key={o.key}>
+    <span className="zs2-rule-sw"><button type="button" aria-label="Chip colour" style={{background:o.c??CHIP_COLORS[0]}} onClick={()=>setColorAt(c=>c===o.key?null:o.key)}/>
+     {colorAt===o.key&&<span className="zs2-rule-pal">{CHIP_COLORS.map(c=><button key={c} type="button" aria-label={c} style={{background:c}} className={o.c===c?'is-on':''} onClick={()=>{setOpts(a=>a.map((y,j)=>j===i?{...y,c}:y));setColorAt(null);}}/>)}</span>}</span>
+    <input className="zn-input" value={o.v} placeholder={`Option ${i+1}`} maxLength={100} onChange={e=>setOpts(a=>a.map((y,j)=>j===i?{...y,v:e.target.value}:y))} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();setOpts(a=>[...a.slice(0,i+1),{v:'',c:CHIP_COLORS[(a.length)%8],key:`n${Date.now()}`},...a.slice(i+1)]);}}}/>
+    <button type="button" className="zs2-rule-x" aria-label="Remove option" disabled={opts.length<2} onClick={()=>setOpts(a=>a.filter((_,j)=>j!==i))}><Trash2 size={15}/></button>
+   </li>)}</ul>
+   <button type="button" className="zn-btn" onClick={()=>setOpts(a=>[...a,{v:'',c:CHIP_COLORS[a.length%8],key:`n${Date.now()}`}])}><Plus size={14}/>Add another item</button>
+   <label className="zs2-rule-check"><input type="checkbox" checked={strict} onChange={e=>setStrict(e.target.checked)}/>Reject anything that isn&apos;t an option</label>
+  </>:<p className="zn-nav-note">Each cell in the range shows a tick box. Ticked cells hold TRUE and unticked ones FALSE, so formulas like =COUNTIF({range||'B2:B100'},TRUE) work.</p>}
+  {err&&<p className="zn-error" role="alert">{err}</p>}
+  <div className="zn-modal-foot">{exists&&<button type="button" className="zn-btn" onClick={onRemove}>Remove rule</button>}<button type="button" className="zn-btn" onClick={onClose}>Cancel</button><button className="zn-btn is-primary">Done</button></div>
+ </form></Modal>;
 }

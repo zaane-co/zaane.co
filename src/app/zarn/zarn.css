@@ -2979,3 +2979,40 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zpx-doc small{font-size:13px}
  .zpx-chev{display:block;flex:none;color:var(--z-muted);opacity:.6}
 }
+
+/* Sheets: checkboxes and dropdown chips (data validation), like Google Sheets. */
+.zs2-grid td.is-check{text-align:center;vertical-align:middle}
+.zs2-check{display:inline-block;width:14px;height:14px;margin-top:1px;border:2px solid var(--s-head-fg);border-radius:3px;vertical-align:middle;cursor:pointer;position:relative}
+.zs2-check.is-on{background:var(--s-sel);border-color:var(--s-sel)}
+.zs2-check.is-on::after{content:"";position:absolute;left:3px;top:0;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.zs2-grid td.is-list{padding-right:20px;vertical-align:middle}
+.zs2-chip{display:inline-block;max-width:100%;padding:1px 8px;border-radius:999px;font-size:12px;line-height:17px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+.zs2-badval{text-decoration:underline wavy #ef4444;text-underline-offset:3px}
+.zs2-dd{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:16px;height:18px;display:grid;place-items:center;border-radius:3px;color:var(--s-head-fg);opacity:.55;cursor:pointer}
+.zs2-grid td.is-list:hover .zs2-dd,.zs2-grid td.is-cur .zs2-dd{opacity:1}
+.zs2-dd:hover{background:var(--z-hover)}
+.zs2-ddpop{position:absolute;left:-1px;top:calc(100% + 2px);z-index:30;min-width:max(100%,200px);max-width:300px;padding:6px 0 0;border-radius:8px;background:var(--z-panel);border:1px solid var(--z-border);box-shadow:0 10px 28px rgba(0,0,0,.35);cursor:default;white-space:normal}
+.zs2-ddlist{display:flex;flex-direction:column;max-height:260px;overflow-y:auto}
+.zs2-ddlist>button{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 12px;text-align:left;color:var(--z-fg)}
+.zs2-ddlist>button:hover,.zs2-ddlist>button.is-on{background:var(--z-hover)}
+.zs2-ddlist>button svg{color:var(--s-sel);flex:none}
+.zs2-ddfoot{display:flex;justify-content:flex-end;gap:4px;margin-top:6px;padding:4px 6px;border-top:1px solid var(--z-border)}
+.zs2-ddfoot button{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;font-size:12.5px;color:var(--z-muted)}
+.zs2-ddfoot button:hover{background:var(--z-hover);color:var(--z-fg)}
+.zs2-warn{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);z-index:200;max-width:calc(100vw - 32px);padding:10px 16px;border-radius:10px;background:#c5221f;color:#fff;font-size:13.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.zs2-rule{display:flex;flex-direction:column;gap:12px}
+.zs2-rule-type{display:flex;gap:4px;padding:3px;border-radius:10px;background:var(--z-panel-2)}
+.zs2-rule-type button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--z-muted)}
+.zs2-rule-type button.is-on{background:var(--z-panel);color:var(--z-fg);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.zs2-rule-opts{display:flex;flex-direction:column;gap:8px;margin:-4px 0 0;padding:0;list-style:none}
+.zs2-rule-opts li{display:flex;align-items:center;gap:8px}
+.zs2-rule-opts .zn-input{flex:1;min-width:0}
+.zs2-rule-sw{position:relative;flex:none}
+.zs2-rule-sw>button{width:26px;height:26px;border-radius:50%;border:2px solid var(--z-border)}
+.zs2-rule-pal{position:absolute;left:0;top:calc(100% + 6px);z-index:5;display:grid;grid-template-columns:repeat(8,22px);gap:6px;padding:8px;border-radius:10px;background:var(--z-panel);border:1px solid var(--z-border);box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.zs2-rule-pal button{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
+.zs2-rule-pal button.is-on{outline:2px solid var(--s-sel,#1a73e8);outline-offset:2px}
+.zs2-rule-x{flex:none;width:34px;height:34px;display:grid;place-items:center;border-radius:8px;color:var(--z-muted)}
+.zs2-rule-x:hover:not(:disabled){background:var(--z-hover);color:var(--z-fg)}.zs2-rule-x:disabled{opacity:.3}
+.zs2-rule-check{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.zs2-rule>.zn-btn{align-self:flex-start}

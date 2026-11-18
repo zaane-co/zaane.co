@@ -1,4 +1,4 @@
-import {evaluate,parseRef,readSheet,ref,show} from '@/lib/sheet';
+import {CHIP_COLORS,chipInk,evaluate,parseRef,readSheet,ref,ruleAt,show} from '@/lib/sheet';
 import {notFound} from 'next/navigation';
 import {cookies} from 'next/headers';
 import type {Metadata} from 'next';
@@ -29,5 +29,5 @@ export default async function Page({params}:{params:Promise<{token:string}>}){
 function SheetView({raw}:{raw:string}){
  const data=readSheet(raw);
  return <>{data.tabs.map(t=>{const v=evaluate(t,data.tabs);let mc=0,mr=0;for(const k of Object.keys(t.cells)){const p=parseRef(k);if(p){mc=Math.max(mc,p[0]);mr=Math.max(mr,p[1]);}}
-  return <section key={t.id} className="docpub-sheet">{data.tabs.length>1&&<h2>{t.name}</h2>}<div className="docpub-sheet-scroll"><table><tbody>{Array.from({length:mr+1},(_,r)=><tr key={r}>{Array.from({length:mc+1},(_,c)=>{const k=ref(c,r);const st=t.style?.[k];return <td key={c} style={{fontWeight:st?.b?700:undefined,fontStyle:st?.i?'italic':undefined,textDecoration:[st?.u?'underline':'',st?.s?'line-through':''].join(' ').trim()||undefined,color:st?.color,background:st?.bg,textAlign:st?.h==='c'?'center':st?.h==='r'?'right':undefined}}>{show(v[k],st)}</td>;})}</tr>)}</tbody></table></div></section>;})}</>;
+  return <section key={t.id} className="docpub-sheet">{data.tabs.length>1&&<h2>{t.name}</h2>}<div className="docpub-sheet-scroll"><table><tbody>{Array.from({length:mr+1},(_,r)=><tr key={r}>{Array.from({length:mc+1},(_,c)=>{const k=ref(c,r);const st=t.style?.[k];return <td key={c} style={{fontWeight:st?.b?700:undefined,fontStyle:st?.i?'italic':undefined,textDecoration:[st?.u?'underline':'',st?.s?'line-through':''].join(' ').trim()||undefined,color:st?.color,background:st?.bg,textAlign:st?.h==='c'?'center':st?.h==='r'?'right':undefined}}>{(()=>{const rl=ruleAt(t.valid,c,r),txt=show(v[k],st);if(rl?.t==='check')return <span className={`docpub-check${v[k]===true?' is-on':''}`} aria-label={v[k]===true?'Ticked':'Not ticked'}/>;const o=rl?.t==='list'&&txt?rl.opts?.find(y=>y.v.toLowerCase()===txt.toLowerCase()):undefined;return o?<span className="docpub-chip" style={{background:o.c??CHIP_COLORS[0],color:chipInk(o.c??CHIP_COLORS[0])}}>{txt}</span>:txt;})()}</td>;})}</tr>)}</tbody></table></div></section>;})}</>;
 }
