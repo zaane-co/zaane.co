@@ -13,6 +13,7 @@ import {optimizeImage} from '@/components/admin/blog/shared';
 
 type DriveKind='my'|'team'|'client';
 type Kind='folder'|'doc'|'file';
+const isTable=(it:{kind:string;name:string})=>it.kind==='file'&&/\.(xlsx|xlsm|xls|ods|csv|tsv)$/i.test(it.name);
 const isPdf=(it:{kind:string;name:string;type?:string})=>it.kind==='file'&&(it.type==='application/pdf'||/\.pdf$/i.test(it.name));
 type Item={sheet?:boolean;color?:string|null;opened?:string;kind:Kind;id:string;name:string;owner_id:string;drive:DriveKind;lead_id:string|null;folder_id:string|null;trashed_at:string|null;updated_at:string;size?:number;type?:string;shared?:boolean};
 // Where you are: a drive's root or a folder, or one of the cross-drive lists.
@@ -124,6 +125,18 @@ export default function Drive(){
  }
  // A PDF stays as it is; "Edit as doc" makes an editable copy beside it (text, headings, lists and tables).
  const [pdfBusy,setPdfBusy]=useState(false);
+ // An Excel / CSV file stays as it is; "Edit in Sheets" makes an editable sheet beside it.
+ async function editTable(it:Item){
+  if(pdfBusy)return;setPdfBusy(true);setErr('');
+  try{
+   const r=await fetch(`/api/zarn/files?f=${it.id}`);if(!r.ok)throw new Error('Could not open the file.');
+   const {fileToSheet}=await import('./xlsx-to-sheet');const {data}=await fileToSheet(await r.arrayBuffer(),it.name);
+   const id=crypto.randomUUID();
+   const {error}=await db.from('zarn_docs').insert({id,owner_id:me.user_id,kind:'sheet',title:it.name.replace(/\.(xlsx|xlsm|xls|ods|csv|tsv)$/i,'').slice(0,200)||'Untitled sheet',content:JSON.stringify(data),folder_id:it.folder_id,...(it.folder_id?{}:{drive:it.drive,...(it.drive==='client'?{lead_id:it.lead_id}:{})})});
+   if(error)throw new Error('Could not create the sheet.');
+   router.push(`/zarn/sheets/${id}`);
+  }catch(e){setErr(e instanceof Error?e.message:'Could not open the file in Sheets.');setPdfBusy(false);}
+ }
  async function editPdf(it:Item){
   if(pdfBusy)return;setPdfBusy(true);setErr('');
   try{
@@ -267,6 +280,7 @@ export default function Drive(){
   if(it.kind==='folder')router.push(`/zarn/drive?f=${it.id}`);
   else if(it.kind==='doc')router.push(it.sheet?`/zarn/sheets/${it.id}`:`/zarn/docs/${it.id}`);
   else{void db.from('zarn_drive_opens').upsert({user_id:me.user_id,kind:'file',item_id:it.id,opened_at:new Date().toISOString()});
+  if(isTable(it)&&place){void (async()=>{if(await confirm({title:'Edit in Sheets?',message:`Makes an editable ZARN sheet from “${it.name}”, saved beside it. The original file stays as it is.`,confirm:'Edit in Sheets',danger:false}))void editTable(it);else window.location.href=`/api/zarn/files?f=${it.id}&download=1`;})();return;}
   if(isImage(it.type)||docKind({name:it.name,type:it.type??''}))setViewing(it);
   else window.location.href=`/api/zarn/files?f=${it.id}&download=1`;}
  };
@@ -385,7 +399,7 @@ export default function Drive(){
    {nav.map(([href,label,ic,on])=><button key={href} type="button" className={on?'is-on':''} onClick={()=>{setSwitching(false);router.push(href);}}>{ic}<span>{label}</span>{on&&<Check size={18}/>}</button>)}
    {clients.length>0&&<><p>Client drives</p>{clients.map(c=>{const on=!list&&place?.drive==='client'&&place.lead===c.lead;return <button key={c.lead} type="button" className={on?'is-on':''} onClick={()=>{setSwitching(false);router.push(`/zarn/drive?v=client&l=${c.lead}`);}}><Briefcase size={18}/><span>{c.name}</span>{on&&<Check size={18}/>}</button>;})}</>}
   </div></div>}
-  {menu&&<ItemMenu item={menu.item} x={menu.x} y={menu.y} starred={stars.has(`${menu.item.kind}:${menu.item.id}`)} mine={menu.item.owner_id===me.user_id} picked={sel.has(keyOf(menu.item))} onPick={()=>toggle(menu.item)} onEditPdf={isPdf(menu.item)&&place?()=>void editPdf(menu.item):undefined}
+  {menu&&<ItemMenu item={menu.item} x={menu.x} y={menu.y} starred={stars.has(`${menu.item.kind}:${menu.item.id}`)} mine={menu.item.owner_id===me.user_id} picked={sel.has(keyOf(menu.item))} onPick={()=>toggle(menu.item)} onEditPdf={isPdf(menu.item)&&place?()=>void editPdf(menu.item):undefined} onEditTable={isTable(menu.item)&&place?()=>void editTable(menu.item):undefined}
    onOpen={()=>open(menu.item)} onRename={()=>setRenaming(menu.item)} onMove={()=>setMoving([menu.item])} onStar={()=>void toggleStar(menu.item)}
    onColor={c=>void recolor(menu.item,c)} onShare={()=>{const it=menu.item;if(it.drive!=='my'&&!(it.kind==='doc'&&it.owner_id===me.user_id))setAccessItem(it);else if(it.kind==='doc')setSharingDoc(it.id);else if(it.owner_id===me.user_id)setSharingItem(it);else setAccessItem(it);}} onTrash={()=>void trash(menu.item)} onRestore={()=>void trash(menu.item,true)} onDestroy={()=>void destroy([menu.item])} close={()=>setMenu(null)}/>}
   {bgMenu&&<div className="zn-menu zdr-ctx" style={{left:Math.min(bgMenu.x,window.innerWidth-240),top:Math.min(bgMenu.y,window.innerHeight-200)}} onClick={e=>e.stopPropagation()} role="menu">
@@ -407,7 +421,7 @@ export default function Drive(){
  </div>;
 }
 
-function ItemMenu({item,x,y,starred,mine,picked,onPick,onEditPdf,onOpen,onRename,onMove,onStar,onShare,onTrash,onRestore,onDestroy,onColor,close}:{item:Item;x:number;y:number;starred:boolean;mine:boolean;picked:boolean;onPick:()=>void;onEditPdf?:()=>void;onColor:(c:string|null)=>void;onOpen:()=>void;onRename:()=>void;onMove:()=>void;onStar:()=>void;onShare:()=>void;onTrash:()=>void;onRestore:()=>void;onDestroy:()=>void;close:()=>void}){
+function ItemMenu({item,x,y,starred,mine,picked,onPick,onEditPdf,onEditTable,onOpen,onRename,onMove,onStar,onShare,onTrash,onRestore,onDestroy,onColor,close}:{item:Item;x:number;y:number;starred:boolean;mine:boolean;picked:boolean;onPick:()=>void;onEditPdf?:()=>void;onEditTable?:()=>void;onColor:(c:string|null)=>void;onOpen:()=>void;onRename:()=>void;onMove:()=>void;onStar:()=>void;onShare:()=>void;onTrash:()=>void;onRestore:()=>void;onDestroy:()=>void;close:()=>void}){
  const ref=useRef<HTMLDivElement>(null),[pos,setPos]=useState({left:x,top:y});
  useEffect(()=>{const el=ref.current;if(!el)return;const w=el.offsetWidth,h=el.offsetHeight;setPos({left:Math.max(8,Math.min(x-w,window.innerWidth-w-8)),top:Math.max(8,Math.min(y,window.innerHeight-h-8))});},[x,y]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')close();};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[close]);
@@ -422,6 +436,7 @@ function ItemMenu({item,x,y,starred,mine,picked,onPick,onEditPdf,onOpen,onRename
    <button type="button" onClick={act(onPick)}><CheckSquare size={15}/>{picked?'Unselect':'Select'}</button>
    <button type="button" onClick={act(onOpen)}>{item.kind==='folder'?<Folder size={15}/>:<FileText size={15}/>}Open</button>
    {item.kind==='file'&&onEditPdf&&<button type="button" onClick={act(onEditPdf)}><Pencil size={15}/>Edit as doc</button>}
+   {item.kind==='file'&&onEditTable&&<button type="button" onClick={act(onEditTable)}><FileSpreadsheet size={15}/>Edit in Sheets</button>}
    {item.kind==='file'&&<a href={`/api/zarn/files?f=${item.id}&download=1`} onClick={close}><Download size={15}/>Download</a>}
    <button type="button" onClick={act(onRename)}><Pencil size={15}/>Rename</button>
    {canShare&&<button type="button" onClick={act(onShare)}><Share2 size={15}/>Share</button>}
