@@ -1035,7 +1035,7 @@ button.zp-members{display:inline-flex;align-items:center;border-radius:999px;pad
 .zn-voice-play{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--z-accent);color:#fff}.zn-voice-play:disabled{opacity:.6}
 .zn-voice time{flex:none;min-width:34px;font-size:12px;font-variant-numeric:tabular-nums;color:var(--z-muted)}
 .zn-voice-rate{flex:none;height:24px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:800;background:var(--z-hover);color:var(--z-muted)}
-.zn-voice-bar{flex:1;min-width:0;height:4px;appearance:none;-webkit-appearance:none;border-radius:999px;background:linear-gradient(to right,var(--z-accent) var(--p,0%),var(--z-border) var(--p,0%));outline:0;cursor:pointer}
+.zn-voice-bar-old{flex:1;min-width:0;height:4px;appearance:none;-webkit-appearance:none;border-radius:999px;background:linear-gradient(to right,var(--z-accent) var(--p,0%),var(--z-border) var(--p,0%));outline:0;cursor:pointer}
 .zn-voice-bar::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--z-accent);border:0}
 .zn-voice-bar::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--z-accent);border:0}
 /* Phones: a WhatsApp-style bar. The field is a rounded pill, attach sits to its left, and the round send / mic button to its right. */
@@ -3236,3 +3236,10 @@ a.zn-act-row:hover{background:var(--z-hover)}
 @media (max-width:560px){.zn-dc{flex-wrap:wrap}.zn-dc-acts{width:100%}.zn-dc-acts .zn-btn{flex:1;justify-content:center}}
 .zd-people li.is-inherited span{display:flex;flex-direction:column;line-height:1.25}.zd-people li.is-inherited em{font-style:normal;font-size:11.5px;color:var(--z-muted)}
 .zd-access-static{font-size:14px;font-weight:700;padding:4px 0}
+
+/* Voice note waveform: tap or drag to seek; played part in the accent colour */
+.zn-voice-wave{flex:1;min-width:0;height:30px;display:flex;align-items:center;gap:2px;cursor:pointer;touch-action:none;outline:0}
+.zn-voice-wave i{flex:1;min-width:2px;max-width:4px;border-radius:2px;background:var(--z-muted);opacity:.45;transition:background .1s,opacity .1s}
+.zn-voice-wave i.is-on{background:var(--z-accent);opacity:1}
+.zn-voice-wave:focus-visible{box-shadow:0 0 0 2px var(--z-accent);border-radius:6px}
+.zn-voice{width:min(340px,100%)}

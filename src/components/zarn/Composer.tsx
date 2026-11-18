@@ -62,10 +62,11 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
   if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){setError('Voice notes aren’t supported on this browser.');return;}
   setError('');
   try{
-   const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
+   const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:true,autoGainControl:true,sampleRate:48000}});
    recStream.current=stream;
    const mime=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg'].find(t=>MediaRecorder.isTypeSupported(t));
-   const r=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+   // Echo cancellation is for calls; on a voice note it only makes the voice warble. A higher bitrate keeps speech clear.
+   const r=new MediaRecorder(stream,{...(mime?{mimeType:mime}:{}),audioBitsPerSecond:96000});
    chunks.current=[];discard.current=false;
    r.ondataavailable=e=>{if(e.data.size)chunks.current.push(e.data);};
    r.onstop=()=>{const secs=Math.max(1,Math.round((Date.now()-recStart.current)/1000));stopTracks();if(discard.current){setRec(false);return;}void sendVoice(new Blob(chunks.current,{type:r.mimeType||mime||'audio/webm'}),secs);};
