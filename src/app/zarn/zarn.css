@@ -2004,7 +2004,7 @@ a.zn-act-row:hover{background:var(--z-hover)}
 
 @media(min-width:861px){.zarn.is-drive .zn-sidebar{display:none}}
 .zdr-check{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--z-faint);display:grid;place-items:center;flex-shrink:0;opacity:0;color:#fff}
-.zdr-folder:hover .zdr-check,.zdr-card:hover .zdr-check,.zdr-table tr:hover .zdr-check,.zdr-check.is-on,.zdr-main:has(.zdr-selbar) .zdr-check{opacity:1}
+.zdr-check.is-on,.zdr-main:has(.zdr-selbar) .zdr-check{opacity:1}
 .zdr-check.is-on{background:var(--z-accent);border-color:var(--z-accent)}
 .zdr-folder.is-sel,.zdr-card.is-sel,.zdr-table tr.is-sel{background:var(--z-hover);box-shadow:inset 0 0 0 2px var(--z-accent)}
 .zdr-selbar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:10px 24px 0;padding:6px 10px;border-radius:999px;background:var(--z-panel-2);border:1px solid var(--z-border)}
@@ -2017,7 +2017,7 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zdr-person{display:flex;align-items:center;gap:10px}
 .zdr-person b{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zdr-person .zn-btn{height:32px;padding:0 12px}
-@media(hover:none){.zdr-check{opacity:1}}
+
 /* Sheets */
 .zs-page{height:100%;overflow:hidden}
 .zs-bar{display:flex;align-items:center;gap:6px;padding:8px 16px;border-bottom:1px solid var(--z-border);flex-shrink:0}
@@ -2264,10 +2264,11 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zdr-folder{position:relative;height:50px;padding:0 6px 0 14px;gap:12px}
 .zdr-fic{position:relative;display:grid;place-items:center;width:22px;height:22px;flex:0 0 22px!important}
 .zdr-fic .zdr-check{position:absolute;inset:1px;width:20px;height:20px;background:var(--z-panel-2)}
-.zdr-folder:hover .zdr-fic>svg,.zdr-folder.is-sel .zdr-fic>svg,.zdr-main:has(.zdr-selbar) .zdr-fic>svg{opacity:0}
+.zdr-folder.is-sel .zdr-fic>svg,.zdr-main:has(.zdr-selbar) .zdr-fic>svg{opacity:0}
 .zdr-fname{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zdr-who{font-size:13px;color:var(--z-faint);white-space:nowrap;margin-left:4px}
 .zdr-access-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--z-panel-2);border:1px solid var(--z-border)}
 .zdr-access-card>svg{color:var(--z-muted)}.zdr-access-card div{display:flex;flex-direction:column}.zdr-access-card b{font-size:14px}.zdr-access-card small{font-size:12.5px;color:var(--z-muted)}
 .zdr-people-row{flex-direction:row;flex-wrap:wrap;gap:6px;align-items:center}.zdr-people-row em{font-style:normal;font-size:12px;color:var(--z-muted)}
 .zdr-folder>.zdr-fname{text-align:left}
+.zdr-check{pointer-events:none}.zdr-main:has(.zdr-selbar) .zdr-check{pointer-events:auto}

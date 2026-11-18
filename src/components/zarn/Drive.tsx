@@ -347,7 +347,7 @@ export default function Drive(){
    {uploads.length>0&&<div className="zdr-uploads" role="status"><b>{uploads.every(u=>u.done)?'Uploads finished':`Uploading ${uploads.filter(u=>!u.done).length}…`}</b>{uploads.map((u,i)=><p key={i}>{u.done?u.err?<span className="zdr-bad">!</span>:<span className="zdr-ok">✓</span>:<Loader2 size={13} className="zn-spin"/>}<span>{u.name}</span>{u.err&&<small>{u.err}</small>}</p>)}{uploads.every(u=>u.done)&&<button type="button" className="zn-btn" onClick={()=>setUploads([])}>Close</button>}</div>}
   </section>}
 
-  {menu&&<ItemMenu item={menu.item} x={menu.x} y={menu.y} starred={stars.has(`${menu.item.kind}:${menu.item.id}`)} mine={menu.item.owner_id===me.user_id}
+  {menu&&<ItemMenu item={menu.item} x={menu.x} y={menu.y} starred={stars.has(`${menu.item.kind}:${menu.item.id}`)} mine={menu.item.owner_id===me.user_id} picked={sel.has(keyOf(menu.item))} onPick={()=>toggle(menu.item)}
    onOpen={()=>open(menu.item)} onRename={()=>setRenaming(menu.item)} onMove={()=>setMoving([menu.item])} onStar={()=>void toggleStar(menu.item)}
    onColor={c=>void recolor(menu.item,c)} onShare={()=>{const it=menu.item;if(it.drive!=='my'&&!(it.kind==='doc'&&it.owner_id===me.user_id))setAccessItem(it);else if(it.kind==='doc')setSharingDoc(it.id);else if(it.owner_id===me.user_id)setSharingItem(it);else setAccessItem(it);}} onTrash={()=>void trash(menu.item)} onRestore={()=>void trash(menu.item,true)} onDestroy={()=>void destroy([menu.item])} close={()=>setMenu(null)}/>}
   {bgMenu&&<div className="zn-menu zdr-ctx" style={{left:Math.min(bgMenu.x,window.innerWidth-240),top:Math.min(bgMenu.y,window.innerHeight-200)}} onClick={e=>e.stopPropagation()} role="menu">
@@ -369,7 +369,7 @@ export default function Drive(){
  </div>;
 }
 
-function ItemMenu({item,x,y,starred,mine,onOpen,onRename,onMove,onStar,onShare,onTrash,onRestore,onDestroy,onColor,close}:{item:Item;x:number;y:number;starred:boolean;mine:boolean;onColor:(c:string|null)=>void;onOpen:()=>void;onRename:()=>void;onMove:()=>void;onStar:()=>void;onShare:()=>void;onTrash:()=>void;onRestore:()=>void;onDestroy:()=>void;close:()=>void}){
+function ItemMenu({item,x,y,starred,mine,picked,onPick,onOpen,onRename,onMove,onStar,onShare,onTrash,onRestore,onDestroy,onColor,close}:{item:Item;x:number;y:number;starred:boolean;mine:boolean;picked:boolean;onPick:()=>void;onColor:(c:string|null)=>void;onOpen:()=>void;onRename:()=>void;onMove:()=>void;onStar:()=>void;onShare:()=>void;onTrash:()=>void;onRestore:()=>void;onDestroy:()=>void;close:()=>void}){
  const ref=useRef<HTMLDivElement>(null),[pos,setPos]=useState({left:x,top:y});
  useEffect(()=>{const el=ref.current;if(!el)return;const w=el.offsetWidth,h=el.offsetHeight;setPos({left:Math.max(8,Math.min(x-w,window.innerWidth-w-8)),top:Math.max(8,Math.min(y,window.innerHeight-h-8))});},[x,y]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')close();};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[close]);
@@ -381,6 +381,7 @@ function ItemMenu({item,x,y,starred,mine,onOpen,onRename,onMove,onStar,onShare,o
    <button type="button" onClick={act(onRestore)}><RotateCcw size={15}/>Restore</button>
    <button type="button" className="zdr-danger" onClick={act(onDestroy)}><Trash2 size={15}/>Delete forever</button>
   </>:<>
+   <button type="button" onClick={act(onPick)}><CheckSquare size={15}/>{picked?'Unselect':'Select'}</button>
    <button type="button" onClick={act(onOpen)}>{item.kind==='folder'?<Folder size={15}/>:<FileText size={15}/>}Open</button>
    {item.kind==='file'&&<a href={`/api/zarn/files?f=${item.id}&download=1`} onClick={close}><Download size={15}/>Download</a>}
    <button type="button" onClick={act(onRename)}><Pencil size={15}/>Rename</button>
