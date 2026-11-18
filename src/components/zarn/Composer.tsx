@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {AtSign,Briefcase,Loader2,Paperclip,Send,X,Mic,Trash2} from 'lucide-react';
 import {optimizeImage} from '@/components/admin/blog/shared';
 import type {ZAttachment,ZLead,ZMember} from '@/lib/zarn';
+import {Modal} from './Dialogs';
 import {useZarn} from './ZarnProvider';
 import {Avatar,textToTokens} from './format';
 import {registerDrop} from './drop';
@@ -208,10 +209,9 @@ export function LeadPicker({onClose,onPick}:{onClose:()=>void;onPick:(id:string)
    const {data}=await query;setRows((data??[]) as ZLead[]);
   },200);return()=>clearTimeout(t);
  },[q,db]);
- return <div className="zn-modal-scrim" onClick={onClose}><div className="zn-modal" role="dialog" aria-label="Share a lead" onClick={e=>e.stopPropagation()}>
-  <div className="zn-modal-head"><h2>Share a CRM lead</h2><button type="button" aria-label="Close" onClick={onClose}><X size={18}/></button></div>
+ return <Modal title="Share a CRM lead" onClose={onClose}>
   <input className="zn-input" autoFocus placeholder="Search by name or company" value={q} onChange={e=>setQ(e.target.value)}/>
-  <ul className="zn-list">{rows.map(l=><li key={l.id}><button type="button" onClick={()=>{loadLead(l.id);onPick(l.id);}}><span className="zn-stage-dot" style={{background:l.stage_color??'#52525b'}}/><span><b>{l.name}</b><small>{[l.company,l.stage_label].filter(Boolean).join(' · ')}</small></span></button></li>)}
+  <ul className="zn-list zn-list-scroll">{rows.map(l=><li key={l.id}><button type="button" onClick={()=>{loadLead(l.id);onPick(l.id);}}><span className="zn-stage-dot" style={{background:l.stage_color??'#52525b'}}/><span><b>{l.name}</b><small>{[l.company,l.stage_label].filter(Boolean).join(' · ')}</small></span></button></li>)}
    {!rows.length&&<li className="zn-empty-row">No leads found.</li>}</ul>
- </div></div>;
+ </Modal>;
 }
