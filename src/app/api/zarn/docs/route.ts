@@ -11,6 +11,8 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('links'),id}),
  z.object({action:z.literal('link_create'),id,password:z.string().min(4).max(100).optional(),days:z.number().int().min(1).max(365).nullable().optional()}),
  z.object({action:z.literal('link_revoke'),link_id:id}),
+ // One link per document, Google style: turn it on or off, and change its expiry or password without changing the URL.
+ z.object({action:z.literal('link_set'),id,on:z.boolean(),days:z.number().int().min(0).max(365).optional(),password:z.string().min(4).max(100).optional(),clear_password:z.boolean().optional()}),
 ]);
 const fail=(error:string,status=400)=>Response.json({error},{status});
 export async function POST(request:Request){
@@ -50,6 +52,23 @@ export async function POST(request:Request){
  if(b.action==='links'){
   const {data}=await db.from('zarn_doc_links').select('id,token,password_hash,expires_at,views,created_at').eq('doc_id',b.id).is('revoked_at',null).order('created_at',{ascending:false});
   return Response.json({links:(data??[]).map(l=>({id:l.id,url:`${siteUrl()}/doc/${l.token}`,protected:!!l.password_hash,expires_at:l.expires_at,views:l.views,created_at:l.created_at}))});
+ }
+ if(b.action==='link_set'){
+  const {data:cur}=await db.from('zarn_doc_links').select('id,token,password_hash,expires_at,views').eq('doc_id',b.id).is('revoked_at',null).order('created_at',{ascending:false});
+  if(!b.on){if(cur?.length)await db.from('zarn_doc_links').update({revoked_at:new Date().toISOString()}).eq('doc_id',b.id).is('revoked_at',null);return Response.json({link:null});}
+  const patch:{expires_at?:string|null;password_hash?:string|null}={};
+  if(b.days!==undefined)patch.expires_at=b.days?new Date(Date.now()+b.days*86400_000).toISOString():null;
+  if(b.password)patch.password_hash=hashPassword(b.password);else if(b.clear_password)patch.password_hash=null;
+  const live=(cur??[]).find(l=>!l.expires_at||new Date(l.expires_at)>new Date());
+  if(live){
+   if(Object.keys(patch).length){const {error}=await db.from('zarn_doc_links').update(patch).eq('id',live.id);if(error)return fail('Could not update the link.');}
+   const l={...live,...patch};
+   return Response.json({link:{id:l.id,url:`${siteUrl()}/doc/${l.token}`,protected:!!l.password_hash,expires_at:l.expires_at,views:l.views}});
+  }
+  const token=newToken();
+  const {data,error}=await db.from('zarn_doc_links').insert({doc_id:b.id,token,password_hash:patch.password_hash??null,expires_at:patch.expires_at??null,created_by:me.user_id}).select('id').single();
+  if(error||!data)return fail('Could not create the link.');
+  return Response.json({link:{id:data.id,url:`${siteUrl()}/doc/${token}`,protected:!!patch.password_hash,expires_at:patch.expires_at??null,views:0}});
  }
  // link_create
  const token=newToken();
