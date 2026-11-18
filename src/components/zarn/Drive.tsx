@@ -372,7 +372,8 @@ function ItemMenu({item,x,y,starred,mine,onOpen,onRename,onMove,onStar,onShare,o
  useEffect(()=>{const el=ref.current;if(!el)return;const w=el.offsetWidth,h=el.offsetHeight;setPos({left:Math.max(8,Math.min(x-w,window.innerWidth-w-8)),top:Math.max(8,Math.min(y,window.innerHeight-h-8))});},[x,y]);
  useEffect(()=>{const k=(e:KeyboardEvent)=>{if(e.key==='Escape')close();};window.addEventListener('keydown',k);return()=>window.removeEventListener('keydown',k);},[close]);
  const act=(f:()=>void)=>()=>{close();f();};
- const canShare=item.drive==='my'&&mine;
+ // My Drive items are shared person by person; docs and sheets anywhere can also get a share link.
+ const canShare=mine&&(item.drive==='my'||item.kind==='doc');
  return <div ref={ref} className="zn-menu zdr-ctx" style={pos} onClick={e=>e.stopPropagation()} role="menu">
   {item.trashed_at?<>
    <button type="button" onClick={act(onRestore)}><RotateCcw size={15}/>Restore</button>
