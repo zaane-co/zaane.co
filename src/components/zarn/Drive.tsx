@@ -39,7 +39,7 @@ export default function Drive(){
  useEffect(()=>{setLayout(loadPref('zarn-drive-layout',matchMedia('(max-width:760px)').matches?'list':'grid'));setSort(loadPref('zarn-drive-sort','updated'));},[]);
 
  // Where we are, from the URL: ?v=team | ?v=client&l=<lead> | ?v=shared|recent|starred|trash|chats, plus ?f=<folder>.
- const v=params.get('v')??'my',folderParam=params.get('f'),leadParam=params.get('l');
+ const v=params.get('v')??(me.account_type==='guest'?'my':'team'),folderParam=params.get('f'),leadParam=params.get('l');
  const list:ListView|null=(['shared','recent','starred','trash','chats'] as const).find(x=>x===v)??null;
  const clients=useMemo(()=>channels.filter(c=>c.kind==='client'&&c.lead_id&&!c.archived_at).map(c=>({lead:c.lead_id!,name:title(c)})),[channels,title]);
  const clientName=useCallback((l:string|null)=>clients.find(c=>c.lead===l)?.name??'Client',[clients]);
@@ -84,7 +84,7 @@ export default function Drive(){
  const canAdd=!guest&&!!place;
  const trail=useMemo(()=>{const t:Item[]=[];let f=folder,hops=0;while(f&&hops<50){t.unshift(f);f=f.folder_id?byId.get(f.folder_id)??null:null;hops++;}return t;},[folder,byId]);
  const rootLabel=(p:{drive:DriveKind;lead:string|null})=>p.drive==='team'?'Team drive':p.drive==='client'?clientName(p.lead):'My Drive';
- const rootHref=(p:{drive:DriveKind;lead:string|null})=>p.drive==='team'?'/zarn/drive?v=team':p.drive==='client'?`/zarn/drive?v=client&l=${p.lead}`:'/zarn/drive';
+ const rootHref=(p:{drive:DriveKind;lead:string|null})=>p.drive==='team'?'/zarn/drive?v=team':p.drive==='client'?`/zarn/drive?v=client&l=${p.lead}`:'/zarn/drive?v=my';
 
  const shown=useMemo(()=>{
   if(!items)return [];
@@ -264,7 +264,7 @@ export default function Drive(){
  const asPlace=(f:Item):Place=>({drive:f.drive,lead:f.lead_id,folder:f.id});
 
  const nav:[string,string,React.ReactNode,boolean][]=[
-  ['/zarn/drive','My Drive',<HardDrive key="m" size={17}/>,!list&&(place?.drive==='my')],
+  ['/zarn/drive?v=my','My Drive',<HardDrive key="m" size={17}/>,!list&&(place?.drive==='my')],
   ...(!guest?[['/zarn/drive?v=team','Team drive',<Users key="t" size={17}/>,!list&&place?.drive==='team'] as [string,string,React.ReactNode,boolean]]:[]),
   ['/zarn/drive?v=shared','Shared with me',<Share2 key="s" size={17}/>,list==='shared'],
   ['/zarn/drive?v=recent','Recent',<Clock key="r" size={17}/>,list==='recent'],

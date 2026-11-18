@@ -52,7 +52,7 @@ export default function SheetPage({id}:{id:string}){
  })();return()=>{on=false;};},[db,id,me.user_id,router]);
  useEffect(()=>{if(!row)return;let on=true;void (async()=>{
   const client=channels.find(c=>c.kind==='client'&&c.lead_id===row.lead_id);
-  const root=row.drive==='team'?{name:'Team drive',href:'/zarn/drive?v=team'}:row.drive==='client'?{name:client?chTitle(client):'Client drive',href:`/zarn/drive?v=client&l=${row.lead_id}`}:row.owner_id===me.user_id?{name:'My Drive',href:'/zarn/drive'}:{name:'Shared with me',href:'/zarn/drive?v=shared'};
+  const root=row.drive==='team'?{name:'Team drive',href:'/zarn/drive?v=team'}:row.drive==='client'?{name:client?chTitle(client):'Client drive',href:`/zarn/drive?v=client&l=${row.lead_id}`}:row.owner_id===me.user_id?{name:'My Drive',href:'/zarn/drive?v=my'}:{name:'Shared with me',href:'/zarn/drive?v=shared'};
   const trail:{name:string;href:string}[]=[];let f=row.folder_id,h=0;
   while(f&&h<20){const {data:x}=await db.from('zarn_drive_folders').select('id,name,parent_id').eq('id',f).maybeSingle();if(!x)break;trail.unshift({name:x.name as string,href:`/zarn/drive?f=${x.id}`});f=x.parent_id as string|null;h++;}
   if(on)setCrumbs([root,...trail]);})();return()=>{on=false;};},[row,db,channels,chTitle,me.user_id]);

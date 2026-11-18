@@ -59,7 +59,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
   void (async()=>{
    const client=channels.find(c=>c.kind==='client'&&c.lead_id===doc.lead_id);
    const root=doc.drive==='team'?{name:'Team drive',href:'/zarn/drive?v=team'}:doc.drive==='client'?{name:client?chTitle(client):'Client drive',href:`/zarn/drive?v=client&l=${doc.lead_id}`}
-    :doc.owner_id===me.user_id?{name:'My Drive',href:'/zarn/drive'}:{name:'Shared with me',href:'/zarn/drive?v=shared'};
+    :doc.owner_id===me.user_id?{name:'My Drive',href:'/zarn/drive?v=my'}:{name:'Shared with me',href:'/zarn/drive?v=shared'};
    const trail:{name:string;href:string}[]=[];let f=doc.folder_id,hops=0;
    while(f&&hops<20){const {data}=await db.from('zarn_drive_folders').select('id,name,parent_id').eq('id',f).maybeSingle();if(!data)break;trail.unshift({name:data.name as string,href:`/zarn/drive?f=${data.id}`});f=data.parent_id as string|null;hops++;}
    if(live)setCrumbs([root,...trail]);
