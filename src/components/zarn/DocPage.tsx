@@ -8,7 +8,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import LinkExt from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import {ImagePlus,Bold,Check,ChevronLeft,ChevronRight,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,ListChecks,Loader2,Quote,Redo2,Share2,Strikethrough,Underline as UnderlineIcon,Undo2,AlignLeft,AlignCenter,AlignRight,AlignJustify,Baseline,Highlighter,IndentIncrease,IndentDecrease,RemoveFormatting,Printer,Minus,Plus,Table2,Lock,FileText,PanelLeft,CloudOff} from 'lucide-react';
+import {ImagePlus,Bold,Check,ChevronLeft,ChevronRight,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,ListChecks,Loader2,Quote,Redo2,Share2,Strikethrough,Underline as UnderlineIcon,Undo2,AlignLeft,AlignCenter,AlignRight,AlignJustify,Baseline,Highlighter,IndentIncrease,IndentDecrease,RemoveFormatting,Printer,Minus,Plus,Table2,Lock,FileText,PanelLeft,CloudOff,Type,X} from 'lucide-react';
 import {Extension} from '@tiptap/core';
 import TextAlign from '@tiptap/extension-text-align';
 import {TextStyleKit} from '@tiptap/extension-text-style';
@@ -90,7 +90,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
  },[db,doc.id,meId]);
  const canEdit=role==='owner'||role==='edit';
  const [title,setTitle]=useState(doc.title),[state,setState]=useState<'saved'|'saving'|'error'>('saved'),[sharing,setSharing]=useState(false),[linkOpen,setLinkOpen]=useState(false),[url,setUrl]=useState('');
- const [menu,setMenu]=useState<string|null>(null),[pop,setPop]=useState<'color'|'hl'|null>(null),[zoom,setZoom]=useState(100),[outline,setOutline]=useState(()=>{try{return localStorage.getItem('zarn-doc-outline')==='1';}catch{return false;}}),[counting,setCounting]=useState(false);
+ const [menu,setMenu]=useState<string|null>(null),[pop,setPop]=useState<'color'|'hl'|null>(null),[zoom,setZoom]=useState(100),[outline,setOutline]=useState(()=>{try{return localStorage.getItem('zarn-doc-outline')==='1';}catch{return false;}}),[counting,setCounting]=useState(false),[sheet,setSheet]=useState<null|'text'|'para'|'insert'>(null);
  const editorRef=useRef<Editor|null>(null),fileRef=useRef<HTMLInputElement>(null);
  const [img,setImg]=useState({busy:false,error:''});
  const tools=imageTools('doc',doc.id,()=>editorRef.current,setImg);
@@ -211,6 +211,39 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
     <button type="button" className="is-danger" onMouseDown={e=>e.preventDefault()} onClick={()=>c().deleteTable().run()}>Delete table</button></span>}
    {linkOpen&&<form className="zd-link" onSubmit={e=>{e.preventDefault();applyLink();}}><input autoFocus value={url} onChange={e=>setUrl(e.target.value)} placeholder="Paste a link (leave empty to remove)" aria-label="Link address"/><button className="zn-btn is-primary">Apply</button></form>}
   </div>}
+  {canEdit&&ed&&<div className="zg-mbar" role="toolbar" aria-label="Quick formatting" onClick={e=>e.stopPropagation()}>
+   {btn('Undo',<Undo2 size={19}/>,false,()=>c().undo().run())}{btn('Redo',<Redo2 size={19}/>,false,()=>c().redo().run())}<i/>
+   {btn('Bold',<Bold size={19}/>,ed.isActive('bold'),()=>c().toggleBold().run())}{btn('Italic',<Italic size={19}/>,ed.isActive('italic'),()=>c().toggleItalic().run())}{btn('Underline',<UnderlineIcon size={19}/>,ed.isActive('underline'),()=>c().toggleUnderline().run())}
+   {btn('Bulleted list',<List size={19}/>,ed.isActive('bulletList'),()=>c().toggleBulletList().run())}{btn('Checklist',<ListChecks size={19}/>,ed.isActive('taskList'),()=>c().toggleTaskList().run())}<i/>
+   {btn('More formatting',<Type size={19}/>,!!sheet,()=>setSheet(v=>v?null:'text'))}
+  </div>}
+  {canEdit&&ed&&sheet&&<div className="zg-sheet" role="dialog" aria-label="Formatting" onClick={e=>e.stopPropagation()} onMouseDown={e=>{if((e.target as HTMLElement).tagName!=='SELECT')e.preventDefault();}}>
+   <header><nav>{([['text','Text'],['para','Paragraph'],['insert','Insert']] as const).map(([k,l])=><button key={k} type="button" className={sheet===k?'is-on':''} onClick={()=>setSheet(k)}>{l}</button>)}</nav><button type="button" className="zg-sheet-x" aria-label="Close" onClick={()=>setSheet(null)}><X size={18}/></button></header>
+   {sheet==='text'&&<div className="zg-sheet-body">
+    <div className="zg-chips">{([['p','Normal'],['h1','Heading 1'],['h2','Heading 2'],['h3','Heading 3']] as const).map(([k,l])=><button key={k} type="button" className={style===k?'is-on':''} onClick={()=>{if(k==='p')c().setParagraph().run();else c().setHeading({level:Number(k[1]) as 1|2|3}).run();}}>{l}</button>)}</div>
+    <div className="zg-seg">{btn('Bold',<Bold size={19}/>,ed.isActive('bold'),()=>c().toggleBold().run())}{btn('Italic',<Italic size={19}/>,ed.isActive('italic'),()=>c().toggleItalic().run())}{btn('Underline',<UnderlineIcon size={19}/>,ed.isActive('underline'),()=>c().toggleUnderline().run())}{btn('Strikethrough',<Strikethrough size={19}/>,ed.isActive('strike'),()=>c().toggleStrike().run())}</div>
+    <div className="zg-row2"><select className="zg-msel" aria-label="Font" value={FONTS.includes(font)?font:'Inter'} onChange={e=>c().setFontFamily(e.target.value).run()} style={{fontFamily:font}}>{FONTS.map(f=><option key={f} value={f}>{f}</option>)}</select>
+     <div className="zg-seg is-size">{btn('Smaller text',<Minus size={17}/>,false,()=>setSize(SIZES.slice().reverse().find(x=>x<size)??size-1))}<b>{size}</b>{btn('Bigger text',<Plus size={17}/>,false,()=>setSize(SIZES.find(x=>x>size)??size+1))}</div></div>
+    <p className="zg-lbl">Text colour</p><div className="zg-dots"><button type="button" className="zg-dot-none" aria-label="Default colour" onClick={()=>c().unsetColor().run()}>A</button>{COLORS.slice(0,18).map(x=><button key={x} type="button" aria-label={x} style={{background:x}} className={ts.color===x?'is-on':''} onClick={()=>c().setColor(x).run()}/>)}</div>
+    <p className="zg-lbl">Highlight</p><div className="zg-dots"><button type="button" className="zg-dot-none" aria-label="No highlight" onClick={()=>c().unsetBackgroundColor().run()}>∅</button>{COLORS.slice(21).concat(['#fef08a','#e5e7eb']).map(x=><button key={x} type="button" aria-label={x} style={{background:x}} className={ts.backgroundColor===x?'is-on':''} onClick={()=>c().setBackgroundColor(x).run()}/>)}</div>
+    <button type="button" className="zg-wide" onClick={()=>c().unsetAllMarks().run()}><RemoveFormatting size={17}/>Clear formatting</button>
+   </div>}
+   {sheet==='para'&&<div className="zg-sheet-body">
+    <div className="zg-seg">{btn('Left align',<AlignLeft size={19}/>,ed.isActive({textAlign:'left'}),()=>c().setTextAlign('left').run())}{btn('Centre align',<AlignCenter size={19}/>,ed.isActive({textAlign:'center'}),()=>c().setTextAlign('center').run())}{btn('Right align',<AlignRight size={19}/>,ed.isActive({textAlign:'right'}),()=>c().setTextAlign('right').run())}{btn('Justify',<AlignJustify size={19}/>,ed.isActive({textAlign:'justify'}),()=>c().setTextAlign('justify').run())}</div>
+    <div className="zg-seg">{btn('Bulleted list',<List size={19}/>,ed.isActive('bulletList'),()=>c().toggleBulletList().run())}{btn('Numbered list',<ListOrdered size={19}/>,ed.isActive('orderedList'),()=>c().toggleOrderedList().run())}{btn('Checklist',<ListChecks size={19}/>,ed.isActive('taskList'),()=>c().toggleTaskList().run())}</div>
+    <div className="zg-seg">{btn('Decrease indent',<IndentDecrease size={19}/>,false,()=>indent(-1))}{btn('Increase indent',<IndentIncrease size={19}/>,false,()=>indent(1))}{btn('Quote',<Quote size={19}/>,ed.isActive('blockquote'),()=>c().toggleBlockquote().run())}{btn('Code block',<Code2 size={19}/>,ed.isActive('codeBlock'),()=>c().toggleCodeBlock().run())}</div>
+    <p className="zg-lbl">Line spacing</p><div className="zg-chips">{([['1','Single'],['1.15','1.15'],['1.5','1.5'],['2','Double']] as const).map(([v,l])=><button key={v} type="button" className={lh===v?'is-on':''} onClick={()=>setLh(v)}>{l}</button>)}</div>
+   </div>}
+   {sheet==='insert'&&<div className="zg-sheet-body zg-ins">
+    <button type="button" onClick={()=>{setSheet(null);fileRef.current?.click();}}><ImagePlus size={20}/>Image</button>
+    <button type="button" onClick={()=>{insertTable();setSheet(null);}}><Table2 size={20}/>Table</button>
+    <button type="button" onClick={()=>{setSheet(null);setUrl(ed.getAttributes('link').href??'');setLinkOpen(true);}}><Link2 size={20}/>Link</button>
+    <button type="button" onClick={()=>{c().setHorizontalRule().run();setSheet(null);}}><Minus size={20}/>Line</button>
+    <button type="button" onClick={()=>{c().insertContent(new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})).run();setSheet(null);}}><Check size={20}/>Today’s date</button>
+    {ed.isActive('table')&&<><button type="button" onClick={()=>c().addRowAfter().run()}><Plus size={20}/>Row</button><button type="button" onClick={()=>c().addColumnAfter().run()}><Plus size={20}/>Column</button><button type="button" onClick={()=>c().deleteRow().run()}><Minus size={20}/>Row</button><button type="button" onClick={()=>c().deleteColumn().run()}><Minus size={20}/>Column</button><button type="button" className="is-danger" onClick={()=>{c().deleteTable().run();setSheet(null);}}><X size={20}/>Delete table</button></>}
+   </div>}
+  </div>}
+  {linkOpen&&<form className="zd-link zg-mlink" onClick={e=>e.stopPropagation()} onSubmit={e=>{e.preventDefault();applyLink();}}><input autoFocus value={url} onChange={e=>setUrl(e.target.value)} placeholder="Paste a link (leave empty to remove)" aria-label="Link address"/><button className="zn-btn is-primary">Apply</button></form>}
   <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={e=>{void tools.insert(Array.from(e.target.files??[]));e.target.value='';}}/>
   {(img.busy||img.error)&&<p className={`zd-imgstate${img.error?' is-error':''}`} role="status">{img.busy?'Uploading picture…':img.error}</p>}
   <div className="zg-body">
