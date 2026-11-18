@@ -135,11 +135,15 @@ function micDown(e:React.PointerEvent){
   setSending(true);setError('');
   const msg={id:crypto.randomUUID(),channel_id:channelId,parent_id:parentId??null,user_id:me.user_id,body,attachments:ready.map(({key,name,size,type})=>({key,name,size,type})),lead_id:leadId};
   emit({table:'zarn_messages',type:'INSERT',row:{...msg,invoice_id:null,kind:'user',meta:{},reply_count:0,last_reply_at:null,pinned_at:null,edited_at:null,deleted_at:null,created_at:new Date().toISOString(),pending:true}});
+  // Clear the box at once (like any chat app); the text comes back only if the send fails.
+  const keep={text,files,leadId};
+  setText('');setFiles([]);setLeadId(null);onSent?.();box.current?.focus();
   const {error:e}=await db.from('zarn_messages').insert(msg);
   setSending(false);
-  if(e){emit({table:'zarn_messages',type:'DELETE',row:{...msg} as never});setError('Message not sent. Check your connection and try again.');return;}
+  if(e){emit({table:'zarn_messages',type:'DELETE',row:{...msg} as never});setText(t=>t||keep.text);setFiles(f=>f.length?f:keep.files);setLeadId(l=>l??keep.leadId);setError('Message not sent. Check your connection and try again.');return;}
+  // Saved: drop the clock now instead of waiting for the realtime echo.
+  emit({table:'zarn_messages',type:'UPDATE',row:{id:msg.id,channel_id:msg.channel_id,parent_id:msg.parent_id,pending:false} as never});
   void fetch('/api/zarn/push/notify',{method:'POST',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({message_id:msg.id})}).catch(()=>{});
-  setText('');setFiles([]);setLeadId(null);onSent?.();box.current?.focus();
   void checkOutsiders(body);
  }
  // Tagging someone who isn't in the channel doesn't add them: they won't see the message. Offer to invite them.
