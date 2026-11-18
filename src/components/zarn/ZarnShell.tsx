@@ -1,6 +1,6 @@
 'use client';
 import {Fragment} from 'react';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
@@ -75,9 +75,14 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  const shownClients=clients.filter(c=>z.title(c).toLowerCase().includes(clientQ.toLowerCase()));
  const isTab=tabs.includes(pathname)||pathname==='/zarn';
  // Where the phone back arrow goes from the current screen.
+ // The phone back arrow returns to the screen you actually came from (like a native app). Only when there is no
+ // earlier ZARN screen (opened from a notification or a link) does it fall back to the parent screen below.
+ const trail=useRef<string[]>([]);
+ useEffect(()=>{const t=trail.current;if(t[t.length-1]!==pathname){if(t[t.length-2]===pathname)t.pop();else t.push(pathname);}},[pathname]);
+ const goBack=(e:React.MouseEvent)=>{const t=trail.current;if(t.length>1){e.preventDefault();router.back();}};
  const back=(()=>{
   const m=pathname.match(/^\/zarn\/c\/([0-9a-f-]{36})/);
-  if(m){const c=channels.find(x=>x.id===m[1]);return c?.kind==='dm'?'/zarn/dms':'/zarn/home';}
+  if(m)return '/zarn/home';
   if(pathname.startsWith('/zarn/clients/'))return '/zarn/clients';
   if(pathname.startsWith('/zarn/people'))return '/zarn/dms';
   return '/zarn/home';
@@ -193,7 +198,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
    </aside>
   </div>
   <main className="zn-main">
-   {!isTab&&<Link href={back} className="zn-icon zn-back" aria-label="Back"><ChevronLeft size={22}/>{(badges.home+badges.dms+badges.clients)>0&&<i className="zn-ping"/>}</Link>}
+   {!isTab&&<Link href={back} onClick={goBack} className="zn-icon zn-back" aria-label="Back"><ChevronLeft size={22}/>{(badges.home+badges.dms+badges.clients)>0&&<i className="zn-ping"/>}</Link>}
    {children}
   </main>
   {/* Phone dock (Slack-style): a floating icon bar plus a + button for quick actions. */}
