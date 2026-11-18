@@ -173,8 +173,8 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
    <div className="zg-meta">
     <div className="zg-row">
      <input className="zg-title" value={title} readOnly={!canEdit} maxLength={200} placeholder="Untitled document" aria-label="Title" size={Math.max(8,Math.min(48,(title||'Untitled document').length+1))} onChange={e=>{setTitle(e.target.value);latest.current.title=e.target.value;queue();}}/>
-     {crumbs.length>0&&<nav className="zg-where" aria-label="Location"><Folder size={13}/>{crumbs.map((x,i)=><span key={x.href}>{i>0&&<ChevronRight size={12}/>}<Link href={x.href}>{x.name}</Link></span>)}</nav>}
-     <span className={`zg-state${state==='error'?' is-error':''}`} data-tip={!canEdit?'You can view this document':state==='saving'?'Saving…':state==='error'?'Not saved yet. Keep typing to retry.':'All changes saved'}>{!canEdit?<><Lock size={13}/>View only</>:state==='saving'?<><Loader2 size={14} className="zn-spin"/>Saving…</>:state==='error'?<><CloudOff size={15}/>Not saved</>:<><CloudCheck size={15}/>Saved</>}</span>
+     <div className="zg-loc">{crumbs.length>0&&<nav className="zg-where" aria-label="Location"><Folder size={13}/>{crumbs.map((x,i)=><span key={x.href}>{i>0&&<ChevronRight size={12}/>}<Link href={x.href}>{x.name}</Link></span>)}</nav>}
+     <span className={`zg-state${state==='error'?' is-error':''}`} data-tip={!canEdit?'You can view this document':state==='saving'?'Saving…':state==='error'?'Not saved yet. Keep typing to retry.':'All changes saved'}>{!canEdit?<><Lock size={13}/>View only</>:state==='saving'?<><Loader2 size={14} className="zn-spin"/>Saving…</>:state==='error'?<><CloudOff size={15}/>Not saved</>:<><CloudCheck size={15}/>Saved</>}</span></div>
     </div>
     <nav className="zg-menus" onClick={e=>e.stopPropagation()}>{menus.map(([name,items])=><div key={name} className="zg-menu">
      <button type="button" className={menu===name?'is-on':''} onClick={()=>setMenu(m=>m===name?null:name)} onMouseEnter={()=>{if(menu&&menu!==name)setMenu(name);}}>{name}</button>
