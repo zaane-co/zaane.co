@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-import {Clock,Settings,HeartPulse,Mail,MessageSquare,Phone,Plus,Smile,X} from 'lucide-react';
+import {ChevronLeft,Clock,Settings,HeartPulse,Mail,MessageSquare,Phone,Plus,Smile,X} from 'lucide-react';
 import {liveStatus,usernameOk,waLink,type ZEmergency} from '@/lib/zarn';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -21,15 +21,17 @@ export default function ProfileSheet({userId,onClose,onEdit}:{userId:string;onCl
  const st=liveStatus(p),phones=[p.phone,p.phone2,p.phone3].filter((n):n is string=>!!n),wa=waLink(p.whatsapp);
  return <>
   <div className="zn-sheet-scrim" onClick={onClose}><aside className="zn-sheet zn-prof" role="dialog" aria-label={`${p.display_name}’s profile`} onClick={e=>e.stopPropagation()}>
-   <header className="zn-prof-head"><b>Profile</b><div className="zn-prof-head-btns">{isMe&&<button type="button" className="zn-prof-edit-btn" onClick={()=>{onClose();onEdit();}}><Settings size={16}/>Edit profile</button>}<button type="button" aria-label="Close" onClick={onClose}><X size={20}/></button></div></header>
+   <header className="zn-prof-head"><button type="button" className="zn-prof-back" aria-label="Back" onClick={onClose}><ChevronLeft size={22}/></button><b>Profile</b><div className="zn-prof-head-btns">{isMe&&<button type="button" className="zn-prof-edit-btn" onClick={()=>{onClose();onEdit();}}><Settings size={16}/><span>Edit profile</span><em>Edit</em></button>}<button type="button" className="zn-prof-x" aria-label="Close" onClick={onClose}><X size={20}/></button></div></header>
    <div className="zn-prof-side">
    <div className="zn-prof-photo">{p.avatar_url?<img src={p.avatar_url} alt=""/>:<Avatar m={p} size={220}/>}</div>
    <div className="zn-prof-name"><h2>{p.display_name}{p.account_type==='guest'&&<span className="zn-guest-tag">Guest</span>}</h2>{isMe&&<button type="button" className="zn-prof-edit" onClick={()=>setEdit('profile')}>Edit</button>}</div>
    {p.title&&<p className="zn-prof-title">{p.title}</p>}
    {p.username&&<p className="zn-prof-muted">@{p.username}</p>}
+   <div className="zn-prof-info">
    <p className={`zn-prof-line${on?' is-on':''}`}><i/>{on?'Active':seen?`Last seen ${seen.toLocaleDateString()===new Date().toLocaleDateString()?'today':seen.toLocaleDateString('en-GB',{day:'numeric',month:'short'})} at ${seen.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}`:'Away'}</p>
    <p className="zn-prof-line"><Clock size={15}/>{local} local time</p>
    {st&&<p className="zn-prof-line"><span>{st.emoji}</span>{st.text}</p>}
+   </div>
    <div className="zn-prof-actions">
     {isMe?<button type="button" className="zn-btn" onClick={onEdit}><Smile size={15}/>{st?'Update status':'Set a status'}</button>
      :<button type="button" className="zn-btn is-primary" disabled={busy} onClick={async()=>{setBusy(true);try{await openDm([userId]);onClose();}finally{setBusy(false);}}}><MessageSquare size={15}/>Message</button>}

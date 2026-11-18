@@ -2361,3 +2361,41 @@ a.zn-act-row:hover{background:var(--z-hover)}
 @media(max-width:760px){.zn-chan-head .zn-head-actions button[aria-label="Star"],.zn-chan-head .zn-head-actions button[aria-label="Unstar"]{display:none}}
 /* Phones: any list inside a dialog scrolls by itself, so iOS never has to push the whole dialog up */
 @media(pointer:coarse) and (max-width:760px){.zn-modal:not(.zn-confirm)>.zn-list{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto;overscroll-behavior:contain}}
+/* Desktop: the phone-only bits of the profile header stay hidden */
+.zn-prof-back,.zn-prof-edit-btn em{display:none}
+.zn-prof-info{display:flex;flex-direction:column;gap:10px}
+/* Phones: a profile is a full page (like a chat app's contact info), not a pop-up. Round back button, big round photo,
+   name in the middle, action tiles, then rounded cards. */
+@media(max-width:760px){
+ .zn-sheet-scrim:has(>.zn-prof){background:var(--z-bg)}
+ .zn-sheet.zn-prof{position:fixed;inset:0;width:100%;max-height:none;height:100%;border:0;border-radius:0;box-shadow:none;display:block;overflow-y:auto;overscroll-behavior:contain;background:var(--z-bg);padding:0 0 calc(28px + env(safe-area-inset-bottom));animation:zn-push .3s cubic-bezier(.32,.72,0,1)}
+ .zn-prof-head{position:sticky;top:0;z-index:2;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;border:0;background:var(--z-bg)}
+ .zn-prof-head b{text-align:center;font-size:16px;font-weight:700}
+ .zn-prof-head .zn-prof-back{display:grid;width:42px;height:42px;border-radius:50%;background:var(--z-panel-2);color:var(--z-fg)}
+ .zn-prof-head .zn-prof-x{display:none}
+ .zn-prof-head-btns{min-width:42px;justify-content:flex-end}
+ .zn-prof-head-btns .zn-prof-edit-btn{height:42px;padding:0 16px;border:0;border-radius:999px;background:var(--z-panel-2);font-size:15px}
+ .zn-prof-edit-btn svg,.zn-prof-edit-btn span{display:none}.zn-prof-edit-btn em{display:inline;font-style:normal}
+ .zn-prof-side{border:0!important;padding:8px 16px 0;align-items:center;text-align:center;gap:6px}
+ .zn-prof-photo{width:148px!important;height:148px;margin:6px auto 10px!important;border-radius:50%}
+ .zn-prof-photo .zn-avatar{font-size:52px!important}
+ .zn-prof-name{justify-content:center}
+ .zn-prof-name h2{font-size:26px;font-weight:800;justify-content:center}
+ .zn-prof-name .zn-prof-edit{display:none}
+ .zn-prof-title{font-size:15px;color:var(--z-muted)}
+ .zn-prof-side>.zn-prof-muted{font-size:14px}
+ .zn-prof-info{order:2;width:100%;margin-top:12px!important;box-sizing:border-box;padding:4px 16px;border-radius:16px;background:var(--z-panel);gap:0;text-align:left}
+ .zn-prof-info .zn-prof-line{padding:12px 0;font-size:14.5px;color:var(--z-fg)}
+ .zn-prof-info .zn-prof-line+.zn-prof-line{border-top:1px solid var(--z-border)}
+ .zn-prof-info .zn-prof-line.is-on{color:#22c55e}
+ .zn-prof-actions{order:1;width:100%;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:10px;margin-top:14px}
+ .zn-prof-side>*{margin:0}
+ .zn-prof-actions .zn-btn{min-width:0;height:auto;flex-direction:column;gap:6px;padding:14px 4px;border:0;border-radius:16px;background:var(--z-panel);color:var(--z-fg);font-size:13.5px;font-weight:600}
+ .zn-prof-actions .zn-btn svg{width:22px;height:22px}
+ .zn-prof-actions .zn-btn.is-primary{background:var(--z-panel);color:var(--z-fg)}
+ .zn-prof-main{padding:12px 16px 0;gap:12px;overflow:visible}
+ .zn-prof-sec,.zn-prof-sec:first-child{border:0;padding:14px 16px;border-radius:16px;background:var(--z-panel)}
+ .zn-prof-sec .zn-em-card{background:var(--z-panel-2);border:0}
+}
+@keyframes zn-push{from{transform:translateX(100%)}to{transform:none}}
+@media(prefers-reduced-motion:reduce){.zn-sheet.zn-prof{animation:none!important}}
