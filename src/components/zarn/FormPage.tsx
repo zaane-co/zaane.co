@@ -34,6 +34,7 @@ export default function FormPage({id}:{id:string}){
   if(!on)return;
   const x=d as Row|null;
   if(x&&x.kind!=='form'){router.replace(x.kind==='sheet'?`/zarn/sheets/${id}`:`/zarn/docs/${id}`);return;}
+  if(!x||r!=='owner'&&r!=='edit'){router.replace(`/f/${id}`);return;}
   setRow(x);setRole((r as Role|null)??null);
   if(x){const f=readForm(x.content);setForm(f);setTitle(x.title);latest.current={form:f,title:x.title};
    void db.from('zarn_drive_opens').upsert({user_id:me.user_id,kind:'doc',item_id:id,opened_at:new Date().toISOString()});}
