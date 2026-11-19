@@ -119,9 +119,17 @@ function InviteNote({m}:{m:ZMessage}){
  const ch=String(m.meta.channel??''),name=String(m.meta.name??'a channel'),by=people[String(m.meta.by??'')]?.display_name??'Someone',toMe=m.meta.to===me.user_id;
  const pending=toMe&&invites.some(i=>i.channel_id===ch),joined=!!membership[ch];
  async function respond(accept:boolean){setBusy(true);try{const r=await fetch('/api/zarn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:accept?'invite_accept':'invite_decline',channel_id:ch})});await reloadInvites();if(r.ok&&accept){await reload();router.push(`/zarn/c/${ch}`);}}finally{setBusy(false);}}
- return <div className="zn-invite-note"><Hash size={15}/><span>{toMe?<><b>{by}</b> invited you to <b>#{name}</b></>:<>You invited <b>{people[String(m.meta.to??'')]?.display_name??'them'}</b> to <b>#{name}</b></>}</span>
-  {pending?<span className="zn-invite-note-act"><button type="button" className="zn-btn is-primary" disabled={busy} onClick={()=>void respond(true)}>Accept</button><button type="button" className="zn-btn" disabled={busy} onClick={()=>void respond(false)}>Decline</button></span>
-  :toMe&&<small>{joined?'Joined':'No longer open'}</small>}</div>;
+ const to=people[String(m.meta.to??'')]?.display_name??'them';
+ const when=timeOf(m.created_at);
+ return <div className="zn-invite-note">
+  <span className="zn-invite-note-ic"><Hash size={18}/></span>
+  <div className="zn-invite-note-main">
+   <span className="zn-invite-note-text">{toMe?<><b>{by}</b> invited you to <b>#{name}</b></>:<>You invited <b>{to}</b> to <b>#{name}</b></>}</span>
+   <small>Channel invitation · {when}{toMe&&!pending?` · ${joined?'You joined':'No longer open'}`:''}</small>
+  </div>
+  {pending?<span className="zn-invite-note-act"><button type="button" className="zn-btn" disabled={busy} onClick={()=>void respond(false)}>Decline</button><button type="button" className="zn-btn is-primary" disabled={busy} onClick={()=>void respond(true)}>Accept</button></span>
+  :joined&&<Link className="zn-btn" href={`/zarn/c/${ch}`}>Open channel</Link>}
+ </div>;
 }
 
 function systemText(m:ZMessage,people:Record<string,{display_name:string}>){

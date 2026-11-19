@@ -1723,11 +1723,14 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-head-faces>span>.zn-avatar+.zn-avatar{margin-left:-6px}
 .zn-head-faces b{font-size:13px;font-weight:600;color:var(--z-fg)}
 /* Channel invitation in a DM */
-.zn-invite-note{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:6px 0;padding:12px 14px;border:1px solid var(--z-border);border-radius:12px;background:var(--z-panel);font-size:14px;max-width:560px}
-.zn-invite-note>svg{color:var(--z-accent);flex:none}
-.zn-invite-note>span:first-of-type{flex:1;min-width:0}
-.zn-invite-note-act{display:flex;gap:6px}
+.zn-invite-note{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:6px 20px 6px 66px;padding:12px 14px;border:1px solid var(--z-border);border-radius:12px;background:var(--z-panel);font-size:14px;max-width:520px}
+.zn-invite-note-ic{width:38px;height:38px;border-radius:10px;background:var(--z-accent);color:#fff;display:grid;place-items:center;flex:none}
+.zn-invite-note-main{flex:1;min-width:160px;display:flex;flex-direction:column;gap:2px}
+.zn-invite-note-text{line-height:1.35;overflow-wrap:break-word}.zn-invite-note-text b:last-child{white-space:nowrap}.zn-invite-note-text b{font-weight:700}
 .zn-invite-note small{font-size:12px;color:var(--z-muted)}
+.zn-invite-note-act{display:flex;gap:6px;margin-left:auto}
+.zn-invite-note .zn-btn{height:34px;padding:0 14px}
+@media (max-width:760px){.zn-invite-note{margin:6px 12px;max-width:none}}
 .zn-outsiders b{font-weight:600}
 .zn-nav-item.is-active .zn-admin-eye{border-color:#fff;color:#fff}
 /* Calls page */
