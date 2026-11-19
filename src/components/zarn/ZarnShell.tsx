@@ -30,7 +30,7 @@ import CallProvider from './CallProvider';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 
 type Area='chat'|'business'|'clients'|'projects'|'drive';
-const areaOf=(p:string):Area=>p.startsWith('/zarn/drive')||p.startsWith('/zarn/docs')||p.startsWith('/zarn/sheets')?'drive':p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')?'clients':p.startsWith('/zarn/business')||p.startsWith('/zarn/crm')?'business':'chat';
+const areaOf=(p:string):Area=>p.startsWith('/zarn/drive')||p.startsWith('/zarn/docs')||p.startsWith('/zarn/sheets')||p.startsWith('/zarn/forms')?'drive':p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')?'clients':p.startsWith('/zarn/business')||p.startsWith('/zarn/crm')?'business':'chat';
 // Phone tab roots (tab bar visible). Inside a conversation the tab bar hides and a back arrow shows instead.
 const tabs=['/zarn/home','/zarn/todos','/zarn/drive','/zarn/projects','/zarn/clients'];
 

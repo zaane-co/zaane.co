@@ -36,6 +36,7 @@ export default function DocPage({id}:{id:string}){
    const [{data},{data:r}]=await Promise.all([db.from('zarn_docs').select('id,title,content,owner_id,updated_at,drive,folder_id,lead_id,kind').eq('id',id).maybeSingle(),db.rpc('zarn_doc_role',{d:id})]);
    if(!live)return;
    if((data as {kind?:string}|null)?.kind==='sheet'){router.replace(`/zarn/sheets/${id}`);return;}
+   if((data as {kind?:string}|null)?.kind==='form'){router.replace(`/zarn/forms/${id}`);return;}
    if(data)void db.from('zarn_drive_opens').upsert({user_id:me.user_id,kind:'doc',item_id:id,opened_at:new Date().toISOString()});setDoc((data as Doc|null)??null);setRole((r as Role|null)??null);
   })();
   return()=>{live=false;};

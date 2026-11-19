@@ -74,9 +74,9 @@ export async function POST(request:Request){
   const added=rows.filter(r=>!had.has(r.user_id)).map(r=>r.user_id);
   if(added.length){
    const {data:doc}=await db.from('zarn_docs').select('title,kind').eq('id',b.id).maybeSingle();
-   const sheet=doc?.kind==='sheet',what=sheet?'a sheet':'a document';
-   await pushTo(added,{title:`${me.display_name} shared ${what} with you`,body:doc?.title||'Untitled',tag:`doc-${b.id}`,url:`/zarn/${sheet?'sheets':'docs'}/${b.id}`}).catch(()=>0);
-   await tellInChat(me,rows.filter(r=>added.includes(r.user_id)),sheet?'sheet':'document',doc?.title||'Untitled',`/zarn/${sheet?'sheets':'docs'}/${b.id}`);
+   const sheet=doc?.kind==='sheet',form=doc?.kind==='form',what=form?'a form':sheet?'a sheet':'a document';
+   await pushTo(added,{title:`${me.display_name} shared ${what} with you`,body:doc?.title||'Untitled',tag:`doc-${b.id}`,url:`/zarn/${form?'forms':sheet?'sheets':'docs'}/${b.id}`}).catch(()=>0);
+   await tellInChat(me,rows.filter(r=>added.includes(r.user_id)),form?'form':sheet?'sheet':'document',doc?.title||'Untitled',`/zarn/${form?'forms':sheet?'sheets':'docs'}/${b.id}`);
   }
   return Response.json({ok:true,added:added.length});
  }

@@ -1,5 +1,5 @@
 import {CHIP_COLORS,chipInk,evaluate,parseRef,readSheet,ref,ruleAt,show} from '@/lib/sheet';
-import {notFound} from 'next/navigation';
+import {notFound,redirect} from 'next/navigation';
 import {cookies} from 'next/headers';
 import type {Metadata} from 'next';
 import {serviceClient} from '@/lib/supabase/server';
@@ -17,6 +17,7 @@ export default async function Page({params}:{params:Promise<{token:string}>}){
  if(l.password_hash&&!verifyUnlock(token,(await cookies()).get(cookieName(token))?.value))return <main className="docpub"><DocUnlock token={token}/></main>;
  const {data:doc}=await db.from('zarn_docs').select('title,content,updated_at,kind,trashed_at').eq('id',l.doc_id).maybeSingle();
  if(!doc||doc.trashed_at)notFound();
+ if(doc.kind==='form')redirect(`/f/${l.doc_id}`);
  await db.from('zarn_doc_links').update({views:l.views+1}).eq('id',l.id);
  return <main className="docpub"><article className="docpub-doc">
   <h1>{doc.title||'Untitled'}</h1>

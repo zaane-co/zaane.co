@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {useRouter,useSearchParams} from 'next/navigation';
-import {Briefcase,Check,ChevronDown,FileSpreadsheet,FolderUp,Keyboard,CheckSquare,ChevronRight,X,Clock,Download,File as FileIcon,FileText,Folder,FolderInput,FolderPlus,HardDrive,LayoutGrid,List,Loader2,MessageSquare,MoreVertical,Pencil,Plus,RotateCcw,Search,Share2,Star,Trash2,Upload,Users} from 'lucide-react';
+import {ClipboardList,Briefcase,Check,ChevronDown,FileSpreadsheet,FolderUp,Keyboard,CheckSquare,ChevronRight,X,Clock,Download,File as FileIcon,FileText,Folder,FolderInput,FolderPlus,HardDrive,LayoutGrid,List,Loader2,MessageSquare,MoreVertical,Pencil,Plus,RotateCcw,Search,Share2,Star,Trash2,Upload,Users} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
 import {Modal,PeoplePicker} from './Dialogs';
@@ -11,12 +11,13 @@ import ShareDoc from './ShareDoc';
 import ShareFolder from './ShareFolder';
 import Files from './Files';
 import {optimizeImage} from '@/components/admin/blog/shared';
+import {blankForm} from '@/lib/form';
 
 type DriveKind='my'|'team'|'client';
 type Kind='folder'|'doc'|'file';
 const isTable=(it:{kind:string;name:string})=>it.kind==='file'&&/\.(xlsx|xlsm|xls|ods|csv|tsv)$/i.test(it.name);
 const isPdf=(it:{kind:string;name:string;type?:string})=>it.kind==='file'&&(it.type==='application/pdf'||/\.pdf$/i.test(it.name));
-type Item={toMe?:boolean;restricted?:boolean;sheet?:boolean;color?:string|null;opened?:string;kind:Kind;id:string;name:string;owner_id:string;drive:DriveKind;lead_id:string|null;folder_id:string|null;trashed_at:string|null;updated_at:string;size?:number;type?:string;shared?:boolean};
+type Item={toMe?:boolean;restricted?:boolean;sheet?:boolean;form?:boolean;color?:string|null;opened?:string;kind:Kind;id:string;name:string;owner_id:string;drive:DriveKind;lead_id:string|null;folder_id:string|null;trashed_at:string|null;updated_at:string;size?:number;type?:string;shared?:boolean};
 // Where you are: a drive's root or a folder, or one of the cross-drive lists.
 type Place={drive:DriveKind;lead:string|null;folder:string|null};
 type ListView='shared'|'recent'|'starred'|'trash'|'chats';
@@ -66,7 +67,7 @@ export default function Drive(){
   type R=Record<string,unknown>;
   const all:Item[]=[
    ...((f.data??[]) as R[]).map(x=>({kind:'folder' as const,id:x.id as string,name:x.name as string,owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.parent_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,shared:sharedFolders.has(x.id as string)||x.access==='restricted',toMe:toMeFolders.has(x.id as string),restricted:x.access==='restricted',color:x.color as string|null})),
-   ...((d.data??[]) as R[]).map(x=>({kind:'doc' as const,id:x.id as string,name:(x.title as string)||'Untitled',owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.folder_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,shared:sharedDocs.has(x.id as string)||x.visibility==='team',sheet:x.kind==='sheet',opened:opened.get(`doc:${x.id}`)})),
+   ...((d.data??[]) as R[]).map(x=>({kind:'doc' as const,id:x.id as string,name:(x.title as string)||'Untitled',owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.folder_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,shared:sharedDocs.has(x.id as string)||x.visibility==='team',sheet:x.kind==='sheet',form:x.kind==='form',opened:opened.get(`doc:${x.id}`)})),
    ...((fl.data??[]) as R[]).map(x=>({kind:'file' as const,id:x.id as string,name:x.name as string,owner_id:x.owner_id as string,drive:x.drive as DriveKind,lead_id:x.lead_id as string|null,folder_id:x.folder_id as string|null,trashed_at:x.trashed_at as string|null,updated_at:x.updated_at as string,size:x.size as number,type:x.type as string,shared:sharedFiles.has(x.id as string),opened:opened.get(`file:${x.id}`)})),
   ];
   setItems(all);setStars(new Set(((s.data??[]) as {kind:string;item_id:string}[]).map(x=>`${x.kind}:${x.item_id}`)));
@@ -120,9 +121,14 @@ export default function Drive(){
   if(fail(error,'Could not create the folder.'))return;
   setNaming(false);void load();
  }
- async function newDoc(sheet=false){
+ async function newDoc(sheet:boolean|'form'=false){
   setNewMenu(false);if(!place)return;setErr('');
   const id=crypto.randomUUID();
+  if(sheet==='form'){
+   const {error}=await db.from('zarn_docs').insert({id,owner_id:me.user_id,title:'Untitled form',folder_id:place.folder,...target(),kind:'form',content:JSON.stringify(blankForm())});
+   if(fail(error,'Could not create the form.'))return;
+   router.push(`/zarn/forms/${id}`);return;
+  }
   const {error}=await db.from('zarn_docs').insert({id,owner_id:me.user_id,title:sheet?'Untitled sheet':'Untitled',folder_id:place.folder,...target(),...(sheet?{kind:'sheet',content:JSON.stringify({tabs:[{id:'s1',name:'Sheet1',cells:{}}]})}:{})});
   if(fail(error,sheet?'Could not create the sheet.':'Could not create the doc.'))return;
   router.push(sheet?`/zarn/sheets/${id}`:`/zarn/docs/${id}`);
@@ -282,7 +288,7 @@ export default function Drive(){
  const open=(it:Item)=>{
   if(it.trashed_at)return;
   if(it.kind==='folder')router.push(`/zarn/drive?f=${it.id}`);
-  else if(it.kind==='doc')router.push(it.sheet?`/zarn/sheets/${it.id}`:`/zarn/docs/${it.id}`);
+  else if(it.kind==='doc')router.push(it.form?`/zarn/forms/${it.id}`:it.sheet?`/zarn/sheets/${it.id}`:`/zarn/docs/${it.id}`);
   else{void db.from('zarn_drive_opens').upsert({user_id:me.user_id,kind:'file',item_id:it.id,opened_at:new Date().toISOString()});
   if(isTable(it)&&place){void (async()=>{if(await confirm({title:'Edit in Sheets?',message:`Makes an editable ZARN sheet from “${it.name}”, saved beside it. The original file stays as it is.`,confirm:'Edit in Sheets',danger:false}))void editTable(it);else window.location.href=`/api/zarn/files?f=${it.id}&download=1`;})();return;}
   if(isImage(it.type)||docKind({name:it.name,type:it.type??''}))setViewing(it);
@@ -290,7 +296,7 @@ export default function Drive(){
  };
  const where=(it:Item)=>it.drive==='team'?'Team drive':it.drive==='client'?clientName(it.lead_id):it.owner_id===me.user_id?'My Drive':`${people[it.owner_id]?.display_name??'Someone'}’s drive`;
  const ownerName=(id:string)=>id===me.user_id?'me':people[id]?.display_name??'Someone';
- const icon=(it:Item,s=20)=>it.kind==='folder'?<Folder size={s} className="zdr-ic is-folder" fill="currentColor" style={it.color?{color:it.color}:undefined}/>:it.sheet?<FileSpreadsheet size={s} className="zdr-ic is-sheet"/>:it.kind==='doc'?<FileText size={s} className="zdr-ic is-doc"/>:<FileIcon size={s} className="zdr-ic is-file"/>;
+ const icon=(it:Item,s=20)=>it.kind==='folder'?<Folder size={s} className="zdr-ic is-folder" fill="currentColor" style={it.color?{color:it.color}:undefined}/>:it.form?<ClipboardList size={s} className="zdr-ic is-form"/>:it.sheet?<FileSpreadsheet size={s} className="zdr-ic is-sheet"/>:it.kind==='doc'?<FileText size={s} className="zdr-ic is-doc"/>:<FileIcon size={s} className="zdr-ic is-file"/>;
 
  // Drag items onto folders (or a breadcrumb) to move them; drop files from the computer to upload here.
  const dragProps=(it:Item)=>({draggable:!it.trashed_at,onDragStart:(e:React.DragEvent)=>{e.dataTransfer.setData('application/x-zarn-drive',`${it.kind}:${it.id}`);e.dataTransfer.effectAllowed='move';}});
@@ -322,6 +328,7 @@ export default function Drive(){
      <button type="button" onClick={()=>{setNewMenu(false);setNaming(true);}}><FolderPlus size={15}/>New folder</button>
      <button type="button" onClick={()=>void newDoc()}><FileText size={15}/>New doc</button>
      <button type="button" onClick={()=>void newDoc(true)}><FileSpreadsheet size={15}/>New sheet</button>
+     <button type="button" onClick={()=>void newDoc('form')}><ClipboardList size={15}/>New form</button>
      <button type="button" onClick={()=>{setNewMenu(false);pick.current?.click();}}><Upload size={15}/>Upload files</button>
      <button type="button" onClick={()=>{setNewMenu(false);pickDir.current?.click();}}><FolderUp size={15}/>Upload folder</button>
     </div>}</div>:null}
@@ -381,7 +388,7 @@ export default function Drive(){
      </div>)}</div></>}
      {shown.some(i=>i.kind!=='folder')&&<><p className="zdr-group">Files</p><div className="zdr-grid">{shown.filter(i=>i.kind!=='folder').map(it=><div key={`${it.kind}:${it.id}`} role="button" tabIndex={0} className={`zdr-card${sel.has(keyOf(it))?' is-sel':''}`} {...dragProps(it)} onClick={e=>click(e,it)} onKeyDown={e=>{if(e.key==='Enter')open(it);}} onContextMenu={e=>{e.preventDefault();e.stopPropagation();setBgMenu(null);setMenu({item:it,x:e.clientX,y:e.clientY});}}>
       <div className="zdr-card-top">{checkBox(it)}{icon(it,16)}<b title={it.name}>{it.name}</b><button type="button" className="zdr-dots" aria-label={`More for ${it.name}`} onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setMenu({item:it,x:r.right,y:r.bottom});}}><MoreVertical size={16}/></button></div>
-      <div className={`zdr-thumb is-${it.sheet?'sheet':it.kind}`}>{it.kind==='file'&&isImage(it.type)?<img src={`/api/zarn/files?f=${it.id}`} alt="" loading="lazy"/>:it.sheet?<FileSpreadsheet size={42}/>:it.kind==='doc'?<FileText size={42}/>:<em>{ext(it.name)}</em>}</div>
+      <div className={`zdr-thumb is-${it.form?'form':it.sheet?'sheet':it.kind}`}>{it.kind==='file'&&isImage(it.type)?<img src={`/api/zarn/files?f=${it.id}`} alt="" loading="lazy"/>:it.form?<ClipboardList size={42}/>:it.sheet?<FileSpreadsheet size={42}/>:it.kind==='doc'?<FileText size={42}/>:<em>{ext(it.name)}</em>}</div>
       <small><Avatar m={people[it.owner_id]} size={18}/>{list==='recent'||q?where(it):`${it.owner_id===me.user_id?'You':ownerName(it.owner_id)}`} · {dayOf(it.updated_at)}{stars.has(`${it.kind}:${it.id}`)&&<Star size={11} className="zdr-star" fill="currentColor"/>}</small>
      </div>)}</div></>}
     </>
@@ -410,6 +417,7 @@ export default function Drive(){
    <button type="button" onClick={()=>{setBgMenu(null);setNaming(true);}}><FolderPlus size={15}/>New folder</button>
    <button type="button" onClick={()=>{setBgMenu(null);void newDoc();}}><FileText size={15}/>New doc</button>
    <button type="button" onClick={()=>{setBgMenu(null);void newDoc(true);}}><FileSpreadsheet size={15}/>New sheet</button>
+   <button type="button" onClick={()=>{setBgMenu(null);void newDoc('form');}}><ClipboardList size={15}/>New form</button>
    <button type="button" onClick={()=>{setBgMenu(null);pick.current?.click();}}><Upload size={15}/>Upload files</button>
    <button type="button" onClick={()=>{setBgMenu(null);pickDir.current?.click();}}><FolderUp size={15}/>Upload folder</button>
   </div>}

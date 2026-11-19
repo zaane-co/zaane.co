@@ -1,0 +1,63 @@
+/* A ZARN form as people answer it. Light, on purpose, like Google Forms; --zff is the form's colour. */
+.zff{--zff:#673ab7;--zff-bg:color-mix(in srgb,var(--zff) 12%,#fff);min-height:100dvh;background:var(--zff-bg);color:#202124;font-family:Inter,system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14px;line-height:1.5;color-scheme:light}
+.zff *{box-sizing:border-box}
+.zff-wrap{width:min(770px,100%);margin:0 auto;padding:12px 16px 40px;display:flex;flex-direction:column}
+.zff form{display:flex;flex-direction:column;gap:12px}
+.zff-done,.zff-head{margin-bottom:12px}
+.zff-card{background:#fff;border:1px solid #dadce0;border-radius:8px;padding:22px 24px;display:flex;flex-direction:column;gap:12px;position:relative}
+.zff-card.is-bad{border-color:#d93025}
+.zff-head{border-top:10px solid var(--zff);padding-top:20px}
+.zff-head h1{margin:0;font-size:30px;font-weight:500;line-height:1.25;word-break:break-word}
+.zff-desc{margin:0;white-space:pre-wrap;color:#202124}
+.zff-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;border-top:1px solid #dadce0;margin:2px -24px 0;padding:12px 24px 0;font-size:13px;color:#5f6368}
+.zff-reqnote{color:#d93025}
+.zff-section{background:var(--zff);border-color:var(--zff);color:#fff}
+.zff-section h2{margin:0;font-size:20px;font-weight:500}.zff-section p{margin:0;white-space:pre-wrap}
+.zff-q{font-size:16px;font-weight:500;color:#202124;word-break:break-word}
+.zff-req{color:#d93025;margin-left:4px}
+.zff-help{margin:-6px 0 0;font-size:13px;color:#5f6368;white-space:pre-wrap}
+.zff-text{width:min(100%,360px);border:0;border-bottom:1px solid #dadce0;padding:8px 0;font:inherit;font-size:14px;color:#202124;background:transparent;outline:0;transition:border-color .15s}
+.zff-text:focus{border-bottom:2px solid var(--zff);padding-bottom:7px}
+.zff-area{width:100%;resize:none;overflow:hidden;min-height:38px}
+.zff-short{width:auto;min-width:170px}
+.zff-select{width:min(100%,260px);height:44px;border:1px solid #dadce0;border-radius:4px;padding:0 12px;font:inherit;background:#fff;color:#202124}
+.zff-opts{display:flex;flex-direction:column;gap:2px}
+.zff-opt{display:flex;align-items:center;gap:12px;min-height:44px;cursor:pointer;padding:2px 0}
+.zff-opt input[type=radio],.zff-opt input[type=checkbox],.zff-scale-n input{position:absolute;opacity:0;pointer-events:none}
+.zff-opt>i,.zff-scale-n>i{width:20px;height:20px;border:2px solid #5f6368;border-radius:999px;flex-shrink:0;display:grid;place-items:center;transition:border-color .12s}
+.zff-opt>i.is-box{border-radius:3px}
+.zff-opt input:checked+i,.zff-scale-n input:checked+i{border-color:var(--zff)}
+.zff-opt input:checked+i::after,.zff-scale-n input:checked+i::after{content:'';width:10px;height:10px;border-radius:999px;background:var(--zff)}
+.zff-opt input:checked+i.is-box{background:var(--zff)}
+.zff-opt input:checked+i.is-box::after{width:5px;height:10px;border-radius:0;background:none;border:solid #fff;border-width:0 2px 2px 0;transform:translate(0,-1px) rotate(45deg)}
+.zff-opt input:focus-visible+i,.zff-scale-n input:focus-visible+i{outline:2px solid var(--zff);outline-offset:3px}
+.zff-other{flex:1;min-width:0}
+.zff-scale{display:flex;align-items:flex-end;justify-content:center;gap:4px;flex-wrap:wrap;padding:4px 0}
+.zff-scale-n{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:40px;cursor:pointer;padding:4px}
+.zff-scale-legend{display:none}
+.zff-scale-end{padding:0 8px 4px;font-size:13px;color:#202124;max-width:140px;text-align:center}
+.zff-err{margin:0;font-size:12px;color:#d93025}
+.zff-formerr{margin:0;color:#d93025;font-size:14px}
+.zff-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px}
+.zff-submit{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 24px;border:0;border-radius:6px;background:var(--zff);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.zff-submit:disabled{opacity:.6;cursor:default}
+.zff-link{background:none;border:0;padding:6px 0;font:inherit;font-weight:500;color:var(--zff);cursor:pointer}
+.zff-link:hover{text-decoration:underline}
+.zff-clear{align-self:flex-end;font-size:13px}
+.zff-done{align-items:flex-start;gap:14px;color:#202124}.zff-done svg{color:var(--zff)}.zff-done p{margin:0;font-size:15px;white-space:pre-wrap}
+.zff-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.zff-brand{margin:22px 0 0;text-align:center;font-size:12px;color:#5f6368}
+.zff-spin{animation:zff-spin 1s linear infinite}@keyframes zff-spin{to{transform:rotate(360deg)}}
+.zff-preview{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding:10px 16px;background:#202124;color:#fff;font-size:13px}
+.zff-preview button{height:32px;padding:0 14px;border-radius:999px;border:0;background:#fff;color:#202124;font:inherit;font-weight:600;cursor:pointer}
+.zff-closed{max-width:770px;margin:0 auto;padding:12px 16px}
+@media (max-width:600px){
+ .zff-wrap{padding:8px 10px 32px}
+ .zff-card{padding:18px 16px}
+ .zff-meta{margin:2px -16px 0;padding:12px 16px 0}
+ .zff-head h1{font-size:24px}
+ .zff-text{width:100%}
+ .zff-scale{justify-content:space-between;gap:0}.zff-scale-end{display:none}
+ .zff-scale-legend{display:flex;justify-content:space-between;gap:12px;width:100%;font-size:12.5px;color:#5f6368;padding:4px 4px 0}.zff-scale-legend span:last-child{text-align:right}
+ .zff-scale-n{min-width:0;flex:1}
+}

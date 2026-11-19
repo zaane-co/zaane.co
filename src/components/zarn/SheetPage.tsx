@@ -55,7 +55,7 @@ export default function SheetPage({id}:{id:string}){
  useEffect(()=>{let on=true;void (async()=>{
   const [{data:d},{data:r}]=await Promise.all([db.from('zarn_docs').select('id,title,content,owner_id,kind,drive,folder_id,lead_id').eq('id',id).maybeSingle(),db.rpc('zarn_doc_role',{d:id})]);
   if(!on)return;
-  if(d&&(d as Row).kind!=='sheet'){router.replace(`/zarn/docs/${id}`);return;}
+  if(d&&(d as Row).kind!=='sheet'){router.replace(`/zarn/${(d as Row).kind==='form'?'forms':'docs'}/${id}`);return;}
   setRow((d as Row|null)??null);setRole((r as Role|null)??null);
   if(d){const s=readSheet((d as Row).content);setData(s);setTabId(s.tabs[0].id);setTitle((d as Row).title);latest.current={data:s,title:(d as Row).title};base.current=(d as Row).content;
    void db.from('zarn_doc_versions').select('created_at').eq('doc_id',id).order('created_at',{ascending:false}).limit(1).then(({data:v}:{data:unknown})=>{const t=(v as {created_at:string}[]|null)?.[0]?.created_at;snapAt.current=t?new Date(t).getTime():0;});

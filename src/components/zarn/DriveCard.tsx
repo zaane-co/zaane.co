@@ -1,14 +1,14 @@
 'use client';
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
-import {ChevronRight,FileSpreadsheet,FileText,FolderOpen,Lock} from 'lucide-react';
+import {ChevronRight,ClipboardList,FileSpreadsheet,FileText,FolderOpen,Lock} from 'lucide-react';
 import {useZarn} from './ZarnProvider';
 type Doc={id:string;title:string;kind:string;drive:'my'|'team'|'client';lead_id:string|null;folder_id:string|null;owner_id:string};
 type Info={doc:Doc|null;path:{id:string;name:string}[];pub?:string;folder?:Doc};
 const UUID='[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 // A ZARN document or sheet link: /zarn/docs/<id>, /zarn/sheets/<id>, or a public /doc/<token>.
 export function driveLink(url:string):{id?:string;token?:string;folder?:string}|null{
- try{const u=new URL(url);const a=u.pathname.match(new RegExp(`^/zarn/(?:docs|sheets)/(${UUID})`,'i'));if(a)return {id:a[1]};if(u.pathname==='/zarn/drive'){const f=u.searchParams.get('f');if(f&&new RegExp(`^${UUID}$`,'i').test(f))return {folder:f};}const b=u.pathname.match(/^\/doc\/([A-Za-z0-9_-]{8,})$/);if(b)return {token:b[1]};}catch{}
+ try{const u=new URL(url);const a=u.pathname.match(new RegExp(`^/zarn/(?:docs|sheets|forms)/(${UUID})`,'i'));if(a)return {id:a[1]};if(u.pathname==='/zarn/drive'){const f=u.searchParams.get('f');if(f&&new RegExp(`^${UUID}$`,'i').test(f))return {folder:f};}const b=u.pathname.match(/^\/doc\/([A-Za-z0-9_-]{8,})$/);if(b)return {token:b[1]};}catch{}
  return null;
 }
 const cache=new Map<string,Promise<Info>>();
@@ -47,7 +47,7 @@ export default function DriveCard({url,target}:{url:string;target:{id?:string;to
   <div className="zn-dc-main"><b>{info.pub?'Shared ZARN document':target.folder?'ZARN folder':'ZARN document'}</b><small>{info.pub?'Anyone with this link can view it.':'You don’t have access. Ask the person who shared it.'}</small></div>
   {info.pub&&<div className="zn-dc-acts"><a className="zn-btn is-primary" href={info.pub} target="_blank" rel="noopener noreferrer">Open</a></div>}
  </div>;
- const sheet=d.kind==='sheet',isFolder=d.kind==='folder';
+ const sheet=d.kind==='sheet',form=d.kind==='form',isFolder=d.kind==='folder';
  const client=d.drive==='client'?channels.find(c=>c.kind==='client'&&c.lead_id===d.lead_id):undefined;
  const shared=d.drive==='my'&&d.owner_id!==me.user_id;
  const root=d.drive==='team'?'Team drive':d.drive==='client'?(client?title(client):'Client drive'):shared?'Shared with me':'My Drive';
@@ -55,9 +55,9 @@ export default function DriveCard({url,target}:{url:string;target:{id?:string;to
  const crumbs=shared&&!isFolder?[]:info.path;
  const last=crumbs[crumbs.length-1];
  const where=isFolder?`${base.replace('v=shared','v=my')}&f=${d.id}`:last?`${base}&f=${last.id}`:base;
- const openHref=isFolder?where:`/zarn/${sheet?'sheets':'docs'}/${d.id}`;
- return <div className={`zn-dc${sheet?' is-sheet':''}${isFolder?' is-folder':''}`}>
-  <span className="zn-dc-ic">{isFolder?<FolderOpen size={20}/>:sheet?<FileSpreadsheet size={20}/>:<FileText size={20}/>}</span>
+ const openHref=isFolder?where:`/zarn/${form?'forms':sheet?'sheets':'docs'}/${d.id}`;
+ return <div className={`zn-dc${sheet?' is-sheet':''}${form?' is-form':''}${isFolder?' is-folder':''}`}>
+  <span className="zn-dc-ic">{isFolder?<FolderOpen size={20}/>:form?<ClipboardList size={20}/>:sheet?<FileSpreadsheet size={20}/>:<FileText size={20}/>}</span>
   <div className="zn-dc-main">
    <Link href={openHref} className="zn-dc-title">{d.title||'Untitled'}</Link>
    <small className="zn-dc-path"><FolderOpen size={12}/><span>{root}</span>{crumbs.map(c=><span key={c.id}><ChevronRight size={11}/>{c.name}</span>)}</small>

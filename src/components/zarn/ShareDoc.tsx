@@ -16,7 +16,7 @@ const day=(iso:string)=>new Date(iso).toLocaleDateString('en-GB',{day:'numeric',
 // and copy the document's one link. "Anyone with the link" is read only for people outside ZARN, with an optional expiry and password.
 export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}){
  const {db,me,members,channels,title,people}=useZarn(),confirm=useConfirm();
- const [loaded,setLoaded]=useState(false),[owner,setOwner]=useState(''),[canShare,setCanShare]=useState(true),[docTitle,setDocTitle]=useState(''),[kind,setKind]=useState<'doc'|'sheet'>('doc');
+ const [loaded,setLoaded]=useState(false),[owner,setOwner]=useState(''),[canShare,setCanShare]=useState(true),[docTitle,setDocTitle]=useState(''),[kind,setKind]=useState<'doc'|'sheet'|'form'>('doc');
  const [access,setAccess]=useState<Access>('restricted'),[teamRole,setTeamRole]=useState<'view'|'edit'>('view'),[lead,setLead]=useState(''),[shared,setShared]=useState<Person[]>([]);
  const [link,setLink]=useState<Link|null>(null),[expiry,setExpiry]=useState('keep'),[password,setPassword]=useState(''),[clearPw,setClearPw]=useState(false);
  const [dirty,setDirty]=useState(false),[busy,setBusy]=useState(false),[msg,setMsg]=useState(''),[copied,setCopied]=useState(false);
@@ -34,7 +34,7 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
    if(!live||!d)return;
    const x=d as {owner_id:string;title:string;kind:string;visibility:'private'|'team';team_role:'view'|'edit';lead_id:string|null};
    const l=((links.links??[]) as Link[]).find(k=>!k.expires_at||new Date(k.expires_at)>new Date())??null;
-   setDocTitle(x.title||'Untitled');setOwner(x.owner_id);setCanShare(role==='owner'||role==='edit');setKind(x.kind==='sheet'?'sheet':'doc');
+   setDocTitle(x.title||'Untitled');setOwner(x.owner_id);setCanShare(role==='owner'||role==='edit');setKind(x.kind==='sheet'?'sheet':x.kind==='form'?'form':'doc');
    setAccess(l?'anyone':x.visibility==='team'?'team':'restricted');setTeamRole(x.team_role);setLead(x.lead_id??'');setShared((m??[]) as Person[]);setLink(l);setLoaded(true);
   })();
   return()=>{live=false;};
@@ -58,13 +58,13 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
  async function copy(){
   let l=link;
   if(dirty){const r=await save();if(r===false)return;l=r;}
-  const url=access==='anyone'&&l?l.url:`${(process.env.NEXT_PUBLIC_SHARE_URL||'https://zaane.co').replace(/\/$/,'')}/zarn/${kind==='sheet'?'sheets':'docs'}/${docId}`;
+  const url=access==='anyone'&&l?l.url:`${(process.env.NEXT_PUBLIC_SHARE_URL||'https://zaane.co').replace(/\/$/,'')}/zarn/${kind==='form'?'forms':kind==='sheet'?'sheets':'docs'}/${docId}`;
   try{await navigator.clipboard.writeText(url);setCopied(true);setTimeout(()=>setCopied(false),1800);}catch{setMsg(url);}
  }
  async function done(){if(dirty&&await save()===false)return;onClose();}
  async function close(){if(dirty&&!await confirm({title:'Discard sharing changes?',message:'Nothing you changed here is saved yet.',confirm:'Discard'}))return;onClose();}
  const toggle=(uid:string)=>{touch();setShared(s=>s.some(p=>p.user_id===uid)?s.filter(p=>p.user_id!==uid):[...s,{user_id:uid,role:'view'}]);};
- const what=kind==='sheet'?'sheet':'document';
+ const what=kind==='form'?'form':kind==='sheet'?'sheet':'document';
  const accessHint=access==='restricted'?'Only people added above can open it.':access==='team'?'Everyone on the team can find and open it.':'Anyone on the internet with the link can view it. The team can open it in ZARN.';
  const expiryLabel=link?.expires_at?`Expires ${day(link.expires_at)}`:'Never expires';
  return <Modal title={loaded?`Share “${docTitle}”`:'Share'} onClose={()=>void close()} wide>
@@ -82,7 +82,7 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
     <div className="zd-access">
      <span className={`zd-access-ic is-${access}`}>{access==='restricted'?<Lock size={17}/>:access==='team'?<Users size={17}/>:<Globe2 size={17}/>}</span>
      <div className="zd-access-main">
-      <Dropdown variant="inline" disabled={!canShare} label="General access" value={access} onChange={v=>{touch();setAccess(v as Access);}} options={[{value:'restricted',label:'Restricted'},{value:'team',label:'Everyone on the team'},{value:'anyone',label:'Anyone with the link'}]}/>
+      <Dropdown variant="inline" disabled={!canShare} label="General access" value={access} onChange={v=>{touch();setAccess(v as Access);}} options={[{value:'restricted',label:'Restricted'},{value:'team',label:'Everyone on the team'},...(kind==='form'&&access!=='anyone'?[]:[{value:'anyone',label:'Anyone with the link'}])]}/>
       <small>{accessHint}</small>
      </div>
      {access!=='restricted'&&<Dropdown variant="inline" label="Team access" value={teamRole} onChange={v=>{touch();setTeamRole(v as 'view'|'edit');}} options={[{value:'view',label:'Team: Viewer'},{value:'edit',label:'Team: Editor'}]}/>}
@@ -102,7 +102,8 @@ export default function ShareDoc({docId,onClose}:{docId:string;onClose:()=>void}
     <button type="button" className="zn-btn" disabled={busy||!loaded||(!!password&&password.length<4)} onClick={()=>void copy()}>{copied?<Check size={15}/>:<Link2 size={15}/>}{copied?'Link copied':'Copy link'}</button>
     <button type="button" className="zn-btn is-primary" disabled={busy||!loaded||(!canShare&&dirty)||(!!password&&password.length<4)} onClick={()=>void done()}>{dirty?(shared.length?'Save and notify':'Save'):'Done'}</button>
    </footer>
-   {access==='restricted'&&<p className="zd-share-tip">The copied link only opens for people with access. Pick Anyone with the link to share outside ZARN.</p>}
+   {kind==='form'&&<p className="zd-share-tip">Share gives people access to edit the questions and see responses. To collect answers, use Send on the form.</p>}
+   {kind!=='form'&&access==='restricted'&&<p className="zd-share-tip">The copied link only opens for people with access. Pick Anyone with the link to share outside ZARN.</p>}
    {access!=='restricted'&&!dirty&&loaded&&<p className="zd-share-tip">Sharing this {what} with the team or by link doesn’t notify anyone. Add people above to notify them.</p>}
   </div>
  </Modal>;
