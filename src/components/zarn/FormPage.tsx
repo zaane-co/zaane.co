@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter,useSearchParams} from 'next/navigation';
-import {ArrowDown,ArrowUp,Check,ChevronLeft,ChevronRight,CircleDot,ClipboardList,CloudCheck,CloudOff,Copy,Download,Eye,FileSpreadsheet,Folder,GripVertical,Heading,Link2,SeparatorHorizontal,Loader2,Plus,RefreshCw,Send,Share2,Square,Trash2,X} from 'lucide-react';
+import {ArrowDown,ArrowUp,Check,ChevronLeft,ChevronRight,CircleDot,ClipboardList,CloudCheck,CloudOff,Copy,Download,Eye,FileSpreadsheet,Folder,GripVertical,Heading,ImagePlus,Link2,SeparatorHorizontal,Loader2,Plus,RefreshCw,Send,Share2,Square,Trash2,X} from 'lucide-react';
 import Dropdown from '@/components/ui/Dropdown';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
@@ -127,7 +127,8 @@ export default function FormPage({id}:{id:string}){
   </nav>
   <div className="zfe-body">
    {tab==='questions'&&<div className="zfe-col">
-    <div className={`zfe-card zfe-headcard${focus==='__head'?' is-on':''}`} onClick={e=>{e.stopPropagation();if(canEdit)setFocus('__head');}}>
+    {form.set.cover&&<div className="zfe-cover"><img src={form.set.cover} alt=""/></div>}
+    <div className={`zfe-card zfe-headcard${form.set.cover?' has-cover':''}${focus==='__head'?' is-on':''}`} onClick={e=>{e.stopPropagation();if(canEdit)setFocus('__head');}}>
      <input className="zfe-h1" value={title} readOnly={!canEdit} placeholder="Untitled form" maxLength={200} aria-label="Form title" onChange={e=>{setTitle(e.target.value);latest.current.title=e.target.value;queue();}}/>
      <AutoArea className="zfe-desc" value={form.desc} readOnly={!canEdit} placeholder="Form description" onChange={v=>change(f=>({...f,desc:v}))}/>
     </div>
@@ -157,10 +158,30 @@ export default function FormPage({id}:{id:string}){
     <section className="zfe-card zfe-set">
      <h2>Presentation</h2>
      <label className="zn-label">Confirmation message<AutoArea className="zn-input zfe-area" value={form.set.done??''} placeholder="Your response has been recorded." onChange={v=>setSet({done:v||undefined})}/></label>
+     <PicturePick label="Cover image" hint="A wide picture across the top of the form. Landscape works best." id={id} url={form.set.cover} wide onChange={u=>setSet({cover:u})}/>
+     <PicturePick label="Background photo" hint="Fills the page behind the form. Pick something calm so the questions stay easy to read." id={id} url={form.set.bg} onChange={u=>setSet({bg:u})}/>
      <div className="zn-label">Colour<div className="zfe-swatches">{FORM_COLORS.map(c=><button key={c} type="button" aria-label={`Colour ${c}`} aria-pressed={color===c} style={{background:c}} onClick={()=>setSet({color:c})}>{color===c&&<Check size={15}/>}</button>)}</div></div>
     </section>
    </div>}
   </div>
+ </div>;
+}
+
+// Upload or remove a form picture. Pictures are stored privately and served to anyone who opens the form.
+function PicturePick({label,hint,id,url,wide,onChange}:{label:string;hint:string;id:string;url?:string;wide?:boolean;onChange:(u:string|undefined)=>void}){
+ const pick=useRef<HTMLInputElement>(null),[busy,setBusy]=useState(false),[err,setErr]=useState('');
+ async function upload(f:File){setErr('');setBusy(true);
+  const fd=new FormData();fd.append('file',f);fd.append('scope','form');fd.append('id',id);
+  const r=await fetch('/api/zarn/editor-image',{method:'POST',body:fd}).catch(()=>null);const d=await r?.json().catch(()=>({}));setBusy(false);
+  if(!r?.ok||!d?.url){setErr(d?.error||'Upload failed. Try again.');return;}onChange(d.url as string);}
+ return <div className="zn-label zfe-pic">{label}
+  <input ref={pick} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f);e.target.value='';}}/>
+  {url?<div className={`zfe-pic-prev${wide?' is-wide':''}`}><img src={url} alt=""/><span className="zfe-pic-acts">
+    <button type="button" className="zn-btn" disabled={busy} onClick={()=>pick.current?.click()}>{busy?<Loader2 size={14} className="zn-spin"/>:<ImagePlus size={14}/>}Change</button>
+    <button type="button" className="zn-btn" onClick={()=>onChange(undefined)}><Trash2 size={14}/>Remove</button></span></div>
+  :<button type="button" className={`zfe-pic-add${wide?' is-wide':''}`} disabled={busy} onClick={()=>pick.current?.click()}>{busy?<Loader2 size={18} className="zn-spin"/>:<ImagePlus size={18}/>}<span>{busy?'Uploading…':'Upload a picture'}</span></button>}
+  <small className="zfe-pic-hint">{hint} JPG, PNG or WebP, up to 8 MB.</small>
+  {err&&<span className="zn-error">{err}</span>}
  </div>;
 }
 

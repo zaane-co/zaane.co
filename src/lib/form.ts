@@ -1,7 +1,7 @@
 // Forms are stored as docs with kind='form'; content holds this JSON. Responses live in zarn_form_responses.
 export type QType='short'|'para'|'radio'|'check'|'drop'|'scale'|'date'|'time'|'section'|'page';
 export type Q={id:string;t:QType;title:string;help?:string;req?:1;opts?:string[];other?:1;min?:number;max?:number;lo?:string;hi?:string};
-export type FormSet={open:boolean;who:'team'|'anyone';email?:1;once?:1;done?:string;color?:string;sheet?:string;notify?:1;shuffle?:1};
+export type FormSet={open:boolean;who:'team'|'anyone';email?:1;once?:1;done?:string;color?:string;sheet?:string;notify?:1;shuffle?:1;/** pictures, as /api/zarn/editor-image URLs */ cover?:string;bg?:string};
 export type Form={desc:string;qs:Q[];set:FormSet};
 export type Answers=Record<string,string|string[]>;
 export type Resp={id:string;user_id:string|null;email:string|null;answers:Answers;created_at:string};
