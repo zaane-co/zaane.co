@@ -9,13 +9,18 @@ create table public.zarn_form_responses (
  doc_id uuid not null references public.zarn_docs(id) on delete cascade,
  user_id uuid references public.zarn_members(user_id) on delete set null,
  email text,
+ -- A one-way hash of the sender's network address, only to slow down floods of answers. Never shown.
+ ip_hash text,
  answers jsonb not null default '{}'::jsonb,
  created_at timestamptz not null default now());
 create index zarn_form_responses_doc on public.zarn_form_responses(doc_id,created_at desc);
+create index zarn_form_responses_ip on public.zarn_form_responses(ip_hash,created_at desc) where ip_hash is not null;
 create index zarn_form_responses_user on public.zarn_form_responses(doc_id,user_id) where user_id is not null;
 alter table public.zarn_form_responses enable row level security;
 create policy form_resp_read on public.zarn_form_responses for select to authenticated
  using(public.zarn_doc_role(doc_id) in ('owner','edit'));
 create policy form_resp_remove on public.zarn_form_responses for delete to authenticated
  using(public.zarn_doc_role(doc_id) in ('owner','edit'));
-grant select,delete on public.zarn_form_responses to authenticated;
+-- Only the server writes answers, and the address hash is never readable by people.
+revoke all on public.zarn_form_responses from anon,authenticated;
+grant select(id,doc_id,user_id,email,answers,created_at),delete on public.zarn_form_responses to authenticated;

@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {createHash} from 'node:crypto';
 import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
 import {pushTo} from '@/lib/zarn-push';
@@ -6,6 +7,8 @@ import {checkAnswers,readForm} from '@/lib/form';
 // Someone answering a form. Public forms take answers from anyone with the link; team forms need a ZARN sign-in.
 const body=z.object({id:z.uuid(),answers:z.record(z.string(),z.unknown()),email:z.string().max(200).optional(),hp:z.string().optional()});
 const fail=(error:string,status=400)=>Response.json({error},{status});
+// Sends from one network address: at most 10 to a form in 10 minutes, and 60 to all forms in an hour.
+const ipHash=(req:Request)=>{const ip=(req.headers.get('x-forwarded-for')??'').split(',')[0].trim()||req.headers.get('x-real-ip')||'';return ip?createHash('sha256').update(`zarn-forms:${process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(-12)??''}:${ip}`).digest('hex').slice(0,32):null;};
 const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return fail('Invalid origin',403);
@@ -24,7 +27,15 @@ export async function POST(request:Request){
  let email:string|null=null;
  if(f.set.email&&!me){email=(b.email??'').trim().toLowerCase();if(!EMAIL.test(email))return fail('Enter a valid email address.');}
  const chk=checkAnswers(f,b.answers);if(!chk.ok)return fail(chk.error);
- const {error}=await db.from('zarn_form_responses').insert({doc_id:b.id,user_id:me?.user_id??null,email,answers:chk.clean});
+ const ip=ipHash(request);
+ if(ip&&!me){
+  const since=(ms:number)=>new Date(Date.now()-ms).toISOString();
+  const [{count:here},{count:all}]=await Promise.all([
+   db.from('zarn_form_responses').select('id',{count:'exact',head:true}).eq('ip_hash',ip).eq('doc_id',b.id).gt('created_at',since(600_000)),
+   db.from('zarn_form_responses').select('id',{count:'exact',head:true}).eq('ip_hash',ip).gt('created_at',since(3_600_000))]);
+  if((here??0)>=10||(all??0)>=60)return fail('Too many answers from your connection. Try again a little later.',429);
+ }
+ const {error}=await db.from('zarn_form_responses').insert({doc_id:b.id,user_id:me?.user_id??null,email,ip_hash:ip,answers:chk.clean});
  if(error)return fail('Could not send your answers. Try again.',500);
  if(f.set.notify&&doc.owner_id!==me?.user_id)await pushTo([doc.owner_id],{title:`New response to ${doc.title||'your form'}`,body:me?`From ${me.display_name}`:email?`From ${email}`:'Someone answered your form',tag:`form-${b.id}`,url:`/zarn/forms/${b.id}?tab=responses`}).catch(()=>0);
  return Response.json({ok:true});

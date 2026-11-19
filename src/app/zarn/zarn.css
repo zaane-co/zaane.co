@@ -3279,6 +3279,8 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zfe-qrow{display:flex;align-items:flex-start;gap:14px}
 .zfe-qtitle{flex:1;min-width:0;background:var(--z-panel-2);border-bottom:1px solid var(--z-border);padding:14px 14px 12px;font-size:16px;border-radius:4px 4px 0 0}
 .zfe-qtitle.is-section{background:none;padding:4px 0;font-size:22px;border-radius:0;border-bottom-color:transparent}
+.zfe-section.is-page{border-top:4px solid var(--zfe);margin-top:26px}
+.zfe-pagetag{position:absolute;top:-30px;left:0;display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 12px;border-radius:6px 6px 0 0;background:var(--zfe);color:#fff;font-size:12px;font-weight:600}
 .zfe-section.is-on .zfe-qtitle.is-section{border-bottom-color:var(--z-border)}
 .zfe-qrow .zfe-qtitle{flex:1 1 0;width:auto}.zfe-qrow .zfe-type{width:230px;flex:0 0 230px}
 .zfe-grip{position:absolute;top:2px;left:50%;transform:translateX(-50%) rotate(90deg);color:var(--z-muted);opacity:0}.zfe-q:hover .zfe-grip{opacity:.5}

@@ -1,5 +1,5 @@
 // Forms are stored as docs with kind='form'; content holds this JSON. Responses live in zarn_form_responses.
-export type QType='short'|'para'|'radio'|'check'|'drop'|'scale'|'date'|'time'|'section';
+export type QType='short'|'para'|'radio'|'check'|'drop'|'scale'|'date'|'time'|'section'|'page';
 export type Q={id:string;t:QType;title:string;help?:string;req?:1;opts?:string[];other?:1;min?:number;max?:number;lo?:string;hi?:string};
 export type FormSet={open:boolean;who:'team'|'anyone';email?:1;once?:1;done?:string;color?:string;sheet?:string;notify?:1;shuffle?:1};
 export type Form={desc:string;qs:Q[];set:FormSet};
@@ -8,11 +8,15 @@ export type Resp={id:string;user_id:string|null;email:string|null;answers:Answer
 
 export const QTYPES:{t:QType;label:string}[]=[
  {t:'short',label:'Short answer'},{t:'para',label:'Paragraph'},{t:'radio',label:'Multiple choice'},{t:'check',label:'Checkboxes'},
- {t:'drop',label:'Dropdown'},{t:'scale',label:'Linear scale'},{t:'date',label:'Date'},{t:'time',label:'Time'},{t:'section',label:'Title and description'},
+ {t:'drop',label:'Dropdown'},{t:'scale',label:'Linear scale'},{t:'date',label:'Date'},{t:'time',label:'Time'},{t:'section',label:'Title and description'},{t:'page',label:'Page break'},
 ];
 export const FORM_COLORS=['#673ab7','#3f51b5','#1e88e5','#0097a7','#43a047','#f4511e','#e53935','#d81b60','#6d4c41','#455a64'];
 export const OTHER='__other:';
 export const newQid=()=>Math.random().toString(36).slice(2,10);
+// Questions people answer (not headings or page breaks).
+export const isAsk=(q:Q)=>q.t!=='section'&&q.t!=='page';
+// The form split into pages at each page break. Each page after the first starts with its break (its title and description).
+export function pagesOf(qs:Q[]):Q[][]{const out:Q[][]=[[]];for(const q of qs){if(q.t==='page')out.push([q]);else out[out.length-1].push(q);}return out.filter((p,i)=>i===0||p.length);}
 export const hasOpts=(t:QType)=>t==='radio'||t==='check'||t==='drop';
 export const blankQ=(t:QType='radio'):Q=>({id:newQid(),t,title:'',...(hasOpts(t)?{opts:['Option 1']}:{}),...(t==='scale'?{min:1,max:5}:{})});
 export const blankForm=():Form=>({desc:'',qs:[{...blankQ('radio'),title:'Untitled question'}],set:{open:true,who:'team',color:FORM_COLORS[0]}});
@@ -34,7 +38,7 @@ export function checkAnswers(f:Form,a:unknown):{ok:true;clean:Answers}|{ok:false
  if(!a||typeof a!=='object'||Array.isArray(a))return {ok:false,error:'Invalid answers.'};
  const src=a as Record<string,unknown>,clean:Answers={};
  for(const q of f.qs){
-  if(q.t==='section')continue;
+  if(!isAsk(q))continue;
   const v=src[q.id],name=q.title||'A question';
   const empty=v===undefined||v===null||v===''||(Array.isArray(v)&&!v.length);
   if(empty){if(q.req)return {ok:false,error:`“${name}” needs an answer.`};continue;}
@@ -53,7 +57,7 @@ export function checkAnswers(f:Form,a:unknown):{ok:true;clean:Answers}|{ok:false
 
 // Responses as rows: a header row, then one row per response (oldest first), like Google's linked sheet.
 export function responseRows(f:Form,list:Resp[],who:(r:Resp)=>string):string[][]{
- const qs=f.qs.filter(q=>q.t!=='section');
+ const qs=f.qs.filter(isAsk);
  const showWho=f.set.email||list.some(r=>r.user_id||r.email);
  const head=['Timestamp',...(showWho?['Respondent']:[]),...qs.map(q=>q.title||'Untitled question')];
  const rows=[...list].sort((a,b)=>a.created_at.localeCompare(b.created_at)).map(r=>[new Date(r.created_at).toLocaleString('en-GB'),...(showWho?[who(r)]:[]),...qs.map(q=>answerText(q,r.answers[q.id]))]);

@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter,useSearchParams} from 'next/navigation';
-import {ArrowDown,ArrowUp,Check,ChevronLeft,ChevronRight,CircleDot,ClipboardList,CloudCheck,CloudOff,Copy,Download,Eye,FileSpreadsheet,Folder,GripVertical,Heading,Link2,Loader2,Plus,RefreshCw,Send,Share2,Square,Trash2,X} from 'lucide-react';
+import {ArrowDown,ArrowUp,Check,ChevronLeft,ChevronRight,CircleDot,ClipboardList,CloudCheck,CloudOff,Copy,Download,Eye,FileSpreadsheet,Folder,GripVertical,Heading,Link2,SeparatorHorizontal,Loader2,Plus,RefreshCw,Send,Share2,Square,Trash2,X} from 'lucide-react';
 import Dropdown from '@/components/ui/Dropdown';
 import {useZarn} from './ZarnProvider';
 import {useConfirm} from './ConfirmProvider';
@@ -10,7 +10,7 @@ import {Modal} from './Dialogs';
 import {Avatar} from './format';
 import ShareDoc from './ShareDoc';
 import FormFill from './FormFill';
-import {FORM_COLORS,OTHER,QTYPES,answerText,blankQ,hasOpts,newQid,readForm,responseRows,type Form,type Q,type QType,type Resp} from '@/lib/form';
+import {FORM_COLORS,OTHER,QTYPES,answerText,blankQ,hasOpts,isAsk,newQid,readForm,responseRows,type Form,type Q,type QType,type Resp} from '@/lib/form';
 import {ref} from '@/lib/sheet';
 type Row={id:string;title:string;content:string;owner_id:string;kind:string;drive:'my'|'team'|'client';folder_id:string|null;lead_id:string|null};
 type Role='owner'|'edit'|'view';
@@ -67,7 +67,7 @@ export default function FormPage({id}:{id:string}){
   if(error){setRespErr('Responses aren’t switched on for this workspace yet.');setResps([]);return;}setResps(data as Resp[]);},[db,id]);
  useEffect(()=>{if(!canEdit)return;let on=true;void (async()=>{if(on)await loadResps();})();return()=>{on=false;};},[canEdit,loadResps,tab]);
 
- function addQ(t:QType){const q=t==='section'?{id:newQid(),t,title:''}:blankQ(t);
+ function addQ(t:QType){const q=!isAsk({id:'',t,title:''})?{id:newQid(),t,title:''}:blankQ(t);
   change(f=>{const i=focus?f.qs.findIndex(x=>x.id===focus):-1;const qs=[...f.qs];qs.splice(i<0?qs.length:i+1,0,q);return {...f,qs};});setFocus(q.id);
   setTimeout(()=>document.getElementById(`zfe-${q.id}`)?.scrollIntoView({behavior:'smooth',block:'center'}),50);}
  function move(qid:string,d:-1|1){change(f=>{const i=f.qs.findIndex(q=>q.id===qid),j=i+d;if(i<0||j<0||j>=f.qs.length)return f;const qs=[...f.qs];[qs[i],qs[j]]=[qs[j],qs[i]];return {...f,qs};});}
@@ -135,6 +135,7 @@ export default function FormPage({id}:{id:string}){
     {canEdit&&<div className="zfe-tools" onClick={e=>e.stopPropagation()}>
      <button type="button" aria-label="Add question" data-tip="Add question" onClick={()=>addQ('radio')}><Plus size={20}/><span>Question</span></button>
      <button type="button" aria-label="Add title and description" data-tip="Add title and description" onClick={()=>addQ('section')}><Heading size={18}/><span>Title</span></button>
+     <button type="button" aria-label="Add page break" data-tip="Add page break" onClick={()=>addQ('page')}><SeparatorHorizontal size={18}/><span>Page</span></button>
     </div>}
     {!form.qs.length&&<p className="zfe-empty">No questions yet. Add one to get started.</p>}
    </div>}
@@ -177,8 +178,9 @@ function QCard({q,on,canEdit,first,last,onFocus,onChange,onMove,onDup,onDrop}:{q
  const setType=(t:QType)=>onChange({t,...(hasOpts(t)&&!opts.length?{opts:['Option 1']}:{}),...(t==='scale'&&q.min===undefined?{min:1,max:5}:{})});
  const setOpt=(i:number,v:string)=>onChange({opts:opts.map((o,j)=>j===i?v:o)});
  const mark=(i:number)=>q.t==='check'?<Square size={18}/>:q.t==='drop'?<span className="zfe-num">{i+1}.</span>:<CircleDot size={18} className="zfe-dot"/>;
- if(q.t==='section')return <div id={`zfe-${q.id}`} className={`zfe-card zfe-section${on?' is-on':''}`} onClick={e=>{e.stopPropagation();onFocus();}}>
-  <input className="zfe-qtitle is-section" value={q.title} readOnly={!on} placeholder="Untitled title" maxLength={300} onChange={e=>onChange({title:e.target.value})}/>
+ if(!isAsk(q))return <div id={`zfe-${q.id}`} className={`zfe-card zfe-section${q.t==='page'?' is-page':''}${on?' is-on':''}`} onClick={e=>{e.stopPropagation();onFocus();}}>
+  {q.t==='page'&&<span className="zfe-pagetag"><SeparatorHorizontal size={14}/>New page starts here</span>}
+  <input className="zfe-qtitle is-section" value={q.title} readOnly={!on} placeholder={q.t==='page'?'Page title (optional)':'Untitled title'} maxLength={300} onChange={e=>onChange({title:e.target.value})}/>
   {(on||q.help)&&<AutoArea className="zfe-desc" value={q.help??''} readOnly={!on} placeholder="Description (optional)" onChange={v=>onChange({help:v||undefined})}/>}
   {on&&<div className="zfe-qfoot"><span/><Actions first={first} last={last} onMove={onMove} onDup={onDup} onDrop={onDrop}/></div>}
  </div>;
@@ -187,7 +189,7 @@ function QCard({q,on,canEdit,first,last,onFocus,onChange,onMove,onDup,onDrop}:{q
   {on?<>
    <div className="zfe-qrow">
     <AutoArea className="zfe-qtitle" value={q.title} placeholder="Question" onChange={v=>onChange({title:v})}/>
-    <Dropdown className="zfe-type" label="Question type" value={q.t} onChange={v=>setType(v as QType)} options={QTYPES.filter(x=>x.t!=='section').map(x=>({value:x.t,label:x.label}))}/>
+    <Dropdown className="zfe-type" label="Question type" value={q.t} onChange={v=>setType(v as QType)} options={QTYPES.filter(x=>isAsk({id:'',t:x.t,title:''})).map(x=>({value:x.t,label:x.label}))}/>
    </div>
    <AutoArea className="zfe-help" value={q.help??''} placeholder="Description (optional)" onChange={v=>onChange({help:v||undefined})}/>
    {hasOpts(q.t)&&<div className="zfe-opts">
@@ -240,7 +242,7 @@ function SendForm({link,form,canEdit,onWho,onClose}:{link:string;form:Form;canEd
 function Responses({form,resps,err,who,people,sheet,sheetBusy,onOpen,onCsv,onSheet,onRefresh,onDelete,onDeleteAll}:{form:Form;resps:Resp[]|null;err:string;who:(r:Resp)=>string;people:Record<string,import('@/lib/zarn').ZMember>;sheet:boolean;sheetBusy:boolean;
  onOpen:(v:boolean)=>void;onCsv:()=>void;onSheet:()=>void;onRefresh:()=>void;onDelete:(r:Resp)=>void;onDeleteAll:()=>void}){
  const [view,setView]=useState<'summary'|'one'>('summary'),[at,setAt]=useState(0);
- const list=useMemo(()=>resps??[],[resps]),n=list.length,qs=useMemo(()=>form.qs.filter(q=>q.t!=='section'),[form.qs]);
+ const list=useMemo(()=>resps??[],[resps]),n=list.length,qs=useMemo(()=>form.qs.filter(isAsk),[form.qs]);
  const one=list[Math.min(at,Math.max(0,n-1))];
  const stats=useMemo(()=>qs.map(q=>{
   const vals=list.map(r=>r.answers[q.id]).filter(v=>v!==undefined&&v!==''&&!(Array.isArray(v)&&!v.length));

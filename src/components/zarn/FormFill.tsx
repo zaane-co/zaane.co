@@ -1,24 +1,30 @@
 'use client';
 import {useState} from 'react';
 import {CheckCircle2,Loader2} from 'lucide-react';
-import {OTHER,type Answers,type Form,type Q} from '@/lib/form';
+import {OTHER,isAsk,pagesOf,type Answers,type Form,type Q} from '@/lib/form';
 import './form.css';
 // The form as people answer it, Google Forms style: a coloured header card, one card per question, Submit at the end.
 export default function FormFill({id,title,form,who,preview=false,onExit}:{id:string;title:string;form:Form;who?:string|null;preview?:boolean;onExit?:()=>void}){
  const [a,setA]=useState<Answers>({}),[other,setOther]=useState<Record<string,string>>({}),[email,setEmail]=useState(''),[hp,setHp]=useState('');
- const [bad,setBad]=useState<Set<string>>(new Set()),[busy,setBusy]=useState(false),[err,setErr]=useState(''),[done,setDone]=useState(false);
+ const [page,setPage]=useState(0),[bad,setBad]=useState<Set<string>>(new Set()),[busy,setBusy]=useState(false),[err,setErr]=useState(''),[done,setDone]=useState(false);
  const color=form.set.color||'#673ab7';
  const needEmail=!!form.set.email&&!who;
  const set=(q:string,v:string|string[])=>{setA(x=>({...x,[q]:v}));setBad(s=>{if(!s.has(q))return s;const n=new Set(s);n.delete(q);return n;});};
  const val=(q:Q)=>{const v=a[q.id];if(q.t==='check')return ((v as string[]|undefined)??[]).map(s=>s===OTHER?`${OTHER}${other[q.id]??''}`:s);return v===OTHER?`${OTHER}${other[q.id]??''}`:v;};
+ const pages=pagesOf(form.qs);
+ const empty=(v:string|string[]|undefined)=>v===undefined||v===''||(Array.isArray(v)&&!v.length)||v===OTHER||(Array.isArray(v)&&v.includes(OTHER));
+ // Marks unanswered required questions in the list; returns true if any (and scrolls to the first).
+ function check(qs:Q[],withEmail:boolean){const miss=new Set<string>();
+  for(const q of qs)if(isAsk(q)&&q.req&&empty(val(q)))miss.add(q.id);
+  if(withEmail&&needEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()))miss.add('__email');
+  setBad(miss);if(!miss.size)return false;
+  setErr('Some questions need an answer.');setTimeout(()=>document.querySelector('.zff-card.is-bad')?.scrollIntoView({behavior:'smooth',block:'center'}),30);return true;}
  async function submit(e:React.FormEvent){
   e.preventDefault();setErr('');
-  const out:Answers={},miss=new Set<string>();
-  for(const q of form.qs){if(q.t==='section')continue;const v=val(q);const empty=v===undefined||v===''||(Array.isArray(v)&&!v.length)||v===OTHER||(Array.isArray(v)&&v.includes(OTHER));
-   if(empty){if(q.req)miss.add(q.id);continue;}out[q.id]=v as string|string[];}
-  if(needEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()))miss.add('__email');
-  setBad(miss);
-  if(miss.size){setErr('Some questions need an answer.');document.querySelector('.zff-card.is-bad')?.scrollIntoView({behavior:'smooth',block:'center'});return;}
+  const out:Answers={};
+  if(page<pages.length-1){if(check(pages[page],page===0))return;setPage(p=>p+1);setErr('');window.scrollTo({top:0});document.querySelector('.zfe-previewpage')?.scrollTo({top:0});return;}
+  for(const q of form.qs){if(!isAsk(q))continue;const v=val(q);if(empty(v))continue;out[q.id]=v as string|string[];}
+  if(check(form.qs,true)){const emailBad=needEmail&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());const first=emailBad?0:pages.findIndex(p=>p.some(q=>q.req&&isAsk(q)&&empty(val(q))));if(first>=0&&first!==page)setPage(first);return;}
   if(preview){setDone(true);return;}
   setBusy(true);
   const r=await fetch('/api/zarn/forms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,answers:out,...(needEmail?{email:email.trim()}:{}),hp})}).catch(()=>null);
@@ -32,13 +38,13 @@ export default function FormFill({id,title,form,who,preview=false,onExit}:{id:st
   {preview&&<div className="zff-preview"><span>Preview. Answers here aren’t saved.</span>{onExit&&<button type="button" onClick={onExit}>Back to editing</button>}</div>}
   <div className="zff-wrap">
    {done?<>{head}<div className="zff-card zff-done"><CheckCircle2 size={34}/><p>{form.set.done||'Your response has been recorded.'}</p>
-    {!form.set.once&&<button type="button" className="zff-link" onClick={()=>{setA({});setOther({});setDone(false);}}>Submit another response</button>}</div></>:
+    {!form.set.once&&<button type="button" className="zff-link" onClick={()=>{setA({});setOther({});setPage(0);setDone(false);}}>Submit another response</button>}</div></>:
    <form onSubmit={submit} noValidate>
-    {head}
-    {needEmail&&<div className={`zff-card${bad.has('__email')?' is-bad':''}`}><label className="zff-q">Email<span className="zff-req">*</span></label>
+    {page===0?head:<div className="zff-card zff-head zff-pagehead"><h1>{pages[page][0]?.title||title||'Untitled form'}</h1>{pages[page][0]?.help&&<p className="zff-desc">{pages[page][0].help}</p>}</div>}
+    {page===0&&needEmail&&<div className={`zff-card${bad.has('__email')?' is-bad':''}`}><label className="zff-q">Email<span className="zff-req">*</span></label>
      <input className="zff-text" type="email" autoComplete="email" value={email} onChange={e=>{setEmail(e.target.value);setBad(s=>{const n=new Set(s);n.delete('__email');return n;});}} placeholder="Your email"/>
      {bad.has('__email')&&<p className="zff-err">Enter a valid email address.</p>}</div>}
-    {form.qs.map(q=>q.t==='section'?<div key={q.id} className="zff-card zff-section"><h2>{q.title||'Untitled section'}</h2>{q.help&&<p>{q.help}</p>}</div>:
+    {pages[page].filter(q=>q.t!=='page').map(q=>q.t==='section'?<div key={q.id} className="zff-card zff-section"><h2>{q.title||'Untitled section'}</h2>{q.help&&<p>{q.help}</p>}</div>:
      <div key={q.id} className={`zff-card${bad.has(q.id)?' is-bad':''}`}>
       <div className="zff-q" id={`q-${q.id}`}>{q.title||'Untitled question'}{q.req&&<span className="zff-req">*</span>}</div>
       {q.help&&<p className="zff-help">{q.help}</p>}
@@ -47,8 +53,10 @@ export default function FormFill({id,title,form,who,preview=false,onExit}:{id:st
      </div>)}
     <input className="zff-hp" tabIndex={-1} autoComplete="off" aria-hidden="true" value={hp} onChange={e=>setHp(e.target.value)}/>
     {err&&<p className="zff-formerr" role="alert">{err}</p>}
-    <div className="zff-foot"><button type="submit" className="zff-submit" disabled={busy}>{busy&&<Loader2 size={16} className="zff-spin"/>}Submit</button>
-     <button type="button" className="zff-link" onClick={()=>{setA({});setOther({});setBad(new Set());setErr('');}}>Clear form</button></div>
+    <div className="zff-foot"><span className="zff-nav">{page>0&&<button type="button" className="zff-back" onClick={()=>{setPage(p=>p-1);setErr('');setBad(new Set());}}>Back</button>}
+     <button type="submit" className="zff-submit" disabled={busy}>{busy&&<Loader2 size={16} className="zff-spin"/>}{page<pages.length-1?'Next':'Submit'}</button>
+     {pages.length>1&&<span className="zff-progress" aria-label={`Page ${page+1} of ${pages.length}`}><i style={{width:`${(page+1)/pages.length*100}%`}}/></span>}{pages.length>1&&<small className="zff-pageof">Page {page+1} of {pages.length}</small>}</span>
+     <button type="button" className="zff-link" onClick={()=>{setA({});setOther({});setBad(new Set());setErr('');setPage(0);}}>Clear form</button></div>
    </form>}
    <p className="zff-brand">Made with ZARN Forms. Never share passwords here.</p>
   </div>
