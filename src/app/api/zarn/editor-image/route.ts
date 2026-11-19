@@ -8,15 +8,15 @@ import {cookieName,verifyUnlock} from '@/lib/doc-share';
 // document (or to someone holding a valid, unlocked share link for the document).
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const types:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'};
-const MAX=4*1024*1024,MAX_FORM=8*1024*1024;
+const MAX=4*1024*1024;
 export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
  const me=await zarnMember();if(!me)return Response.json({error:'Sign in first.'},{status:401});
  if(me.account_type==='guest')return Response.json({error:'Guests can’t add pictures.'},{status:403});
  if(!r2Configured())return Response.json({error:'File storage isn’t configured.'},{status:503});
  const form=await request.formData(),file=form.get('file'),scope=String(form.get('scope')??''),id=String(form.get('id')??'');
- if(!(file instanceof File)||!types[file.type]||!uuid.test(id)||!['lead','doc','form'].includes(scope))return Response.json({error:'Choose a JPG, PNG, WebP or GIF picture.'},{status:400});
- if(file.size>(scope==='form'?MAX_FORM:MAX))return Response.json({error:`Pictures must be under ${scope==='form'?8:4} MB.`},{status:400});
+ if(!(file instanceof File)||!types[file.type]||!uuid.test(id)||!['lead','doc'].includes(scope))return Response.json({error:'Choose a JPG, PNG, WebP or GIF picture.'},{status:400});
+ if(file.size>MAX)return Response.json({error:'Pictures must be under 4 MB.'},{status:400});
  if(scope==='lead'){const {allowed}=await clientAccess(me,id);if(!allowed)return Response.json({error:'No access.'},{status:403});}
  else{const {data:role}=await me.db.rpc('zarn_doc_role',{d:id});if(role!=='owner'&&role!=='edit')return Response.json({error:'You can’t edit this document.'},{status:403});}
  try{
@@ -26,13 +26,11 @@ export async function POST(request:Request){
 }
 export async function GET(request:Request){
  const u=new URL(request.url),key=u.searchParams.get('k')??'',token=u.searchParams.get('t')??'';
- const m=key.match(/^private\/brief\/(lead|doc|form)\/([0-9a-f-]{36})\/[0-9a-f-]{36}\.(jpg|png|webp|gif)$/i);
+ const m=key.match(/^private\/brief\/(lead|doc)\/([0-9a-f-]{36})\/[0-9a-f-]{36}\.(jpg|png|webp|gif)$/i);
  if(!m||!uuid.test(m[2]!))return new Response('Not found',{status:404});
  const scope=m[1]!,id=m[2]!;
  let ok=false;
- // A form's cover and background are shown to everyone who opens the form, signed in or not.
- if(scope==='form'){const {data:d}=await serviceClient().from('zarn_docs').select('kind,trashed_at').eq('id',id).maybeSingle();ok=!!d&&d.kind==='form'&&!d.trashed_at;}
- else if(token){
+ if(token){
   // A shared document link: the link must be valid, belong to this document and (if protected) be unlocked.
   if(scope==='doc'&&/^[A-Za-z0-9_-]{20,60}$/.test(token)){
    const {data:l}=await serviceClient().from('zarn_doc_links').select('doc_id,password_hash,expires_at,revoked_at').eq('token',token).maybeSingle();
@@ -48,6 +46,6 @@ export async function GET(request:Request){
  if(!ok)return new Response('Not found',{status:404});
  try{
   const f=await getPrivate(key);
-  return new Response(f.body,{headers:{'Content-Type':f.type,'Content-Disposition':'inline','X-Content-Type-Options':'nosniff','Cache-Control':scope==='form'?'public, max-age=86400':'private, max-age=3600','Content-Security-Policy':"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"}});
+  return new Response(f.body,{headers:{'Content-Type':f.type,'Content-Disposition':'inline','X-Content-Type-Options':'nosniff','Cache-Control':'private, max-age=3600','Content-Security-Policy':"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"}});
  }catch{return new Response('Not found',{status:404});}
 }
