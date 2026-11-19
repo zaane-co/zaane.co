@@ -8,7 +8,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import LinkExt from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import {ImagePlus,Bold,Check,ChevronLeft,ChevronRight,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,ListChecks,Loader2,Quote,Redo2,Share2,Strikethrough,Underline as UnderlineIcon,Undo2,AlignLeft,AlignCenter,AlignRight,AlignJustify,Baseline,Highlighter,IndentIncrease,IndentDecrease,RemoveFormatting,Printer,Minus,Plus,Table2,Lock,FileText,PanelLeft,CloudOff,CloudCheck,Folder,ChevronDown,ChevronUp,X} from 'lucide-react';
+import {ImagePlus,Bold,Check,ChevronLeft,ChevronRight,Code2,Heading1,Heading2,Italic,Link2,List,ListOrdered,ListChecks,Loader2,Quote,Redo2,Share2,Strikethrough,Underline as UnderlineIcon,Undo2,AlignLeft,AlignCenter,AlignRight,AlignJustify,Baseline,Highlighter,IndentIncrease,IndentDecrease,RemoveFormatting,Printer,Minus,Plus,Table2,Lock,FileText,PanelLeft,CloudOff,CloudCheck,Folder,ChevronDown,ChevronUp,X,MessageSquareText} from 'lucide-react';
 import {Extension} from '@tiptap/core';
 import TextAlign from '@tiptap/extension-text-align';
 import {TextStyleKit} from '@tiptap/extension-text-style';
@@ -24,6 +24,7 @@ import {usePictureClick} from './ImageLightbox';
 import Image from '@tiptap/extension-image';
 import {imageTools} from './editor-images';
 import {plainToHtml} from './doc-paste';
+import {CommentMark,CommentsPanel,SelectionBar,unmark} from './DocComments';
 type Doc={id:string;title:string;content:string;owner_id:string;updated_at:string;drive:'my'|'team'|'client';folder_id:string|null;lead_id:string|null};
 type Role='owner'|'edit'|'view';
 // Opens a document: owners and editors can type, everyone else reads. Changes save by themselves.
@@ -104,10 +105,11 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
   setState(error?'error':'saved');
  },[db,doc.id,meId]);
  const queue=useCallback(()=>{setState('saving');if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void save(),1200);},[save]);
+ const [cmtOpen,setCmtOpen]=useState(false),[cmtDraft,setCmtDraft]=useState<{id:string;quote:string}|null>(null),[cmtActive,setCmtActive]=useState<string|null>(null);
  const editor=useEditor({
   immediatelyRender:false,shouldRerenderOnTransaction:true,editable:canEdit,...(sync?{}:{content:doc.content}),
   extensions:[StarterKit.configure({link:false,underline:false,...(sync?{undoRedo:false}:{})}),...(sync?[Collaboration.configure({document:sync.ydoc,field:'default'})]:[]),Underline,Image,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:canEdit?'Start typing…':''}),
-   TextStyleKit,TextAlign.configure({types:['heading','paragraph']}),TaskList,TaskItem.configure({nested:true}),TableKit.configure({table:{resizable:true}}),DocAttrs],
+   TextStyleKit,TextAlign.configure({types:['heading','paragraph']}),TaskList,TaskItem.configure({nested:true}),TableKit.configure({table:{resizable:true}}),DocAttrs,CommentMark],
   editorProps:{attributes:{class:'zd-prose zg-prose','aria-label':'Document'},...tools.handlers,
    handlePaste:(v:unknown,e:ClipboardEvent)=>{if(tools.handlers.handlePaste(v,e))return true;
     const html=e.clipboardData?.getData('text/html')??'';if(/<(table|ul|ol)\b/i.test(html))return false;
@@ -195,6 +197,7 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
    </div>
    <div className="zg-right">
     {here.length>0&&<span className="zd-here" title={here.map(u=>people[u]?.display_name??'Someone').join(', ')+' also has this open'}>{here.slice(0,4).map(u=><Avatar key={u} m={people[u]} size={28}/>)}{here.length>4&&<em>+{here.length-4}</em>}</span>}
+    <button type="button" className={`zg-cmt-btn${cmtOpen?' is-on':''}`} aria-label="Comments" data-tip="Comments" onClick={e=>{e.stopPropagation();setCmtOpen(o=>!o);}}><MessageSquareText size={18}/></button>
     {(role==='owner'||role==='edit')&&<button type="button" className="zg-share" onClick={()=>setSharing(true)}><Share2 size={15}/><span>Share</span></button>}
    </div>
   </header>
@@ -270,8 +273,15 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
     <div className="zg-outline-list">{headings.length?headings.map((h,i)=><button key={i} type="button" title={h.text} className={`is-h${h.level}${i===activeH?' is-on':''}`} onClick={()=>{setActiveH(i);jump(h.pos);}}>{h.text}</button>):<p>Headings you add appear here.</p>}</div></aside>}
    <div className="zg-canvas" data-lenis-prevent ref={canvasRef} onScroll={e=>{if(!outline)return;const box=e.currentTarget,top=box.getBoundingClientRect().top+90;const hs=[...box.querySelectorAll('.zg-prose h1,.zg-prose h2,.zg-prose h3')].filter(h=>h.textContent?.trim());let k=0;hs.forEach((h,i)=>{if(h.getBoundingClientRect().top<=top)k=i;});if(k!==activeH)setActiveH(k);}}>
     {!outline&&<button type="button" className="zg-outline-btn" aria-label="Show outline" data-tip="Show outline" onClick={toggleOutline}><PanelLeft size={16}/></button>}
-    <div className="zg-page" style={{zoom:zoom/100}} onClick={canEdit?undefined:pics.onClick} {...pageTouch}><EditorContent editor={editor}/></div>{pics.node}
+    <div className="zg-page" style={{zoom:zoom/100}} onClick={canEdit?undefined:pics.onClick} onClickCapture={e=>{const c=(e.target as HTMLElement).closest('[data-comment]')?.getAttribute('data-comment');if(c){setCmtActive(c);setCmtOpen(true);}}} {...pageTouch}><EditorContent editor={editor}/></div>{pics.node}
    </div>
+   {cmtActive&&<style>{`.zg-prose [data-comment="${cmtActive.replace(/[^0-9a-f-]/gi,'')}"]{background:#fcd34d;box-shadow:0 2px 0 #f59e0b}`}</style>}
+   {cmtOpen&&<CommentsPanel ed={editor} docId={doc.id} role={role} draft={cmtDraft} active={cmtActive} onActive={setCmtActive}
+    onDraftDone={posted=>{if(!posted&&cmtDraft&&editor)unmark(editor,cmtDraft.id);setCmtDraft(null);}} onClose={()=>{if(cmtDraft&&editor)unmark(editor,cmtDraft.id);setCmtDraft(null);setCmtActive(null);setCmtOpen(false);}}/>}
+   <SelectionBar ed={editor} canEdit={canEdit} onComment={()=>{if(!editor)return;const {from,to}=editor.state.selection;if(from===to)return;
+    if(cmtDraft)unmark(editor,cmtDraft.id);
+    const id=crypto.randomUUID(),quote=editor.state.doc.textBetween(from,to,' ').slice(0,1000);
+    editor.chain().setMark('comment',{id}).setTextSelection(to).run();setCmtDraft({id,quote});setCmtActive(id);setCmtOpen(true);}}/>
   </div>
   <button type="button" className={`zg-words${outline?' with-outline':''}`} onClick={()=>setCounting(true)}>{words.toLocaleString()} word{words===1?'':'s'}</button>
   {counting&&ed&&<div className="zn-modal-scrim" onClick={()=>setCounting(false)}><div className="zn-modal zn-confirm zg-count" role="dialog" aria-label="Word count" onClick={e=>e.stopPropagation()}>
