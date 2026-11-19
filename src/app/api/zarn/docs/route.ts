@@ -10,6 +10,7 @@ const id=z.uuid();
 const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('share'),id,visibility:z.enum(['private','team']),team_role:z.enum(['view','edit']),lead_id:id.nullable(),members:z.array(z.object({user_id:id,role:z.enum(['view','edit'])})).max(300)}),
  z.object({action:z.literal('links'),id}),
+ z.object({action:z.literal('comment_notify'),id,comment_id:id}),
  z.object({action:z.literal('resolve'),token:z.string().min(8).max(200)}),
  z.object({action:z.literal('folder_notify'),folder_id:id,users:z.array(id).max(100)}),
  z.object({action:z.literal('link_create'),id,password:z.string().min(4).max(100).optional(),days:z.number().int().min(1).max(365).nullable().optional()}),
@@ -56,6 +57,17 @@ export async function POST(request:Request){
   return Response.json({ok:true,notified:to.length});
  }
  // A public link pasted in chat: say which document it is, so the card can show its place in Drive (access is still checked when reading it).
+ // A new comment or reply: tell the owner, everyone the document is shared with, and everyone in the thread.
+ if(b.action==='comment_notify'){
+  const ses=await sessionClient();const {data:role}=await ses.rpc('zarn_doc_role',{d:b.id});if(!role)return fail('Not found.',404);
+  const {data:c}=await db.from('zarn_doc_comments').select('thread_id,user_id,body,created_at').eq('id',b.comment_id).eq('doc_id',b.id).maybeSingle();
+  if(!c||c.user_id!==me.user_id||Date.now()-new Date(c.created_at).getTime()>120_000)return fail('Not found.',404);
+  const [{data:doc},{data:mem},{data:th}]=await Promise.all([db.from('zarn_docs').select('title,kind,owner_id').eq('id',b.id).maybeSingle(),db.from('zarn_doc_members').select('user_id').eq('doc_id',b.id),db.from('zarn_doc_comments').select('user_id').eq('thread_id',c.thread_id)]);
+  const to=[...new Set([doc?.owner_id,...(mem??[]).map(m=>m.user_id),...(th??[]).map(t=>t.user_id)].filter((u):u is string=>!!u&&u!==me.user_id))];
+  const reply=c.thread_id!==b.comment_id,path=`/zarn/${doc?.kind==='sheet'?'sheets':'docs'}/${b.id}?c=${c.thread_id}`;
+  if(to.length)await pushTo(to,{title:`${me.display_name} ${reply?'replied to a comment':'commented'} on ${doc?.title||'a document'}`,body:c.body.slice(0,140),tag:`cmt-${c.thread_id}`,url:path}).catch(()=>0);
+  return Response.json({ok:true,notified:to.length});
+ }
  if(b.action==='resolve'){const {data:l}=await db.from('zarn_doc_links').select('doc_id').eq('token',b.token).is('revoked_at',null).maybeSingle();return Response.json({doc_id:l?.doc_id??null});}
  if(!await owns(b.id))return fail('Only the owner and editors can share this.',403);
  if(b.action==='share'){

@@ -106,6 +106,11 @@ function Editing({doc,role,meId,sync}:{doc:Doc;role:Role;meId:string;sync:DocSyn
  },[db,doc.id,meId]);
  const queue=useCallback(()=>{setState('saving');if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>void save(),1200);},[save]);
  const [cmtOpen,setCmtOpen]=useState(false),[cmtDraft,setCmtDraft]=useState<{id:string;quote:string}|null>(null),[cmtActive,setCmtActive]=useState<string|null>(null);
+ useEffect(()=>{let on=true;void (async()=>{
+  const want=new URLSearchParams(location.search).get('c');
+  const {count}=await db.from('zarn_doc_comments').select('id',{count:'exact',head:true}).eq('doc_id',doc.id).is('resolved_at',null);
+  if(!on)return;if(want){setCmtActive(want);setCmtOpen(true);setTimeout(()=>document.querySelector(`.zg-prose [data-comment="${want.replace(/[^0-9a-f-]/gi,'')}"]`)?.scrollIntoView({behavior:'smooth',block:'center'}),600);}
+  else if(count&&!matchMedia('(max-width:760px)').matches)setCmtOpen(true);})();return()=>{on=false;};},[db,doc.id]);
  const editor=useEditor({
   immediatelyRender:false,shouldRerenderOnTransaction:true,editable:canEdit,...(sync?{}:{content:doc.content}),
   extensions:[StarterKit.configure({link:false,underline:false,...(sync?{undoRedo:false}:{})}),...(sync?[Collaboration.configure({document:sync.ydoc,field:'default'})]:[]),Underline,Image,LinkExt.configure({openOnClick:false}),Placeholder.configure({placeholder:canEdit?'Start typing…':''}),

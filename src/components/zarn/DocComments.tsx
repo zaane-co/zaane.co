@@ -59,7 +59,8 @@ export function CommentsPanel({ed,docId,role,draft,active,onActive,onDraftDone,o
   return [...g.entries()].map(([id,cs])=>({id,cs,done:!!cs[0].resolved_at,pos:order.get(id)})).filter(t=>showDone||!t.done).sort((a,b)=>(a.pos??1e9)-(b.pos??1e9));},[list,order,showDone]);
  async function post(thread:string,body:string,quote?:string|null){
   const row={doc_id:docId,thread_id:thread,user_id:me.user_id,body,...(thread===draft?.id?{id:thread,quote:quote??null}:{})};
-  const {error}=await db.from('zarn_doc_comments').insert(row);if(error){setErr('Could not post the comment.');return false;}
+  const {data,error}=await db.from('zarn_doc_comments').insert(row).select('id').single();if(error){setErr('Could not post the comment.');return false;}
+  void fetch('/api/zarn/docs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'comment_notify',id:docId,comment_id:(data as {id:string}).id})}).catch(()=>{});
   changed();return true;}
  async function resolve(t:string){await db.from('zarn_doc_comments').update({resolved_at:new Date().toISOString(),resolved_by:me.user_id}).eq('thread_id',t).eq('doc_id',docId);if(ed)unmark(ed,t);onActive(null);changed();}
  async function remove(c:Cmt,whole:boolean){
