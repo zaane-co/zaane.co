@@ -1,10 +1,5 @@
-import {Suspense} from 'react';
 import {redirect} from 'next/navigation';
-import {zarnMember} from '@/lib/zarn-server';
-import BizLeads from '@/components/zarn/BizLeads';
-export const dynamic='force-dynamic';
-export default async function Page(){
- const me=await zarnMember();if(!me)redirect('/zarn/login');
- if(me.account_type==='guest'||!me.zarnAdmin)redirect('/zarn');
- return <Suspense><BizLeads mode="leads"/></Suspense>;
+// Leads now live under Contacts, Companies and Deals. Old links (and lead notifications) land on Contacts.
+export default async function Page({searchParams}:{searchParams:Promise<{c?:string}>}){
+ const {c}=await searchParams;redirect(c?`/zarn/business/contacts?c=${encodeURIComponent(c)}`:'/zarn/business/contacts');
 }

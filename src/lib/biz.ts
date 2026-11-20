@@ -24,11 +24,31 @@ export const monthKey=(d:string)=>d.slice(0,7);
 export const monthName=(k:string)=>new Date(`${k}-01T12:00:00Z`).toLocaleDateString('en-GB',{month:'long',year:'numeric',timeZone:'UTC'});
 export function csv(rows:(string|number)[][]){return rows.map(r=>r.map(c=>{const s=String(c);return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;}).join(',')).join('\n');}
 
-// Business contacts: leads until they're won, then customers. Separate from Clients on purpose.
-export const stages=[{key:'new',label:'New',color:'#2563eb'},{key:'contacted',label:'Contacted',color:'#d97706'},{key:'proposal',label:'Proposal sent',color:'#7c3aed'},{key:'won',label:'Customer',color:'#16a34a'},{key:'lost',label:'Lost',color:'#52525b'}] as const;
-export type StageKey=typeof stages[number]['key'];
-export const stageOf=(k:string)=>stages.find(s=>s.key===k)??stages[0];
-export const contactSources=['manual','form','referral','social','website','event','other'] as const;
-export const sourceName:Record<string,string>={manual:'Added by hand',form:'Lead form',referral:'Referral',social:'Social media',website:'Website',event:'Event',other:'Other'};
-export type Contact={id:string;name:string;email:string;company:string;phone:string;stage:StageKey;source:string;value:number|null;currency:string;note:string;created_at:string;updated_at:string};
+// Business leads. Contacts are people (leads until a deal is won, then customers); companies are made from the
+// company name on a contact; deals move across a board. All separate from Clients.
+export const dealStages=[{key:'new',label:'New',color:'#2563eb'},{key:'contacted',label:'Contacted',color:'#0891b2'},{key:'proposal',label:'Proposal sent',color:'#7c3aed'},{key:'negotiation',label:'Negotiation',color:'#d97706'},{key:'won',label:'Won',color:'#16a34a'},{key:'lost',label:'Lost',color:'#52525b'}] as const;
+export type DealStage=typeof dealStages[number]['key'];
+export const stageOf=(k:string)=>dealStages.find(s=>s.key===k)??dealStages[0];
+export const contactSources=['manual','form','import','referral','social','website','event','other'] as const;
+export const sourceName:Record<string,string>={manual:'Added by hand',form:'Lead form',import:'Imported',referral:'Referral',social:'Social media',website:'Website',event:'Event',other:'Other'};
+export type Contact={id:string;name:string;email:string;phone:string;company:string;company_id:string|null;job_title:string;website:string;social:string;address:string;city:string;country:string;tags:string[];source:string;note:string;customer:boolean;customer_since:string|null;archived_at:string|null;created_at:string;updated_at:string};
+export type Company={id:string;name:string;website:string;industry:string;email:string;phone:string;address:string;note:string;created_at:string};
+export type Deal={id:string;title:string;contact_id:string|null;company_id:string|null;stage:DealStage;position:number;value:number|null;currency:string;close_on:string|null;note:string;won_at:string|null;created_at:string;updated_at:string};
 export const contactName=(c:Pick<Contact,'name'|'company'>|null|undefined)=>c?(c.company?`${c.company} (${c.name})`:c.name):'';
+// Contact fields a sheet can fill, with the column headings we recognise for each.
+export const importFields:{key:keyof Contact|'first'|'last';label:string;match:RegExp}[]=[
+ {key:'name',label:'Full name',match:/^(full ?name|name|contact( name)?|client( name)?)$/i},
+ {key:'first',label:'First name',match:/^(first ?name|given ?name|first)$/i},
+ {key:'last',label:'Last name',match:/^(last ?name|surname|family ?name|last)$/i},
+ {key:'email',label:'Email',match:/e-?mail/i},
+ {key:'phone',label:'Phone',match:/phone|mobile|whatsapp|tel/i},
+ {key:'company',label:'Company',match:/company|organi[sz]ation|business|brand|employer/i},
+ {key:'job_title',label:'Job title',match:/title|role|position|job/i},
+ {key:'website',label:'Website',match:/website|url|site/i},
+ {key:'social',label:'LinkedIn or social',match:/linkedin|instagram|twitter|social|handle/i},
+ {key:'address',label:'Address',match:/address|street/i},
+ {key:'city',label:'City',match:/city|town|state/i},
+ {key:'country',label:'Country',match:/country/i},
+ {key:'tags',label:'Tags',match:/tags?|labels?|category/i},
+ {key:'note',label:'Notes',match:/note|comment|description|remarks?/i},
+];

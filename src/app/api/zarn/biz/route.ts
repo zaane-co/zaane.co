@@ -4,21 +4,33 @@ import {zarnMember} from '@/lib/zarn-server';
 import {deleteFile} from '@/lib/r2';
 import {emailBase} from '@/lib/site';
 import {settings} from '@/lib/content';
-import {billRepeats,contactSources} from '@/lib/biz';
+import {billRepeats,contactSources,dealStages} from '@/lib/biz';
 import {currencies,paymentMethods,invoiceTotals,money,fmtDate} from '@/lib/crm';
 import {bankColumns,pickAccount,type BankAccount} from '@/lib/bank';
 // ZARN Business: its own contacts, invoices, money book and bills, separate from Clients. Admin-only.
 // Files (receipts) are added through /api/zarn/biz/file.
 const id=z.uuid(),day=z.iso.date(),cur=z.string().trim().min(3).max(4);
-const contact={name:z.string().trim().min(1,'Enter a name.').max(160),email:z.union([z.literal(''),z.email('Enter a valid email.').max(254)]).default(''),company:z.string().trim().max(200).default(''),phone:z.string().trim().max(40).default(''),stage:z.enum(['new','contacted','proposal','won','lost']).default('new'),source:z.enum(contactSources).default('manual'),value:z.number().min(0).max(1e12).nullable().default(null),currency:cur.default('NGN'),note:z.string().trim().max(5000).default('')};
+const str=(n:number)=>z.string().trim().max(n).default('');
+const contact={name:z.string().trim().min(1,'Enter a name.').max(160),email:z.union([z.literal(''),z.email('Enter a valid email.').max(254)]).default(''),phone:str(40),company:str(200),job_title:str(120),website:str(300),social:str(300),address:str(500),city:str(120),country:str(120),tags:z.array(z.string().trim().min(1).max(40)).max(20).default([]),source:z.enum(contactSources).default('manual'),note:str(5000)};
+const company={name:z.string().trim().min(1,'Enter the company name.').max(200),website:str(300),industry:str(120),email:z.union([z.literal(''),z.email('Enter a valid email.').max(254)]).default(''),phone:str(40),address:str(500),note:str(5000)};
+const stageKey=z.enum(dealStages.map(s=>s.key) as [string,...string[]]);
+const deal={title:z.string().trim().min(1,'Name the deal.').max(200),contact_id:id.nullable(),stage:stageKey,value:z.number().min(0).max(1e12).nullable(),currency:cur,close_on:day.nullable(),note:str(5000)};
 const item=z.object({description:z.string().trim().min(1,'Every line needs a description.').max(500),qty:z.number().positive('Quantities must be above zero.').max(1e6),unit_price:z.number().min(0).max(1e12)});
 const invoice={contact_id:id,currency:z.enum(currencies),issue_date:day,due_date:day,items:z.array(item).max(100),tax_rate:z.number().min(0).max(100),discount:z.number().min(0).max(1e12),notes:z.string().trim().max(5000),bank_account_id:id.nullable()};
 const bill={title:z.string().trim().min(1,'Name the bill.').max(160),vendor:z.string().trim().max(160).default(''),amount:z.number().positive('Enter the amount.').max(1e12),currency:cur,category:z.string().trim().max(60).default(''),due_on:day.nullable(),repeat:z.enum(billRepeats),note:z.string().trim().max(2000).default('')};
 const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('contacts')}),
  z.object({action:z.literal('contact_save'),id:id.optional(),...contact}),
- z.object({action:z.literal('contact_stage'),id,stage:contact.stage}),
+ z.object({action:z.literal('contact_import'),rows:z.array(z.object(contact).partial().extend({name:contact.name})).min(1).max(2000),skip_dupes:z.boolean().default(true)}),
+ z.object({action:z.literal('contact_archive'),id,archived:z.boolean()}),
+ z.object({action:z.literal('contact_customer'),id,customer:z.boolean()}),
  z.object({action:z.literal('contact_delete'),id}),
+ z.object({action:z.literal('company_save'),id:id.optional(),...company}),
+ z.object({action:z.literal('company_delete'),id}),
+ z.object({action:z.literal('deals')}),
+ z.object({action:z.literal('deal_save'),id:id.optional(),...deal}),
+ z.object({action:z.literal('deal_move'),id,stage:stageKey,position:z.number()}),
+ z.object({action:z.literal('deal_delete'),id}),
  z.object({action:z.literal('invoice_save'),id:id.optional(),...invoice}),
  z.object({action:z.literal('invoice_status'),id,to:z.enum(['sent','void','reopen'])}),
  z.object({action:z.literal('invoice_send'),id,message:z.string().trim().max(5000).optional()}),
@@ -37,6 +49,18 @@ const fail=(error:string,status=400)=>Response.json({error},{status});
 const esc=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const ENTRY='id,direction,title,amount,currency,paid_on,category,vendor,note,contact_id,bill_id,file_name,file_size,file_type,created_at';
 type Db=ReturnType<typeof serviceClient>;
+// Finds a company by name (ignoring case and spacing) or makes it, so typing a company on a contact files it under Companies.
+async function companyFor(db:Db,name:string,by:string){
+ const n=name.trim().replace(/\s+/g,' ');if(!n)return null;
+ const like=n.replace(/[%_\\]/g,m=>`\\${m}`);
+ const {data:all}=await db.from('zarn_biz_companies').select('id,name').ilike('name',like);
+ const hit=(all??[]).find(c=>c.name.trim().toLowerCase()===n.toLowerCase());if(hit)return {id:hit.id,name:hit.name};
+ const {data,error}=await db.from('zarn_biz_companies').insert({name:n,created_by:by}).select('id,name').single();
+ if(error){const {data:again}=await db.from('zarn_biz_companies').select('id,name').ilike('name',like).limit(1).maybeSingle();return again;}
+ return data;
+}
+// A won deal makes its contact a customer.
+async function markCustomer(db:Db,contact:string|null){if(contact)await db.from('zarn_biz_contacts').update({customer:true,customer_since:new Date().toISOString(),archived_at:null}).eq('id',contact).eq('customer',false);}
 // Paid amount and status always come from the payments, never from the editor.
 async function settle(db:Db,inv:string){
  const [{data:i},{data:p}]=await Promise.all([db.from('zarn_biz_invoices').select('status,total,paid_at').eq('id',inv).single(),db.from('zarn_biz_payments').select('amount').eq('invoice_id',inv)]);
@@ -52,18 +76,77 @@ export async function POST(request:Request){
  const loadInv=async(i:string)=>(await db.from('zarn_biz_invoices').select('*').eq('id',i).maybeSingle()).data;
  switch(b.action){
   case 'contacts':{
-   const {data,error}=await db.from('zarn_biz_contacts').select('*').order('created_at',{ascending:false}).limit(2000);
+   const [{data,error},{data:companies},{data:deals}]=await Promise.all([db.from('zarn_biz_contacts').select('*').order('created_at',{ascending:false}).limit(5000),db.from('zarn_biz_companies').select('*').order('name'),db.from('zarn_biz_deals').select('id,contact_id,company_id,stage,value,currency')]);
    if(error)return fail('Business isn’t set up yet. The database update still needs to be applied.',503);
-   return Response.json({contacts:data});
+   return Response.json({contacts:data,companies:companies??[],deals:deals??[]});
   }
   case 'contact_save':{
-   const {id:rowId,...v}=b;const row={...v,email:v.email.toLowerCase()};
+   const {id:rowId,...v}=b;const co=await companyFor(db,v.company,me.user_id);
+   const row={...v,email:v.email.toLowerCase(),company:co?.name??'',company_id:co?.id??null};
    const res=rowId?await db.from('zarn_biz_contacts').update({...row,updated_at:now}).eq('id',rowId).select('id').single():await db.from('zarn_biz_contacts').insert({...row,created_by:me.user_id}).select('id').single();
    return res.error?fail('Could not save the contact.'):Response.json({ok:true,id:res.data.id});
   }
-  case 'contact_stage':{
-   const {error}=await db.from('zarn_biz_contacts').update({stage:b.stage,updated_at:now}).eq('id',b.id);
-   return error?fail('Could not move the contact.'):Response.json({ok:true});
+  case 'contact_import':{
+   // A sheet of contacts: companies are made once each, and (by default) emails we already have are skipped.
+   const {data:have}=await db.from('zarn_biz_contacts').select('email').neq('email','');
+   const seen=new Set((have??[]).map(h=>h.email.toLowerCase()));
+   const rows=[];let skipped=0;
+   const cos=new Map<string,{id:string;name:string}|null>();
+   for(const r of b.rows){
+    const email=(r.email??'').toLowerCase();
+    if(email&&b.skip_dupes&&seen.has(email)){skipped++;continue;}
+    if(email)seen.add(email);
+    const key=(r.company??'').trim().toLowerCase();
+    if(key&&!cos.has(key))cos.set(key,await companyFor(db,r.company!,me.user_id));
+    const co=key?cos.get(key):null;
+    rows.push({...r,email,company:co?.name??'',company_id:co?.id??null,source:r.source??'import',created_by:me.user_id});
+   }
+   for(let i=0;i<rows.length;i+=500){const {error}=await db.from('zarn_biz_contacts').insert(rows.slice(i,i+500));if(error)return fail(`Imported ${i} before an error. Check the sheet and try the rest.`);}
+   return Response.json({ok:true,added:rows.length,skipped,companies:[...cos.values()].filter(Boolean).length});
+  }
+  case 'contact_archive':{
+   await db.from('zarn_biz_contacts').update({archived_at:b.archived?now:null,updated_at:now}).eq('id',b.id);
+   return Response.json({ok:true});
+  }
+  case 'contact_customer':{
+   await db.from('zarn_biz_contacts').update({customer:b.customer,customer_since:b.customer?now:null,archived_at:null,updated_at:now}).eq('id',b.id);
+   return Response.json({ok:true});
+  }
+  case 'company_save':{
+   const {id:rowId,...v}=b;const row={...v,name:v.name.replace(/\s+/g,' ')};
+   const res=rowId?await db.from('zarn_biz_companies').update(row).eq('id',rowId).select('id').single():await db.from('zarn_biz_companies').insert({...row,created_by:me.user_id}).select('id').single();
+   if(res.error)return fail(res.error.code==='23505'?'A company with that name already exists.':'Could not save the company.');
+   if(rowId)await db.from('zarn_biz_contacts').update({company:row.name}).eq('company_id',rowId);
+   return Response.json({ok:true,id:res.data.id});
+  }
+  case 'company_delete':{
+   await db.from('zarn_biz_contacts').update({company:''}).eq('company_id',b.id);
+   await db.from('zarn_biz_companies').delete().eq('id',b.id);
+   return Response.json({ok:true});
+  }
+  case 'deals':{
+   const [{data,error},{data:contacts},{data:companies}]=await Promise.all([db.from('zarn_biz_deals').select('*').order('position'),db.from('zarn_biz_contacts').select('id,name,company,company_id,email').order('name'),db.from('zarn_biz_companies').select('id,name').order('name')]);
+   if(error)return fail('Deals aren’t set up yet. The database update still needs to be applied.',503);
+   return Response.json({deals:data,contacts:contacts??[],companies:companies??[]});
+  }
+  case 'deal_save':{
+   const {id:rowId,...v}=b;
+   const {data:c}=v.contact_id?await db.from('zarn_biz_contacts').select('company_id').eq('id',v.contact_id).maybeSingle():{data:null};
+   const row={...v,company_id:c?.company_id??null,updated_at:now,...(v.stage==='won'?{won_at:now}:{})};
+   const res=rowId?await db.from('zarn_biz_deals').update(row).eq('id',rowId).select('id').single():await db.from('zarn_biz_deals').insert({...row,position:Date.now(),created_by:me.user_id}).select('id').single();
+   if(res.error)return fail('Could not save the deal.');
+   if(v.stage==='won')await markCustomer(db,v.contact_id);
+   return Response.json({ok:true,id:res.data.id});
+  }
+  case 'deal_move':{
+   const {data:d,error}=await db.from('zarn_biz_deals').update({stage:b.stage,position:b.position,updated_at:now,...(b.stage==='won'?{won_at:now}:{})}).eq('id',b.id).select('contact_id').single();
+   if(error)return fail('Could not move the deal.');
+   if(b.stage==='won')await markCustomer(db,d.contact_id);
+   return Response.json({ok:true});
+  }
+  case 'deal_delete':{
+   await db.from('zarn_biz_deals').delete().eq('id',b.id);
+   return Response.json({ok:true});
   }
   case 'contact_delete':{
    const {count}=await db.from('zarn_biz_invoices').select('id',{count:'exact',head:true}).eq('contact_id',b.id);

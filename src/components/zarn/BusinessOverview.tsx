@@ -8,7 +8,7 @@ import {useZarn} from './ZarnProvider';
 import {sums} from './BizMoney';
 
 type Amt={amount:number;currency:string};
-export type Overview={today:string;weekAgo:string;in:Amt[];out:Amt[];owed:(Amt&{id:string;number:string;who:string;due:string})[];bills:{id:string;title:string;amount:number;currency:string;due_on:string}[];leads:{id:string;name:string;stage:string;created_at:string}[]};
+export type Overview={today:string;weekAgo:string;in:Amt[];out:Amt[];owed:(Amt&{id:string;number:string;who:string;due:string})[];bills:{id:string;title:string;amount:number;currency:string;due_on:string}[];leads:{id:string;name:string;stage:string;value:number|null;currency:string;created_at:string}[]};
 // Business home inside ZARN: this month's money, what's owed, new leads and bills coming up.
 export default function BusinessOverview({data}:{data:Overview}){
  const {me}=useZarn();
@@ -23,8 +23,8 @@ export default function BusinessOverview({data}:{data:Overview}){
    <div><small>Owed to us</small><b>{sums(sumBy(data.owed))}</b><span><Link href="/zarn/business/invoices">{late.length} overdue</Link></span></div>
   </div>
   <div className="zn-biz-grid">
-   <section className="zn-card"><h3><Inbox size={15}/>Leads <small className="zn-muted">{fresh.length} new this week</small></h3>
-    {data.leads.length?<ul className="zn-rows">{data.leads.slice(0,6).map(l=>{const s=stageOf(l.stage);return <li key={l.id}><span className="zn-stage-dot" style={{background:s.color}}/><span><b>{l.name}</b><small>{s.label} · {ago(l.created_at)}</small></span><Link href={`/zarn/business/leads?c=${l.id}`}>Open</Link></li>;})}</ul>:<p className="zn-note">No open leads. <Link className="zn-link" href="/zarn/business/leads">Add one or make a lead form</Link></p>}</section>
+   <section className="zn-card"><h3><Inbox size={15}/>Open deals <small className="zn-muted">{fresh.length} new this week</small></h3>
+    {data.leads.length?<ul className="zn-rows">{data.leads.slice(0,6).map(l=>{const s=stageOf(l.stage);return <li key={l.id}><span className="zn-stage-dot" style={{background:s.color}}/><span><b>{l.name}</b><small>{s.label} · {ago(l.created_at)}</small></span>{l.value!=null&&<b>{money(l.value,l.currency)}</b>}<Link href="/zarn/business/deals">Open</Link></li>;})}</ul>:<p className="zn-note">No open deals. <Link className="zn-link" href="/zarn/business/deals">Add one</Link></p>}</section>
    <section className="zn-card"><h3><FileText size={15}/>Waiting to be paid</h3>
     {data.owed.length?<ul className="zn-rows">{data.owed.slice(0,6).map(o=><li key={o.id}><span><b>{o.who||o.number}</b><small>{o.number} · {o.due<data.today?'overdue since ':'due '}{fmtDay(o.due)}</small></span><b>{money(o.amount,o.currency)}</b><Link href={`/zarn/business/invoices/${o.id}`}>Open</Link></li>)}</ul>:<p className="zn-note">Nothing owed right now.</p>}</section>
    <section className="zn-card zn-span-2"><h3><CalendarClock size={15}/>Bills due soon</h3>

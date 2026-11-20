@@ -14,14 +14,14 @@ export default async function Page(){
   db.from('zarn_biz_payments').select('amount,zarn_biz_invoices(currency)').gte('paid_on',month),
   db.from('zarn_biz_invoices').select('id,number,total,amount_paid,currency,due_date,zarn_biz_contacts(name,company)').eq('status','sent').order('due_date'),
   db.from('zarn_bills').select('id,title,amount,currency,due_on').not('due_on','is',null).lte('due_on',soon).order('due_on').limit(8),
-  db.from('zarn_biz_contacts').select('id,name,company,stage,created_at').in('stage',['new','contacted','proposal']).order('created_at',{ascending:false}).limit(200),
+  db.from('zarn_biz_deals').select('id,title,stage,value,currency,created_at').not('stage','in','(won,lost)').order('created_at',{ascending:false}).limit(200),
  ]);
  const data:Overview={today,
   in:[...(pays??[]).map(p=>({amount:Number(p.amount),currency:(p.zarn_biz_invoices as unknown as {currency:string}|null)?.currency??'NGN'})),...(ent??[]).filter(e=>e.direction==='in').map(e=>({amount:Number(e.amount),currency:e.currency}))],
   out:(ent??[]).filter(e=>e.direction==='out').map(e=>({amount:Number(e.amount),currency:e.currency})),
   owed:(owed??[]).map(i=>{const c=i.zarn_biz_contacts as unknown as {name:string;company:string}|null;return {id:i.id,number:i.number,who:c?.company||c?.name||'',amount:Number(i.total)-Number(i.amount_paid),currency:i.currency,due:i.due_date};}),
   bills:(bills??[]) as Overview['bills'],
-  leads:(leads??[]).map(l=>({id:l.id,name:l.company||l.name,stage:l.stage,created_at:l.created_at})),
+  leads:(leads??[]).map(l=>({id:l.id,name:l.title,stage:l.stage,value:l.value==null?null:Number(l.value),currency:l.currency,created_at:l.created_at})),
   weekAgo};
  return <BusinessOverview data={data}/>;
 }

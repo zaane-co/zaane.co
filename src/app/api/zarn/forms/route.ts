@@ -47,8 +47,13 @@ async function captureLead(db:ReturnType<typeof serviceClient>,form:string,owner
  const mail=EMAIL.test(l.email)?l.email:'';if(!mail&&!l.name)return;
  const [{data:m},{data:u}]=await Promise.all([db.from('zarn_members').select('is_admin').eq('user_id',owner).maybeSingle(),db.from('users').select('role').eq('id',owner).maybeSingle()]);
  if(!m?.is_admin&&u?.role!=='super_admin')return;
- const {data,error}=await db.from('zarn_biz_contacts').insert({name:l.name||mail,email:mail,company:l.company,phone:l.phone,note:l.message,source:'form',form_id:form}).select('id').single();
+ // The company is filed under Companies (matched by name), and a new deal goes on the board.
+ let co:{id:string;name:string}|null=null;
+ if(l.company){const {data:found}=await db.from('zarn_biz_companies').select('id,name').ilike('name',l.company.replace(/[%_\\]/g,m=>`\\${m}`)).limit(1).maybeSingle();
+  co=found??(await db.from('zarn_biz_companies').insert({name:l.company.trim()}).select('id,name').single()).data;}
+ const {data,error}=await db.from('zarn_biz_contacts').insert({name:l.name||mail,email:mail,company:co?.name??'',company_id:co?.id??null,phone:l.phone,note:l.message,source:'form',form_id:form}).select('id').single();
  if(error)return;
+ await db.from('zarn_biz_deals').insert({title:co?.name||l.name||mail,contact_id:data.id,company_id:co?.id??null,stage:'new',position:Date.now(),note:l.message.slice(0,5000)});
  const {data:admins}=await db.from('zarn_members').select('user_id').eq('is_admin',true);
- await pushTo((admins??[]).map(a=>a.user_id),{title:'New lead',body:`${l.name||mail}${l.company?` · ${l.company}`:''} via ${title||'a form'}`,tag:`lead-${data.id}`,url:`/zarn/business/leads?c=${data.id}`}).catch(()=>0);
+ await pushTo((admins??[]).map(a=>a.user_id),{title:'New lead',body:`${l.name||mail}${l.company?` · ${l.company}`:''} via ${title||'a form'}`,tag:`lead-${data.id}`,url:`/zarn/business/contacts?c=${data.id}`}).catch(()=>0);
 }

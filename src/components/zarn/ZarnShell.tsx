@@ -4,7 +4,7 @@ import {useEffect,useRef,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {HardDrive,BookUser,Phone,MessageSquareText,PencilLine,Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X,Inbox,Wallet,Receipt,CalendarClock} from 'lucide-react';
+import {HardDrive,BookUser,Phone,MessageSquareText,PencilLine,Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X,Inbox,Wallet,Receipt,CalendarClock,Building2,KanbanSquare,Archive} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -182,13 +182,20 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
       {section('dms','Direct messages',<>{dms.map(c=><ChannelRow key={c.id} c={c}/>)}{newPeople.map(p=><button key={p.user_id} type="button" className="zn-nav-item" onClick={()=>void z.openDm([p.user_id])}><Avatar m={p} size={20} online={z.online.has(p.user_id)}/><span>{p.display_name}</span></button>)}{staffAdmin&&<button type="button" className="zn-nav-item is-muted" onClick={()=>setDialog('invite')}><UserPlus size={15}/><span>Invite people</span></button>}</>,()=>setDialog('dm'))}
      </>}
      {area==='business'&&<>
+      {section('bizleads','Leads',<>
+       {link('/zarn/business/contacts',<Users size={15}/>,'Contacts')}
+       {link('/zarn/business/companies',<Building2 size={15}/>,'Companies')}
+       {link('/zarn/business/deals',<KanbanSquare size={15}/>,'Deals')}
+       {link('/zarn/business/customers',<UserRound size={15}/>,'Active customers')}
+       {link('/zarn/business/customers/archived',<Archive size={15}/>,'Archived customers')}
+      </>)}
+      {section('bizmoney','Money',<>
       {link('/zarn/business',<TrendingUp size={15}/>,'Overview')}
-      {link('/zarn/business/leads',<Inbox size={15}/>,'Leads')}
-      {link('/zarn/business/customers',<UserRound size={15}/>,'Customers')}
       {link('/zarn/business/invoices',<FileText size={15}/>,'Invoices',0,false)}
       {link('/zarn/business/money',<Wallet size={15}/>,'Money')}
       {link('/zarn/business/receipts',<Receipt size={15}/>,'Receipts')}
       {link('/zarn/business/bills',<CalendarClock size={15}/>,'Bills')}
+      </>)}
       <p className="zn-nav-note">Business runs on its own: its leads, customers and money are separate from Clients.</p>
      </>}
      {area==='projects'&&<>
