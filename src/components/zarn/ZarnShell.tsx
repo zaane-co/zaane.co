@@ -4,7 +4,7 @@ import {useEffect,useRef,useState} from 'react';
 import {deliverDrop,hasDropTarget,isFileDrag} from './drop';
 import Link from 'next/link';
 import {usePathname,useRouter} from 'next/navigation';
-import {HardDrive,BookUser,Phone,MessageSquareText,PencilLine,Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X} from 'lucide-react';
+import {HardDrive,BookUser,Phone,MessageSquareText,PencilLine,Check,ChevronRight,ExternalLink,Smile,FileText,Bookmark,FolderKanban,Hash,AtSign,TrendingUp,Bell,Files,ListChecks,Volume2,VolumeX,Briefcase,ChevronDown,ChevronLeft,Contact,Download,Home,LayoutDashboard,LogOut,MessageSquare,MessageSquarePlus,Moon,Plus,Search,Settings2,Sun,UserPlus,UserRound,Users,X,Inbox,Wallet,Receipt,CalendarClock} from 'lucide-react';
 import {useAdminTheme,writeTheme} from '@/lib/admin-theme';
 import {useZarn} from './ZarnProvider';
 import {Avatar} from './format';
@@ -185,6 +185,11 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
       {link('/zarn/business',<TrendingUp size={15}/>,'Overview')}
       {link('/zarn/crm',<Briefcase size={15}/>,'Pipeline',0,false)}
       {link('/zarn/business/clients',<Users size={15}/>,'All clients')}
+      {link('/zarn/business/leads',<Inbox size={15}/>,'Leads')}
+      {link('/zarn/business/invoices',<FileText size={15}/>,'Invoices',0,false)}
+      {link('/zarn/business/money',<Wallet size={15}/>,'Money')}
+      {link('/zarn/business/receipts',<Receipt size={15}/>,'Receipts')}
+      {link('/zarn/business/bills',<CalendarClock size={15}/>,'Bills')}
       {staffAdmin||me.staffRole==='finance'||me.staffRole==='finance_staff'||me.staffRole==='sales'?<a className="zn-nav-item" href="/admin/invoices" target="_blank" rel="noopener noreferrer"><LayoutDashboard size={15}/><span>Invoices (admin)</span></a>:null}
       <p className="zn-nav-note">Client conversations live under Clients. Deals, values and stages live here.</p>
      </>}

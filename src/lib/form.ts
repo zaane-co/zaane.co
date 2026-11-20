@@ -1,7 +1,7 @@
 // Forms are stored as docs with kind='form'; content holds this JSON. Responses live in zarn_form_responses.
 export type QType='short'|'para'|'radio'|'check'|'drop'|'scale'|'date'|'time'|'section'|'page';
 export type Q={id:string;t:QType;title:string;help?:string;req?:1;opts?:string[];other?:1;min?:number;max?:number;lo?:string;hi?:string};
-export type FormSet={open:boolean;who:'team'|'anyone';email?:1;once?:1;done?:string;color?:string;sheet?:string;notify?:1;shuffle?:1};
+export type FormSet={open:boolean;who:'team'|'anyone';email?:1;once?:1;done?:string;color?:string;sheet?:string;notify?:1;shuffle?:1;lead?:1};
 export type Form={desc:string;qs:Q[];set:FormSet};
 export type Answers=Record<string,string|string[]>;
 export type Resp={id:string;user_id:string|null;email:string|null;answers:Answers;created_at:string};
@@ -62,4 +62,13 @@ export function responseRows(f:Form,list:Resp[],who:(r:Resp)=>string):string[][]
  const head=['Timestamp',...(showWho?['Respondent']:[]),...qs.map(q=>q.title||'Untitled question')];
  const rows=[...list].sort((a,b)=>a.created_at.localeCompare(b.created_at)).map(r=>[new Date(r.created_at).toLocaleString('en-GB'),...(showWho?[who(r)]:[]),...qs.map(q=>answerText(q,r.answers[q.id]))]);
  return [head,...rows];
+}
+
+// A form set to capture leads: picks name, email, company, phone and message out of the answers by question title.
+export function leadFrom(f:Form,a:Answers,email:string|null){
+ const pick=(re:RegExp)=>{for(const q of f.qs){if(!isAsk(q)||!re.test(q.title))continue;const v=a[q.id];const t=Array.isArray(v)?v.join(', '):v;if(t)return String(t).replace(/^__other:/,'').trim();}return '';};
+ const mail=(pick(/e-?mail/i)||email||'').toLowerCase();
+ const used=new Set<string>();for(const q of f.qs)if(/name|e-?mail|company|business|brand|organi[sz]ation|phone|whatsapp|mobile/i.test(q.title))used.add(q.id);
+ const rest=f.qs.filter(q=>isAsk(q)&&!used.has(q.id)&&a[q.id]).map(q=>`${q.title}: ${Array.isArray(a[q.id])?(a[q.id] as string[]).join(', '):a[q.id]}`).join('\n');
+ return {name:pick(/name/i).slice(0,120),email:mail.slice(0,254),company:pick(/company|business|brand|organi[sz]ation/i).slice(0,200),phone:pick(/phone|whatsapp|mobile/i).slice(0,40),message:rest.slice(0,5000)};
 }

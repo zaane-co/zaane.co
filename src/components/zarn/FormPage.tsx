@@ -5,6 +5,7 @@ import {useRouter,useSearchParams} from 'next/navigation';
 import {ArrowDown,ArrowUp,Check,ChevronLeft,ChevronRight,CircleDot,ClipboardList,CloudCheck,CloudOff,Copy,Download,Eye,FileSpreadsheet,Folder,GripVertical,Heading,Link2,SeparatorHorizontal,Loader2,Plus,RefreshCw,Send,Share2,Square,Trash2,X} from 'lucide-react';
 import Dropdown from '@/components/ui/Dropdown';
 import {useZarn} from './ZarnProvider';
+import {useNav} from './nav';
 import {useConfirm} from './ConfirmProvider';
 import {Modal} from './Dialogs';
 import {Avatar} from './format';
@@ -20,6 +21,7 @@ const SHARE_BASE=(process.env.NEXT_PUBLIC_SHARE_URL||'https://zaane.co').replace
 // A form in Drive, built to feel like Google Forms: questions on cards you click to edit, a Responses tab
 // with a summary, each response and a linked sheet, and settings for who can answer.
 export default function FormPage({id}:{id:string}){
+ const canLead=useNav().canBusiness;
  const {db,me,people,channels,title:chTitle}=useZarn(),router=useRouter(),confirm=useConfirm(),params=useSearchParams();
  const [row,setRow]=useState<Row|null|undefined>(undefined),[role,setRole]=useState<Role|null>(null);
  const [form,setForm]=useState<Form|null>(null),[title,setTitle]=useState(''),[state,setState]=useState<'saved'|'saving'|'error'>('saved');
@@ -153,6 +155,7 @@ export default function FormPage({id}:{id:string}){
      {form.set.who==='anyone'&&<div className="zfe-setrow"><div><b>Collect email addresses</b><small>People outside ZARN must type their email. Team members are recorded by name anyway.</small></div><Switch on={!!form.set.email} onChange={v=>setSet({email:v?1:undefined})} label="Collect email addresses"/></div>}
      <div className="zfe-setrow"><div><b>Limit to 1 response</b><small>{form.set.who==='team'?'Each team member can answer once.':'Applies to people signed in to ZARN. People outside ZARN can’t be told apart.'}</small></div><Switch on={!!form.set.once} onChange={v=>setSet({once:v?1:undefined})} label="Limit to 1 response"/></div>
      <div className="zfe-setrow"><div><b>Notify me of new responses</b><small>A notification on your devices each time someone answers.</small></div><Switch on={!!form.set.notify} onChange={v=>setSet({notify:v?1:undefined})} label="Notify me of new responses"/></div>
+     {canLead&&<div className="zfe-setrow"><div><b>Send answers to the Pipeline as leads</b><small>Each response becomes a new lead using the questions titled Name, Email, Company and Phone. Admins get a notification.</small></div><Switch on={!!form.set.lead} onChange={v=>setSet({lead:v?1:undefined})} label="Send answers to the Pipeline as leads"/></div>}
     </section>
     <section className="zfe-card zfe-set">
      <h2>Presentation</h2>

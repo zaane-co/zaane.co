@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
 import {pushTo} from '@/lib/zarn-push';
-import {checkAnswers,readForm} from '@/lib/form';
+import {checkAnswers,leadFrom,readForm} from '@/lib/form';
 // Someone answering a form. Public forms take answers from anyone with the link; team forms need a ZARN sign-in.
 const body=z.object({id:z.uuid(),answers:z.record(z.string(),z.unknown()),email:z.string().max(200).optional(),hp:z.string().optional()});
 const fail=(error:string,status=400)=>Response.json({error},{status});
@@ -38,5 +38,17 @@ export async function POST(request:Request){
  const {error}=await db.from('zarn_form_responses').insert({doc_id:b.id,user_id:me?.user_id??null,email,ip_hash:ip,answers:chk.clean});
  if(error)return fail('Could not send your answers. Try again.',500);
  if(f.set.notify&&doc.owner_id!==me?.user_id)await pushTo([doc.owner_id],{title:`New response to ${doc.title||'your form'}`,body:me?`From ${me.display_name}`:email?`From ${email}`:'Someone answered your form',tag:`form-${b.id}`,url:`/zarn/forms/${b.id}?tab=responses`}).catch(()=>0);
+ if(f.set.lead)await captureLead(db,doc.owner_id,doc.title,leadFrom(f,chk.clean,email)).catch(()=>0);
  return Response.json({ok:true});
+}
+// Forms set to capture leads drop a new lead into the Pipeline and tell the admins.
+// Only forms owned by a ZARN admin can do this, so nobody else can fill the Pipeline.
+async function captureLead(db:ReturnType<typeof serviceClient>,owner:string,title:string,l:ReturnType<typeof leadFrom>){
+ if(!EMAIL.test(l.email))return;
+ const [{data:m},{data:u}]=await Promise.all([db.from('zarn_members').select('is_admin').eq('user_id',owner).maybeSingle(),db.from('users').select('role').eq('id',owner).maybeSingle()]);
+ if(!m?.is_admin&&u?.role!=='super_admin')return;
+ const {data,error}=await db.from('leads').insert({name:l.name||l.email,email:l.email,company:l.company,phone:l.phone,message:l.message,service_interested:'',source:'website'}).select('id').single();
+ if(error)return;
+ const {data:admins}=await db.from('zarn_members').select('user_id').eq('is_admin',true);
+ await pushTo((admins??[]).map(a=>a.user_id),{title:'New lead',body:`${l.name||l.email}${l.company?` · ${l.company}`:''} via ${title||'a form'}`,tag:`lead-${data.id}`,url:`/zarn/crm?lead=${data.id}`}).catch(()=>0);
 }
