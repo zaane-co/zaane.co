@@ -8,7 +8,7 @@ import {lagosToday,fmtDay} from '@/lib/zarn-care';
 import {Modal} from './Dialogs';
 import {useConfirm} from './ConfirmProvider';
 
-type Row=Entry&{counted?:boolean};
+type Row=Entry;
 export const bizApi=async<T=Record<string,unknown>>(body:object):Promise<T>=>{const r=await fetch('/api/zarn/biz',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Something went wrong.');return d;};
 export const sums=(m:Record<string,number>)=>Object.keys(m).length?Object.entries(m).map(([c,v])=>money(v,c)).join(' · '):money(0,'NGN');
 const yearAgo=()=>{const d=new Date();d.setMonth(d.getMonth()-11,1);return d.toISOString().slice(0,8)+'01';};
@@ -16,14 +16,14 @@ const yearAgo=()=>{const d=new Date();d.setMonth(d.getMonth()-11,1);return d.toI
 // The money book (every naira in and out) and the receipt holder are one list seen two ways.
 export default function BizMoney({mode}:{mode:'money'|'receipts'}){
  const confirm=useConfirm();
- const [rows,setRows]=useState<Row[]|null>(null),[clients,setClients]=useState<{id:string;name:string}[]>([]),[err,setErr]=useState('');
+ const [rows,setRows]=useState<Row[]|null>(null),[contacts,setContacts]=useState<{id:string;name:string}[]>([]),[err,setErr]=useState('');
  const [month,setMonth]=useState(monthKey(lagosToday())),[dir,setDir]=useState<'all'|'in'|'out'>('all'),[noFile,setNoFile]=useState(false);
  const [edit,setEdit]=useState<Row|'in'|'out'|null>(null);
- const load=useCallback(async()=>{try{const d=await bizApi<{entries:Row[];clients:{id:string;name:string}[]}>({action:'money',from:yearAgo()});setRows(d.entries);setClients(d.clients);setErr('');}catch(e){setErr((e as Error).message);setRows([]);}},[]);
+ const load=useCallback(async()=>{try{const d=await bizApi<{entries:Row[];contacts:{id:string;name:string}[]}>({action:'money',from:yearAgo()});setRows(d.entries);setContacts(d.contacts);setErr('');}catch(e){setErr((e as Error).message);setRows([]);}},[]);
  useEffect(()=>{void (async()=>{await load();})();},[load]);
  const months=useMemo(()=>{const s=new Set<string>([monthKey(lagosToday())]);for(const r of rows??[])s.add(monthKey(r.paid_on));return [...s].sort().reverse();},[rows]);
  const inMonth=useMemo(()=>(rows??[]).filter(r=>month==='year'||monthKey(r.paid_on)===month),[rows,month]);
- const counted=inMonth.filter(r=>r.counted!==false);
+ const counted=inMonth;
  const ins=sumBy(counted.filter(r=>r.direction==='in')),outs=sumBy(counted.filter(r=>r.direction==='out'));
  const net:Record<string,number>={};for(const c of new Set([...Object.keys(ins),...Object.keys(outs)]))net[c]=(ins[c]??0)-(outs[c]??0);
  const cats=(()=>{const m=new Map<string,{amount:number;currency:string}[]>();for(const r of counted.filter(x=>x.direction==='out')){const k=r.category||'Uncategorised';m.set(k,[...(m.get(k)??[]),r]);}
@@ -33,7 +33,7 @@ export default function BizMoney({mode}:{mode:'money'|'receipts'}){
  if(mode==='receipts')list=list.filter(r=>r.source!=='invoice'&&(noFile?!r.file_name:!!r.file_name));
  async function remove(r:Row){if(!await confirm({title:'Delete this entry?',message:r.file_name?'The receipt file is deleted too.':'This can’t be undone.',confirm:'Delete',danger:true}))return;
   try{await bizApi({action:'entry_delete',id:r.id});void load();}catch(e){setErr((e as Error).message);}}
- function exportCsv(){const out=csv([['Date','Direction','Title','Category','Client','Vendor or payer','Amount','Currency','Note','Receipt'],...list.map(r=>[r.paid_on,r.direction==='in'?'In':'Out',r.title,r.category,r.client??'',r.vendor,r.amount,r.currency,r.note,r.file_name])]);
+ function exportCsv(){const out=csv([['Date','Direction','Title','Category','Contact','Vendor or payer','Amount','Currency','Note','Receipt'],...list.map(r=>[r.paid_on,r.direction==='in'?'In':'Out',r.title,r.category,r.contact??'',r.vendor,r.amount,r.currency,r.note,r.file_name])]);
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'text/csv'}));a.download=`zarn-${mode}-${month}.csv`;a.click();URL.revokeObjectURL(a.href);}
  return <div className="zn-page"><div className="zn-scroll" data-lenis-prevent>
   <header className="zn-page-head zb-head"><div><h1>{mode==='money'?<><Wallet size={20}/>Money</>:<><Receipt size={20}/>Receipts</>}</h1><p>{mode==='money'?'Everything that came in and went out, with invoice payments included.':'Every receipt in one place. Add one with a photo or PDF.'}</p></div>
@@ -57,9 +57,9 @@ export default function BizMoney({mode}:{mode:'money'|'receipts'}){
      {mode==='receipts'&&<label className="zb-check"><input type="checkbox" checked={noFile} onChange={e=>setNoFile(e.target.checked)}/>Missing a receipt</label>}
     </div>
     {rows===null?<p className="zn-note">Loading…</p>:!list.length?<p className="zn-note">{mode==='receipts'?(noFile?'Every entry here has its receipt.':'No receipts for this period yet.'):'Nothing recorded for this period yet.'}</p>:
-     <ul className="zb-rows">{list.map(r=><li key={`${r.source}-${r.id}`} className={r.counted===false?'is-dim':''}>
+     <ul className="zb-rows">{list.map(r=><li key={`${r.source}-${r.id}`}>
       <span className={`zb-dir is-${r.direction}`}>{r.direction==='in'?<ArrowDownLeft size={15}/>:<ArrowUpRight size={15}/>}</span>
-      <span className="zb-main"><b>{r.title}</b><small>{[fmtDay(r.paid_on),r.category,r.client,r.vendor].filter(Boolean).join(' · ')}{r.counted===false?' · counted in its invoice':''}</small></span>
+      <span className="zb-main"><b>{r.title}</b><small>{[fmtDay(r.paid_on),r.category,r.contact,r.vendor].filter(Boolean).join(' · ')}</small></span>
       <span className={`zb-amt is-${r.direction}`}>{r.direction==='in'?'+':'−'}{money(r.amount,r.currency)}</span>
       <span className="zb-row-acts">
        {r.file_name?<a href={`/api/zarn/biz/file?id=${r.id}`} target="_blank" rel="noreferrer" className="zb-ic" aria-label={`Open ${r.file_name}`} data-tip={r.file_name}><Paperclip size={15}/></a>:r.source==='invoice'?<Link href={`/zarn/business/invoices/${r.invoice_id}`} className="zb-ic" aria-label="Open invoice" data-tip="Open invoice"><FileText size={15}/></Link>:null}
@@ -71,20 +71,20 @@ export default function BizMoney({mode}:{mode:'money'|'receipts'}){
     {cats.length?<div className="zb-cats">{cats.map(c=><div key={c.k}><span><b>{c.k}</b><small>{sums(c.sum)}</small></span><i><em style={{width:`${Math.max(4,c.n/maxCat*100)}%`}}/></i></div>)}</div>:<p className="zn-note">No spending recorded for this period.</p>}
    </section>}
   </div>
-  {edit&&<EntryDialog entry={typeof edit==='string'?null:edit} direction={typeof edit==='string'?edit:edit.direction} clients={clients} receipt={mode==='receipts'} onClose={()=>setEdit(null)} onDone={()=>{setEdit(null);void load();}}/>}
+  {edit&&<EntryDialog entry={typeof edit==='string'?null:edit} direction={typeof edit==='string'?edit:edit.direction} contacts={contacts} receipt={mode==='receipts'} onClose={()=>setEdit(null)} onDone={()=>{setEdit(null);void load();}}/>}
  </div></div>;
 }
 
-function EntryDialog({entry,direction:d0,clients,receipt,onClose,onDone}:{entry:Row|null;direction:'in'|'out';clients:{id:string;name:string}[];receipt:boolean;onClose:()=>void;onDone:()=>void}){
+function EntryDialog({entry,direction:d0,contacts,receipt,onClose,onDone}:{entry:Row|null;direction:'in'|'out';contacts:{id:string;name:string}[];receipt:boolean;onClose:()=>void;onDone:()=>void}){
  const [direction,setDirection]=useState(d0),[title,setTitle]=useState(entry?.title??''),[amount,setAmount]=useState(entry?String(entry.amount):''),[currency,setCurrency]=useState(entry?.currency??'NGN');
- const [paid,setPaid]=useState(entry?.paid_on??lagosToday()),[category,setCategory]=useState(entry?.category??''),[vendor,setVendor]=useState(entry?.vendor??''),[lead,setLead]=useState(entry?.lead_id??''),[note,setNote]=useState(entry?.note??'');
+ const [paid,setPaid]=useState(entry?.paid_on??lagosToday()),[category,setCategory]=useState(entry?.category??''),[vendor,setVendor]=useState(entry?.vendor??''),[contact,setContact]=useState(entry?.contact_id??''),[note,setNote]=useState(entry?.note??'');
  const [file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false),[err,setErr]=useState('');
  const cats=direction==='in'?inCategories:outCategories;
  async function save(e:React.FormEvent){e.preventDefault();setErr('');const n=Number(amount.replace(/,/g,''));
   if(!title.trim())return setErr('Say what it was for.');if(!(n>0))return setErr('Enter the amount.');setBusy(true);
   try{
    if(entry)await bizApi({action:'entry_update',id:entry.id,title,amount:n,currency,paid_on:paid,category,vendor,note});
-   else{const f=new FormData();Object.entries({direction,title,amount:String(n),currency,paid_on:paid,category,vendor,note,lead_id:lead}).forEach(([k,v])=>f.append(k,v));if(file)f.append('file',file);
+   else{const f=new FormData();Object.entries({direction,title,amount:String(n),currency,paid_on:paid,category,vendor,note,contact_id:contact}).forEach(([k,v])=>f.append(k,v));if(file)f.append('file',file);
     const r=await fetch('/api/zarn/biz/file',{method:'POST',body:f});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Could not save.');}
    onDone();
   }catch(x){setErr((x as Error).message);setBusy(false);}}
@@ -97,7 +97,7 @@ function EntryDialog({entry,direction:d0,clients,receipt,onClose,onDone}:{entry:
    <div className="zn-form-row"><label className="zn-label">Date<input className="zn-input" type="date" value={paid} onChange={e=>setPaid(e.target.value)}/></label>
     <label className="zn-label">Category<select className="zn-input" value={category} onChange={e=>setCategory(e.target.value)}><option value="">Choose</option>{[...new Set([...cats,...(category?[category]:[])])].map(c=><option key={c}>{c}</option>)}</select></label></div>
    <div className="zn-form-row"><label className="zn-label">{direction==='in'?'Paid by':'Paid to'}<input className="zn-input" value={vendor} maxLength={160} onChange={e=>setVendor(e.target.value)} placeholder={direction==='in'?'Who paid':'Vendor or person'}/></label>
-    {!entry&&<label className="zn-label">Client <small>optional</small><select className="zn-input" value={lead} onChange={e=>setLead(e.target.value)}><option value="">None</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}</div>
+    {!entry&&<label className="zn-label">Contact <small>optional</small><select className="zn-input" value={contact} onChange={e=>setContact(e.target.value)}><option value="">None</option>{contacts.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>}</div>
    <label className="zn-label">Note <small>optional</small><input className="zn-input" value={note} maxLength={2000} onChange={e=>setNote(e.target.value)}/></label>
    {!entry&&<label className="zb-drop"><input type="file" accept="image/*,application/pdf" onChange={e=>setFile(e.target.files?.[0]??null)}/><Paperclip size={16}/>{file?file.name:'Attach the receipt (photo or PDF, up to 8 MB)'}</label>}
    {err&&<p className="zb-err" role="alert">{err}</p>}

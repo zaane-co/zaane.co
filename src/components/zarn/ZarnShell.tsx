@@ -30,7 +30,7 @@ import CallProvider from './CallProvider';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 
 type Area='chat'|'business'|'clients'|'projects'|'drive';
-const areaOf=(p:string):Area=>p.startsWith('/zarn/drive')||p.startsWith('/zarn/docs')||p.startsWith('/zarn/sheets')||p.startsWith('/zarn/forms')?'drive':p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')?'clients':p.startsWith('/zarn/business')||p.startsWith('/zarn/crm')?'business':'chat';
+const areaOf=(p:string):Area=>p.startsWith('/zarn/drive')||p.startsWith('/zarn/docs')||p.startsWith('/zarn/sheets')||p.startsWith('/zarn/forms')?'drive':p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')||p.startsWith('/zarn/crm')||p.startsWith('/zarn/business/clients')?'clients':p.startsWith('/zarn/business')?'business':'chat';
 // Phone tab roots (tab bar visible). Inside a conversation the tab bar hides and a back arrow shows instead.
 const tabs=['/zarn/home','/zarn/todos','/zarn/drive','/zarn/projects','/zarn/clients'];
 
@@ -183,15 +183,13 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
      </>}
      {area==='business'&&<>
       {link('/zarn/business',<TrendingUp size={15}/>,'Overview')}
-      {link('/zarn/crm',<Briefcase size={15}/>,'Pipeline',0,false)}
-      {link('/zarn/business/clients',<Users size={15}/>,'All clients')}
       {link('/zarn/business/leads',<Inbox size={15}/>,'Leads')}
+      {link('/zarn/business/customers',<UserRound size={15}/>,'Customers')}
       {link('/zarn/business/invoices',<FileText size={15}/>,'Invoices',0,false)}
       {link('/zarn/business/money',<Wallet size={15}/>,'Money')}
       {link('/zarn/business/receipts',<Receipt size={15}/>,'Receipts')}
       {link('/zarn/business/bills',<CalendarClock size={15}/>,'Bills')}
-      {staffAdmin||me.staffRole==='finance'||me.staffRole==='finance_staff'||me.staffRole==='sales'?<a className="zn-nav-item" href="/admin/invoices" target="_blank" rel="noopener noreferrer"><LayoutDashboard size={15}/><span>Invoices (admin)</span></a>:null}
-      <p className="zn-nav-note">Client conversations live under Clients. Deals, values and stages live here.</p>
+      <p className="zn-nav-note">Business runs on its own: its leads, customers and money are separate from Clients.</p>
      </>}
      {area==='projects'&&<>
       {link('/zarn/projects',<FolderKanban size={15}/>,'All projects')}
@@ -203,6 +201,11 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
      </>}
      {area==='clients'&&<>
       {clients.length>6&&<label className="zn-client-search"><Search size={14}/><input placeholder="Find a client" value={clientQ} onChange={e=>setClientQ(e.target.value)}/></label>}
+      {canBusiness&&<>
+       {link('/zarn/crm',<Briefcase size={15}/>,'Pipeline',0,false)}
+       {link('/zarn/business/clients',<Users size={15}/>,'All clients')}
+       </>}
+      {staffAdmin||me.staffRole==='finance'||me.staffRole==='finance_staff'||me.staffRole==='sales'?<a className="zn-nav-item" href="/admin/invoices" target="_blank" rel="noopener noreferrer"><LayoutDashboard size={15}/><span>Invoices (admin)</span></a>:null}
       {canAddClient&&<button type="button" className="zn-nav-item zn-add-client" onClick={()=>setDialog('client')}><Plus size={15}/><span>Add client</span></button>}
       {section('myclients',staffAdmin?'All client spaces':'My clients',shownClients.length?shownClients.map(c=><ChannelRow key={c.id} c={c}/>):<p className="zn-nav-note">{clients.length?'No match.':'No client spaces yet. When you’re added to a client, it shows up here.'}</p>)}
       {archivedClients.length>0&&section('archivedclients',`Archived · ${archivedClients.length}`,archivedClients.map(c=><ChannelRow key={c.id} c={c}/>))}

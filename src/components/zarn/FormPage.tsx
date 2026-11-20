@@ -155,7 +155,7 @@ export default function FormPage({id}:{id:string}){
      {form.set.who==='anyone'&&<div className="zfe-setrow"><div><b>Collect email addresses</b><small>People outside ZARN must type their email. Team members are recorded by name anyway.</small></div><Switch on={!!form.set.email} onChange={v=>setSet({email:v?1:undefined})} label="Collect email addresses"/></div>}
      <div className="zfe-setrow"><div><b>Limit to 1 response</b><small>{form.set.who==='team'?'Each team member can answer once.':'Applies to people signed in to ZARN. People outside ZARN can’t be told apart.'}</small></div><Switch on={!!form.set.once} onChange={v=>setSet({once:v?1:undefined})} label="Limit to 1 response"/></div>
      <div className="zfe-setrow"><div><b>Notify me of new responses</b><small>A notification on your devices each time someone answers.</small></div><Switch on={!!form.set.notify} onChange={v=>setSet({notify:v?1:undefined})} label="Notify me of new responses"/></div>
-     {canLead&&<div className="zfe-setrow"><div><b>Send answers to the Pipeline as leads</b><small>Each response becomes a new lead using the questions titled Name, Email, Company and Phone. Admins get a notification.</small></div><Switch on={!!form.set.lead} onChange={v=>setSet({lead:v?1:undefined})} label="Send answers to the Pipeline as leads"/></div>}
+     {canLead&&<div className="zfe-setrow"><div><b>Add answers to Business as leads</b><small>Each response becomes a new lead in Business, using the questions titled Name, Email, Company and Phone. Admins get a notification.</small></div><Switch on={!!form.set.lead} onChange={v=>setSet({lead:v?1:undefined})} label="Add answers to Business as leads"/></div>}
     </section>
     <section className="zfe-card zfe-set">
      <h2>Presentation</h2>

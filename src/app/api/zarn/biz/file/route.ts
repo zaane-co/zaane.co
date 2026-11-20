@@ -29,18 +29,18 @@ export async function POST(request:Request){
    const billId=s('bill_id');if(!uuid.test(billId))return fail('Not found.',404);
    const {data:bill}=await db.from('zarn_bills').select('*').eq('id',billId).maybeSingle();if(!bill)return fail('That bill is gone.',404);
    const f=await store();
-   const {error}=await db.from('zarn_client_receipts').insert({direction:'out',title:bill.title,vendor:bill.vendor,category:bill.category,amount:Math.round(amount*100)/100,currency:bill.currency,paid_on,lead_id:bill.lead_id,bill_id:bill.id,note:s('note'),...f,created_by:me.user_id});
+   const {error}=await db.from('zarn_biz_entries').insert({direction:'out',title:bill.title,vendor:bill.vendor,category:bill.category,amount:Math.round(amount*100)/100,currency:bill.currency,paid_on,bill_id:bill.id,note:s('note'),...f,created_by:me.user_id});
    if(error)throw new Error(error.message);
    // A repeating bill moves to its next date; a one-off is done.
    const next=bill.due_on?nextBillDate(bill.due_on,bill.repeat as BillRepeat,bill.start_on):null;
    await db.from('zarn_bills').update({last_paid_on:paid_on,due_on:next,reminded_for:null}).eq('id',bill.id);
    return Response.json({ok:true,next});
   }
-  const direction=s('direction'),title=s('title',160),lead=s('lead_id');
+  const direction=s('direction'),title=s('title',160),contact=s('contact_id');
   if(direction!=='in'&&direction!=='out')return fail('Choose money in or money out.');
   if(!title)return fail('Say what it was for.');
   const f=await store();
-  const {error}=await db.from('zarn_client_receipts').insert({direction,title,amount:Math.round(amount*100)/100,currency:s('currency',4)||'NGN',paid_on,category:s('category',60),vendor:s('vendor',160),note:s('note'),lead_id:uuid.test(lead)?lead:null,...f,created_by:me.user_id});
+  const {error}=await db.from('zarn_biz_entries').insert({direction,title,amount:Math.round(amount*100)/100,currency:s('currency',4)||'NGN',paid_on,category:s('category',60),vendor:s('vendor',160),note:s('note'),contact_id:uuid.test(contact)?contact:null,...f,created_by:me.user_id});
   if(error)throw new Error(error.message);
   return Response.json({ok:true});
  }catch{return fail('Could not save. Try again.',502);}
@@ -48,7 +48,7 @@ export async function POST(request:Request){
 export async function GET(request:Request){
  const me=await zarnMember();if(!me||me.account_type==='guest'||!me.zarnAdmin)return new Response('Not found',{status:404});
  const rowId=new URL(request.url).searchParams.get('id')??'';if(!uuid.test(rowId))return new Response('Not found',{status:404});
- const {data:row}=await serviceClient().from('zarn_client_receipts').select('file_key,file_name,file_type').eq('id',rowId).maybeSingle();
+ const {data:row}=await serviceClient().from('zarn_biz_entries').select('file_key,file_name,file_type').eq('id',rowId).maybeSingle();
  if(!row?.file_key)return new Response('Not found',{status:404});
  try{
   const f=await getPrivate(row.file_key),show=inline.has(row.file_type);

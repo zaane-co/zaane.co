@@ -12,4 +12,4 @@ export async function proxy(request: NextRequest) {
   response.headers.set('Cache-Control','private, no-store');
   return response;
 }
-export const config = {matcher:['/admin/:path*','/api/admin/:path*','/api/auth/:path*','/zarn/:path*','/zarn','/api/zarn/:path*','/invoice/print/:path*','/f/:path*']};
+export const config = {matcher:['/admin/:path*','/api/admin/:path*','/api/auth/:path*','/zarn/:path*','/zarn','/api/zarn/:path*','/invoice/print/:path*','/invoice/b/print/:path*','/f/:path*']};
