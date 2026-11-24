@@ -12,7 +12,7 @@ function DeviceSelect({icon,list,value,onChange,label}:{icon:React.ReactNode;lis
 const audioOpts={echoCancellation:true,noiseSuppression:true,autoGainControl:true};
 
 // Before a call: check your camera and mic, pick devices, then start.
-export default function CallLobby({peer,me,video:startVideo,onCancel,onStart}:{peer?:ZMember;me:ZMember;video:boolean;onCancel:()=>void;onStart:(r:LobbyResult)=>void}){
+export default function CallLobby({peer,label,action='Start call',me,video:startVideo,onCancel,onStart}:{peer?:ZMember;label?:React.ReactNode;action?:string;me:ZMember;video:boolean;onCancel:()=>void;onStart:(r:LobbyResult)=>void}){
  const [video,setVideo]=useState(startVideo),[muted,setMuted]=useState(false),[err,setErr]=useState('');
  const [devices,setDevices]=useState<MediaDeviceInfo[]>([]),[micId,setMicId]=useState(''),[camId,setCamId]=useState(''),[outId,setOutId]=useState('');
  const [level,setLevel]=useState(0),[ready,setReady]=useState(false);
@@ -46,7 +46,7 @@ export default function CallLobby({peer,me,video:startVideo,onCancel,onStart}:{p
 
  return <div className="zn-lobby-scrim" onKeyDown={e=>{if(e.key==='Escape')onCancel();}}>
   <div className="zn-lobby" role="dialog" aria-label="Start a call">
-   <p className="zn-lobby-title">{video?'Video call':'Voice call'} with <b>{peer?.display_name??'them'}</b></p>
+   <p className="zn-lobby-title">{video?'Video call':'Voice call'} {label??<>with <b>{peer?.display_name??'them'}</b></>}</p>
    <div className="zn-lobby-stage">
     <video ref={vid} className="zn-lobby-video" autoPlay playsInline muted style={{display:video&&!err?undefined:'none'}}/>
     {(!video||err)&&<div className="zn-lobby-me"><Avatar m={me} size={112}/></div>}
@@ -64,7 +64,7 @@ export default function CallLobby({peer,me,video:startVideo,onCancel,onStart}:{p
    </div>
    <div className="zn-lobby-acts">
     <button type="button" className="zn-lobby-btn" onClick={onCancel}><span><X size={20}/></span>Cancel</button>
-    <button type="button" className="zn-lobby-btn is-go" disabled={!ready} onClick={go}><span>{video?<Video size={20}/>:<Phone size={20}/>}</span>Start call</button>
+    <button type="button" className="zn-lobby-btn is-go" disabled={!ready} onClick={go}><span>{video?<Video size={20}/>:<Phone size={20}/>}</span>{action}</button>
    </div>
   </div>
  </div>;

@@ -51,9 +51,8 @@ export default function Message({m,reactions,compact,inThread,onThread,receipt}:
   // A missed or declined call gets a one-tap call back.
   const missed=m.meta.event==='call'&&(m.meta.status==='missed'||m.meta.status==='declined');
   const ch=channels.find(c=>c.id===m.channel_id),by=String(m.meta.by??'');
-  const peer=by===me.user_id?(ch?.dm_key??'').split(',').find(u=>u!==me.user_id):by;
   if(m.meta.event==='channel_invite')return <InviteNote m={m}/>;
-  return <div className="zn-system">{systemText(m,people)}{missed&&peer&&ch?.kind==='dm'&&<button type="button" className="zn-callback" disabled={call.busy} onClick={()=>void call.start(m.channel_id,peer)}><Phone size={12}/>{by===me.user_id?'Call again':'Call back'}</button>}</div>;
+  return <div className="zn-system">{systemText(m,people)}{missed&&ch&&<button type="button" className="zn-callback" disabled={call.busy} onClick={()=>void call.start(m.channel_id,{video:String(m.meta.video)==='true'})}><Phone size={12}/>{by===me.user_id?'Call again':'Call back'}</button>}</div>;
  }
  if(m.deleted_at)return <div className={`zn-msg${compact?' is-compact':''}`}><div className="zn-gutter">{!compact&&<Avatar m={author} name={m.author_name}/>}</div><div className="zn-msg-main"><p className="zn-deleted">This message was deleted.</p></div></div>;
 
@@ -141,7 +140,7 @@ function systemText(m:ZMessage,people:Record<string,{display_name:string}>){
   case 'members_removed':{const names=String(m.meta.users??'').split(',').map(id=>people[id]?.display_name).filter(Boolean);return `${by} removed ${names.join(', ')||'people'}.`;}
   case 'members_invited':{const names=String(m.meta.users??'').split(',').map(id=>people[id]?.display_name).filter(Boolean);return `${by} invited ${names.join(', ')||'people'}. They need to accept to join.`;}
   case 'joined':return `${by} joined the channel.`;
-  case 'call':{const d=Number(m.meta.duration)||0,t=m.meta.status;return t==='ended'?`Voice call · ${Math.floor(d/60)}:${String(d%60).padStart(2,'0')}`:t==='declined'?`${by} called. The call was declined.`:`Missed voice call from ${by}.`;}
+  case 'call':{const d=Number(m.meta.duration)||0,t=m.meta.status,v=String(m.meta.video)==='true'?'video':'voice',g=String(m.meta.group)==='true';return t==='ended'?`${g?'Group ':''}${g?v:v[0]!.toUpperCase()+v.slice(1)} call · ${Math.floor(d/60)}:${String(d%60).padStart(2,'0')}`:t==='declined'?`${by} called. The call was declined.`:g?`${by} started a ${v} call. Nobody joined.`:`Missed ${v} call from ${by}.`;}
   case 'client_opened':return `${by} opened this client space.`;
   default:return '';
  }

@@ -1,9 +1,9 @@
 'use client';
 import {Fragment,useCallback,useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {useCall} from './CallProvider';
+import {CallButtons} from './CallProvider';
 import {useConfirm} from './ConfirmProvider';
-import {Search,Bell,BellOff,Briefcase,FolderKanban,Hash,Info,Lock,Phone,Pin,Star,Trash2,UserPlus,UserRound,Video,X} from 'lucide-react';
+import {Search,Bell,BellOff,Briefcase,FolderKanban,Hash,Info,Lock,Pin,Star,Trash2,UserPlus,UserRound,X} from 'lucide-react';
 import {zarnApi,type ZChannel,type ZMessage,type ZReaction} from '@/lib/zarn';
 import {useZarn,type ZEvent} from './ZarnProvider';
 import Message from './Message';
@@ -17,7 +17,7 @@ const sameGroup=(a:ZMessage|undefined,b:ZMessage)=>!!a&&a.kind==='user'&&b.kind=
 
 // embedded: rendered inside a client space or project (no channel header; that page has its own).
 export default function ChannelView({id,embedded}:{id:string;embedded?:boolean}){
- const z=useZarn(),{db,me,people,channels,membership,subscribe,markRead,setActive,title}=z,router=useRouter(),{profile}=useShell(),call=useCall();
+ const z=useZarn(),{db,me,people,channels,membership,subscribe,markRead,setActive,title}=z,router=useRouter(),{profile}=useShell();
  const channel=channels.find(c=>c.id===id);
  const [messages,setMessages]=useState<ZMessage[]>([]),[reactions,setReactions]=useState<ZReaction[]>([]);
  const [loading,setLoading]=useState(true),[more,setMore]=useState(false),[thread,setThread]=useState<ZMessage|null>(null);
@@ -130,8 +130,7 @@ export default function ChannelView({id,embedded}:{id:string;embedded?:boolean})
     </div>
     <div className="zn-head-actions">
      <button type="button" aria-label="Search this conversation" data-tip="Search here" onClick={()=>setSearching(true)}><Search size={16}/></button>
-     {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined&&!!people[o[0]!]&&!people[o[0]!]?.deactivated_at?<button type="button" aria-label="Voice call" data-tip={call.busy?'You’re on a call':'Voice call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!)}><Phone size={16}/></button>:null;})()}
-     {(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u!==me.user_id):[];return o.length===1&&joined&&!!people[o[0]!]&&!people[o[0]!]?.deactivated_at?<button type="button" aria-label="Video call" data-tip={call.busy?'You’re on a call':'Video call'} disabled={call.busy} onClick={()=>void call.start(channel.id,o[0]!,{video:true})}><Video size={16}/></button>:null;})()}
+     {joined&&(()=>{const o=channel.kind==='dm'?(channel.dm_key??'').split(',').filter(u=>u&&u!==me.user_id):[];return channel.kind!=='dm'||o.some(u=>people[u]&&!people[u]!.deactivated_at);})()&&<CallButtons channelId={channel.id}/>}
      {channel.kind!=='dm'&&(()=>{const ids=Object.keys(reads).filter(u=>people[u]&&!people[u]!.deactivated_at);return ids.length?<button type="button" className="zn-head-faces" aria-label={`${ids.length} members`} data-tip="Members" onClick={()=>setDetails(true)}><span>{ids.slice(0,3).map(u=><Avatar key={u} m={people[u]} size={22}/>)}</span><b>{ids.length}</b></button>:null;})()}
      {pinned.length>0&&<button type="button" data-tip="Pinned messages" onClick={()=>setDetails(true)}><Pin size={16}/><span>{pinned.length}</span></button>}
      {joined&&<button type="button" aria-label={membership[id]?.starred?'Unstar':'Star'} data-tip={membership[id]?.starred?'Unstar':'Star'} className={membership[id]?.starred?'is-on':''} onClick={async()=>{await db.from('zarn_channel_members').update({starred:!membership[id]?.starred}).eq('channel_id',id).eq('user_id',me.user_id);await z.reload();}}><Star size={16}/></button>}
