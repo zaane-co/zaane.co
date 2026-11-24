@@ -7,7 +7,13 @@ import {useZarn} from './ZarnProvider';
 import {Avatar,textToTokens} from './format';
 import {registerDrop} from './drop';
 
-type Upload=ZAttachment&{uploading?:boolean;error?:string;tmp:string};
+type Upload=ZAttachment&{uploading?:boolean;error?:string;tmp:string;pct?:number};
+// PUT straight to storage with progress (XHR, since fetch has no upload progress).
+function putDirect(url:string,file:Blob,type:string,onPct:(n:number)=>void){
+ return new Promise<void>((ok,bad)=>{const x=new XMLHttpRequest();x.open('PUT',url);x.setRequestHeader('Content-Type',type);
+  x.upload.onprogress=e=>{if(e.lengthComputable)onPct(Math.round(e.loaded/e.total*100));};
+  x.onload=()=>x.status<300?ok():bad(new Error('Upload failed. Check your connection and try again.'));x.onerror=()=>bad(new Error('Upload failed. Check your connection and try again.'));x.send(file);});
+}
 // Message box: @mentions with autocomplete, file attachments, a CRM lead card, Enter to send.
 export default function Composer({channelId,parentId,placeholder,onSent,onTyping,disabled}:{channelId:string;parentId?:string;placeholder:string;onSent?:()=>void;onTyping?:()=>void;disabled?:string}){
  const {me,members,db,lead,emit,people,channels}=useZarn();
@@ -119,10 +125,11 @@ function micDown(e:React.PointerEvent){
    setFiles(f=>[...f,{tmp,key:'',name:raw.name,size:raw.size,type:raw.type,uploading:true}]);
    try{
     const file=raw.type.startsWith('image/')&&raw.type!=='image/gif'&&raw.type!=='image/svg+xml'?await optimizeImage(raw):raw;
-    const form=new FormData();form.set('channel_id',channelId);form.set('file',file);
-    const r=await fetch('/api/zarn/files',{method:'POST',body:form});const d=await r.json().catch(()=>({}));
-    if(!r.ok)throw new Error(d.error||'Upload failed.');
-    setFiles(f=>f.map(x=>x.tmp===tmp?{...d,tmp}:x));
+    // Sign, then upload straight to storage with progress (any size up to 5 GB).
+    const r=await fetch('/api/zarn/files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'chat_sign',channel_id:channelId,name:file.name,type:file.type,size:file.size})});
+    const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Upload failed.');
+    await putDirect(d.url,file,d.type,pct=>setFiles(f=>f.map(x=>x.tmp===tmp?{...x,pct}:x)));
+    setFiles(f=>f.map(x=>x.tmp===tmp?{key:d.key,name:d.name,size:file.size,type:d.type,tmp}:x));
    }catch(e){setFiles(f=>f.map(x=>x.tmp===tmp?{...x,uploading:false,error:e instanceof Error?e.message:'Upload failed.'}:x));}
   }
  }
@@ -177,7 +184,7 @@ function micDown(e:React.PointerEvent){
   {outsiders.length>0&&<div className="zn-outsiders" role="status"><span><b>{outsiders.map(u=>people[u]?.display_name??'Someone').join(', ')}</b> {outsiders.length>1?'aren’t':'isn’t'} in #{chName}, so they won’t see your message.</span><button type="button" className="zn-btn is-primary" onClick={()=>void inviteOutsiders()}>{me.staffRole==='super_admin'?'Add to channel':outsiders.length>1?'Invite them':'Invite'}</button><button type="button" className="zn-btn" onClick={()=>setOutsiders([])}>Dismiss</button></div>}
   {note&&<div className="zn-outsiders is-ok" role="status">{note}</div>}
   {(files.length>0||leadId)&&<div className="zn-attach-row">
-   {files.map(f=><span key={f.tmp} className={`zn-chip${f.error?' is-error':''}`} title={f.error}>{f.uploading?<Loader2 size={13} className="zn-spin"/>:<Paperclip size={13}/>}{f.name}<button type="button" aria-label="Remove" onClick={()=>setFiles(x=>x.filter(y=>y.tmp!==f.tmp))}><X size={12}/></button></span>)}
+   {files.map(f=><span key={f.tmp} className={`zn-chip${f.error?' is-error':''}`} title={f.error}>{f.uploading?<Loader2 size={13} className="zn-spin"/>:<Paperclip size={13}/>}{f.name}{f.uploading&&f.pct!=null&&<small className="zn-chip-pct">{f.pct}%</small>}<button type="button" aria-label="Remove" onClick={()=>setFiles(x=>x.filter(y=>y.tmp!==f.tmp))}><X size={12}/></button></span>)}
    {leadId&&<span className="zn-chip"><Briefcase size={13}/>{l?.company||l?.name||'Lead'}<button type="button" aria-label="Remove lead" onClick={()=>setLeadId(null)}><X size={12}/></button></span>}
   </div>}
   {rec?<div className="zn-rec" role="group" aria-label="Recording a voice note">
@@ -188,7 +195,7 @@ function micDown(e:React.PointerEvent){
   </div>:<>
   <textarea ref={box} rows={1} value={text} placeholder={placeholder} maxLength={8000} onChange={e=>onChange(e.target.value,e.target.selectionStart)} onKeyDown={onKey} onPaste={e=>{if(e.clipboardData.files.length){e.preventDefault();void addFiles(e.clipboardData.files);}}} aria-label="Message"/>
   <div className="zn-composer-bar">
-   <button type="button" aria-label="Attach files" data-tip="Attach files (4 MB each)" onClick={()=>fileInput.current?.click()}><Paperclip size={17}/></button>
+   <button type="button" aria-label="Attach files" data-tip="Attach files (up to 5 GB each)" onClick={()=>fileInput.current?.click()}><Paperclip size={17}/></button>
    <input ref={fileInput} type="file" multiple hidden onChange={e=>{void addFiles(e.target.files);e.target.value='';}}/>
    {!isDm&&<button type="button" aria-label="Mention someone" data-tip="Mention someone" onClick={()=>{const el=box.current!;const pos=el.selectionStart;const v=text.slice(0,pos)+(pos&&!/\s$/.test(text.slice(0,pos))?' @':'@')+text.slice(pos);onChange(v,v.length-(text.length-pos));el.focus();}}><AtSign size={17}/></button>}
    <small className="zn-hint">*bold* _italic_ `code` · Shift+Enter for a new line</small>

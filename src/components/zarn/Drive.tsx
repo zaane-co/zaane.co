@@ -158,7 +158,7 @@ export default function Drive(){
    router.push(`/zarn/docs/${id}`);
   }catch(e){setErr(e instanceof Error?e.message:'Could not convert the PDF.');setPdfBusy(false);}
  }
- // Uploads go straight to storage (up to 100 MB each). Picking a folder recreates its folder tree here.
+ // Uploads go straight to storage (up to 5 GB each). Picking a folder recreates its folder tree here.
  async function sendFile(raw:File,to:{drive:string;folder_id:string|null;lead_id:string|null}){
   const file=raw.type.startsWith('image/')&&raw.type!=='image/gif'&&raw.type!=='image/svg+xml'&&raw.size<8*1024*1024?await optimizeImage(raw):raw;
   const post=async(body:object)=>{const r=await fetch('/api/zarn/files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...to,...body})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Upload failed');return d;};

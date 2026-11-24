@@ -3572,3 +3572,4 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zfe-files a:hover{border-color:var(--z-muted)}
 .zfe-files span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .zfe-files small{color:var(--z-muted);font-size:12px;white-space:nowrap}
+.zn-chip-pct{color:var(--z-muted);font-size:11.5px;font-variant-numeric:tabular-nums}

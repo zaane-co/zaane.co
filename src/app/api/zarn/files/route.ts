@@ -1,22 +1,37 @@
 import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
-import {deleteFile,getPrivate,headPrivate,putPrivate,r2Configured,signPut} from '@/lib/r2';
+import {deleteFile,getPrivate,headPrivate,putPrivate,r2Configured,signGet,signPut} from '@/lib/r2';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // Vercel caps request bodies at 4.5 MB; images are shrunk in the browser first.
 const MAX=4*1024*1024;
 const blocked=/\.(html?|svg|js|mjs|xhtml|xml|exe|bat|cmd|sh|msi|dmg|app|php)$/i;
 const inlineTypes=['image/jpeg','image/png','image/webp','image/gif','image/avif','application/pdf'];
 // Upload a file into a channel the member belongs to. The message that references it is posted by the client.
-const BIG=100*1024*1024;
+const BIG=5*1024*1024*1024;
+// Bigger files download straight from storage (a signed link) instead of streaming through the server.
+const DIRECT=20*1024*1024;
 type Where={drive?:string;folder_id?:string|null;lead_id?:string|null};
 const placeOf=(b:Where)=>{const drive=b.drive??'my',folder=b.folder_id??'',lead=b.lead_id??'';
  if(!['my','team','client'].includes(drive)||(folder&&!uuid.test(folder))||(lead&&!uuid.test(lead))||(drive==='client'&&!lead&&!folder))return null;
  return {drive,folder_id:folder||null,lead_id:drive==='client'&&!folder?lead:null};};
 // Drive uploads go straight from the browser to storage (up to 100 MB): sign, upload, then save.
 // Chat attachments can also be saved into Drive; the copy points at the same stored file.
-async function driveAction(request:Request,me:NonNullable<Awaited<ReturnType<typeof zarnMember>>>){
- const b=await request.json().catch(()=>null) as (Where&{action?:string;name?:string;type?:string;size?:number;key?:string;message_id?:string;index?:number})|null;
- if(!b)return Response.json({error:'Invalid request'},{status:400});
+type Body=Where&{action?:string;name?:string;type?:string;size?:number;key?:string;message_id?:string;index?:number;channel_id?:string};
+type Me=NonNullable<Awaited<ReturnType<typeof zarnMember>>>;
+// Chat attachments of any size go straight from the browser to storage: sign (members of the channel only), then upload.
+async function chatAction(b:Body,me:Me){
+ const fail=(m:string,status=400)=>Response.json({error:m},{status});
+ const channel=String(b.channel_id??'');if(!uuid.test(channel))return fail('Invalid request');
+ const {data:inCh}=await me.db.from('zarn_channel_members').select('channel_id').eq('channel_id',channel).eq('user_id',me.user_id).maybeSingle();
+ if(!inCh)return fail('Join the channel first.',403);
+ const name=String(b.name??'').replace(/[^\w.\- ]+/g,'').slice(-120)||'file';
+ if(blocked.test(name))return fail('That file type isn’t allowed.');
+ if(!Number.isFinite(b.size)||Number(b.size)<=0||Number(b.size)>BIG)return fail('Files must be under 5 GB.');
+ const type=String(b.type||'application/octet-stream').slice(0,120);
+ const key=`private/zarn/${channel}/${crypto.randomUUID()}-${name.replace(/\s+/g,'-')}`;
+ return Response.json({key,name,type,url:await signPut(key,type)});
+}
+async function driveAction(b:Body,me:Me){
  if(me.account_type==='guest')return Response.json({error:'Drive is for team members.'},{status:403});
  const place=placeOf(b);if(!place)return Response.json({error:'Invalid request'},{status:400});
  const fail=(m:string,status=400)=>Response.json({error:m},{status});
@@ -28,7 +43,7 @@ async function driveAction(request:Request,me:NonNullable<Awaited<ReturnType<typ
  if(b.action==='sign'){
   const name=String(b.name??'').replace(/[^\w.\- ]+/g,'').slice(-120)||'file';
   if(blocked.test(name))return fail('That file type isn’t allowed.');
-  if(!Number.isFinite(b.size)||Number(b.size)>BIG)return fail('Files must be under 100 MB.');
+  if(!Number.isFinite(b.size)||Number(b.size)>BIG)return fail('Files must be under 5 GB.');
   const type=String(b.type||'application/octet-stream').slice(0,120);
   const key=`private/zarn/personal/${me.user_id}/${crypto.randomUUID()}-${name.replace(/\s+/g,'-')}`;
   return Response.json({key,type,url:await signPut(key,type)});
@@ -37,7 +52,7 @@ async function driveAction(request:Request,me:NonNullable<Awaited<ReturnType<typ
   const key=String(b.key??'');
   if(!key.startsWith(`private/zarn/personal/${me.user_id}/`))return fail('Invalid file.');
   const head=await headPrivate(key);if(!head)return fail('Upload didn’t finish. Try again.');
-  if(head.size>BIG){await deleteFile(key).catch(()=>{});return fail('Files must be under 100 MB.');}
+  if(head.size>BIG){await deleteFile(key).catch(()=>{});return fail('Files must be under 5 GB.');}
   const name=String(b.name??'').replace(/[^\w.\- ]+/g,'').slice(-120)||'file';
   const r=await insert({name,size:head.size,type:head.type||'application/octet-stream',key});
   if('error' in r){await deleteFile(key).catch(()=>{});return fail(r.error!,502);}
@@ -59,7 +74,10 @@ export async function POST(request:Request){
  if(request.headers.get('origin')!==new URL(request.url).origin)return Response.json({error:'Invalid origin'},{status:403});
  const me=await zarnMember();if(!me)return Response.json({error:'Sign in first.'},{status:401});
  if(!r2Configured())return Response.json({error:'File storage isn’t configured.'},{status:503});
- if(request.headers.get('content-type')?.includes('application/json'))return driveAction(request,me);
+ if(request.headers.get('content-type')?.includes('application/json')){
+  const b=await request.json().catch(()=>null) as Body|null;if(!b)return Response.json({error:'Invalid request'},{status:400});
+  return b.action==='chat_sign'?chatAction(b,me):driveAction(b,me);
+ }
  const form=await request.formData();const channel=String(form.get('channel_id')??''),file=form.get('file'),personal=form.get('scope')==='personal'||form.get('scope')==='drive';
  // Drive uploads say where they go: a folder, or the root of a drive (my / team / a client's).
  const drive=String(form.get('drive')??'my'),folder=String(form.get('folder_id')??''),lead=String(form.get('lead_id')??'');
@@ -90,19 +108,20 @@ export async function POST(request:Request){
 export async function GET(request:Request){
  const me=await zarnMember();if(!me)return new Response('Sign in first.',{status:401});
  const u=new URL(request.url),fid=u.searchParams.get('f')??'',mid=u.searchParams.get('m')??'',i=Number(u.searchParams.get('i'));
- let att:{key:string;name:string;type:string}|undefined;
+ let att:{key:string;name:string;type:string;size?:number}|undefined;
  if(fid){
   // A personal file: row-level security only returns it to its owner and the people it was shared with.
   if(!uuid.test(fid))return new Response('Invalid request',{status:400});
-  const {data:row}=await me.db.from('zarn_files').select('key,name,type').eq('id',fid).maybeSingle();
+  const {data:row}=await me.db.from('zarn_files').select('key,name,type,size').eq('id',fid).maybeSingle();
   att=row??undefined;
   if(!att?.key?.startsWith('private/zarn/'))return new Response('Not found',{status:404});
  }else{
   if(!uuid.test(mid)||!Number.isInteger(i)||i<0)return new Response('Invalid request',{status:400});
   const {data:msg}=await me.db.from('zarn_messages').select('attachments,deleted_at').eq('id',mid).maybeSingle();
-  att=(msg?.attachments as {key:string;name:string;type:string}[]|undefined)?.[i];
+  att=(msg?.attachments as {key:string;name:string;type:string;size?:number}[]|undefined)?.[i];
   if(!msg||msg.deleted_at||!att?.key?.startsWith('private/zarn/'))return new Response('Not found',{status:404});
  }
+ if((att.size??0)>DIRECT)return Response.redirect(await signGet(att.key,att.name),302);
  try{
   const f=await getPrivate(att.key);const inline=inlineTypes.includes(f.type)&&u.searchParams.get('download')!=='1';
   return new Response(f.body,{headers:{'Content-Type':f.type,'Content-Disposition':`${inline?'inline':'attachment'}; filename="${att.name.replace(/"/g,'')}"`,'X-Content-Type-Options':'nosniff','Cache-Control':'private, max-age=3600','Content-Security-Policy':f.type==='application/pdf'?"frame-ancestors 'self'":"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox"}});
