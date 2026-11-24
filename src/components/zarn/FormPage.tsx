@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {useRouter,useSearchParams} from 'next/navigation';
-import {ArrowDown,ArrowUp,Check,ChevronLeft,ChevronRight,CircleDot,ClipboardList,CloudCheck,CloudOff,Copy,Download,Eye,FileSpreadsheet,Folder,GripVertical,Heading,Link2,SeparatorHorizontal,Loader2,Plus,RefreshCw,Send,Share2,Square,Trash2,X} from 'lucide-react';
+import {ArrowDown,ArrowUp,Check,ChevronLeft,ChevronRight,CircleDot,ClipboardList,CloudCheck,CloudOff,Copy,Download,Eye,FileSpreadsheet,Folder,GripVertical,Heading,Link2,SeparatorHorizontal,Loader2,Plus,RefreshCw,Send,Share2,Square,Trash2,Upload,X} from 'lucide-react';
 import Dropdown from '@/components/ui/Dropdown';
 import {useZarn} from './ZarnProvider';
 import {useNav} from './nav';
@@ -11,7 +11,7 @@ import {Modal} from './Dialogs';
 import {Avatar} from './format';
 import ShareDoc from './ShareDoc';
 import FormFill from './FormFill';
-import {FORM_COLORS,OTHER,QTYPES,answerText,blankQ,hasOpts,isAsk,newQid,readForm,responseRows,type Form,type Q,type QType,type Resp} from '@/lib/form';
+import {FILE_COUNTS,FILE_KINDS,FILE_SIZES,FORM_COLORS,OTHER,QTYPES,answerText,blankQ,fileBytes,hasOpts,isAsk,newQid,parseFile,readForm,responseRows,sizeName,type FileKind,type Form,type Q,type QType,type Resp} from '@/lib/form';
 import {ref} from '@/lib/sheet';
 type Row={id:string;title:string;content:string;owner_id:string;kind:string;drive:'my'|'team'|'client';folder_id:string|null;lead_id:string|null};
 type Role='owner'|'edit'|'view';
@@ -142,7 +142,7 @@ export default function FormPage({id}:{id:string}){
     </div>}
     {!form.qs.length&&<p className="zfe-empty">No questions yet. Add one to get started.</p>}
    </div>}
-   {tab==='responses'&&canEdit&&<Responses form={form} resps={resps} err={respErr} who={who} people={people} sheet={!!form.set.sheet} sheetBusy={sheetBusy}
+   {tab==='responses'&&canEdit&&<Responses docId={id} form={form} resps={resps} err={respErr} who={who} people={people} sheet={!!form.set.sheet} sheetBusy={sheetBusy}
      onOpen={v=>setSet({open:v})} onCsv={csv} onSheet={()=>void toSheet()} onRefresh={()=>void loadResps()}
      onDelete={async r=>{if(!await confirm({title:'Delete this response?',message:'It’s removed for good.',confirm:'Delete'}))return;setResps(l=>l?.filter(x=>x.id!==r.id)??l);await db.from('zarn_form_responses').delete().eq('id',r.id);}}
      onDeleteAll={async()=>{if(!await confirm({title:'Delete all responses?',message:`All ${n} responses are removed for good.`,confirm:'Delete all'}))return;setResps([]);await db.from('zarn_form_responses').delete().eq('doc_id',id);}}/>}
@@ -179,7 +179,7 @@ function AutoArea({value,onChange,className,placeholder,readOnly}:{value:string;
 // One question. Click it to edit (title, type, options, required); otherwise it shows as people will see it.
 function QCard({q,on,canEdit,first,last,onFocus,onChange,onMove,onDup,onDrop}:{q:Q;on:boolean;canEdit:boolean;first:boolean;last:boolean;onFocus:()=>void;onChange:(p:Partial<Q>)=>void;onMove:(d:-1|1)=>void;onDup:()=>void;onDrop:()=>void}){
  const opts=q.opts??[];
- const setType=(t:QType)=>onChange({t,...(hasOpts(t)&&!opts.length?{opts:['Option 1']}:{}),...(t==='scale'&&q.min===undefined?{min:1,max:5}:{})});
+ const setType=(t:QType)=>onChange({t,...(hasOpts(t)&&!opts.length?{opts:['Option 1']}:{}),...(t==='scale'&&q.min===undefined?{min:1,max:5}:{}),...(t==='file'&&q.maxN===undefined?{maxN:1,maxMb:100}:{})});
  const setOpt=(i:number,v:string)=>onChange({opts:opts.map((o,j)=>j===i?v:o)});
  const mark=(i:number)=>q.t==='check'?<Square size={18}/>:q.t==='drop'?<span className="zfe-num">{i+1}.</span>:<CircleDot size={18} className="zfe-dot"/>;
  if(!isAsk(q))return <div id={`zfe-${q.id}`} className={`zfe-card zfe-section${q.t==='page'?' is-page':''}${on?' is-on':''}`} onClick={e=>{e.stopPropagation();onFocus();}}>
@@ -210,6 +210,12 @@ function QCard({q,on,canEdit,first,last,onFocus,onChange,onMove,onDup,onDrop}:{q
     <label><span>{q.min??1}</span><input className="zfe-line" value={q.lo??''} placeholder="Label (optional)" maxLength={60} onChange={e=>onChange({lo:e.target.value||undefined})}/></label>
     <label><span>{q.max??5}</span><input className="zfe-line" value={q.hi??''} placeholder="Label (optional)" maxLength={60} onChange={e=>onChange({hi:e.target.value||undefined})}/></label>
    </div>}
+   {q.t==='file'&&<div className="zfe-file">
+    <div className="zfe-setrow"><div><b>Only take certain kinds of file</b><small>{q.kinds?.length?'People can only add the kinds ticked below.':'Any file is fine.'}</small></div><Switch on={!!q.kinds?.length} onChange={v=>onChange({kinds:v?['image']:undefined})} label="Only take certain kinds of file"/></div>
+    {!!q.kinds?.length&&<div className="zfe-kinds">{FILE_KINDS.map(k=>{const has=q.kinds!.includes(k.k);return <label key={k.k} className="zfe-kind"><input type="checkbox" checked={has} onChange={()=>{const n=(has?q.kinds!.filter(x=>x!==k.k):[...q.kinds!,k.k]) as FileKind[];onChange({kinds:n.length?n:undefined});}}/>{k.label}</label>;})}</div>}
+    <div className="zfe-setrow"><div><b>Most files</b></div><select className="zfe-mini" aria-label="Most files" value={q.maxN??1} onChange={e=>onChange({maxN:Number(e.target.value)})}>{FILE_COUNTS.map(n=><option key={n} value={n}>{n}</option>)}</select></div>
+    <div className="zfe-setrow"><div><b>Largest file</b><small>Big videos are fine; they upload straight to storage.</small></div><select className="zfe-mini" aria-label="Largest file" value={q.maxMb??100} onChange={e=>onChange({maxMb:Number(e.target.value)})}>{FILE_SIZES.map(n=><option key={n} value={n}>{sizeName(n)}</option>)}</select></div>
+   </div>}
    {(q.t==='short'||q.t==='para'||q.t==='date'||q.t==='time')&&<p className={`zfe-fake${q.t==='para'?' is-long':''}`}>{q.t==='short'?'Short answer text':q.t==='para'?'Long answer text':q.t==='date'?'Day, month, year':'Time'}</p>}
    <div className="zfe-qfoot"><label className="zfe-req">Required<Switch on={!!q.req} onChange={v=>onChange({req:v?1:undefined})} label="Required"/></label><Actions first={first} last={last} onMove={onMove} onDup={onDup} onDrop={onDrop}/></div>
   </>:<>
@@ -217,6 +223,7 @@ function QCard({q,on,canEdit,first,last,onFocus,onChange,onMove,onDup,onDrop}:{q
    {q.help&&<p className="zfe-helpview">{q.help}</p>}
    {hasOpts(q.t)&&<div className="zfe-opts is-view">{opts.map((o,i)=><div key={i} className="zfe-opt">{mark(i)}<span>{o}</span></div>)}{q.other&&<div className="zfe-opt">{mark(opts.length)}<span>Other…</span></div>}</div>}
    {q.t==='scale'&&<div className="zfe-scaleview">{q.lo&&<span>{q.lo}</span>}{Array.from({length:(q.max??5)-(q.min??1)+1},(_,i)=><span key={i} className="zfe-scalen"><b>{(q.min??1)+i}</b><CircleDot size={18} className="zfe-dot"/></span>)}{q.hi&&<span>{q.hi}</span>}</div>}
+   {q.t==='file'&&<p className="zfe-fake zfe-fakefile"><Upload size={16}/>Add file <small>up to {q.maxN??1}, {sizeName(q.maxMb??100)} each</small></p>}
    {(q.t==='short'||q.t==='para'||q.t==='date'||q.t==='time')&&<p className={`zfe-fake${q.t==='para'?' is-long':''}`}>{q.t==='short'?'Short answer text':q.t==='para'?'Long answer text':q.t==='date'?'Day, month, year':'Time'}</p>}
   </>}
  </div>;
@@ -243,7 +250,7 @@ function SendForm({link,form,canEdit,onWho,onClose}:{link:string;form:Form;canEd
 }
 
 // Responses: a summary per question (bars for choices, a list for text), each response one at a time, CSV and a linked sheet.
-function Responses({form,resps,err,who,people,sheet,sheetBusy,onOpen,onCsv,onSheet,onRefresh,onDelete,onDeleteAll}:{form:Form;resps:Resp[]|null;err:string;who:(r:Resp)=>string;people:Record<string,import('@/lib/zarn').ZMember>;sheet:boolean;sheetBusy:boolean;
+function Responses({docId,form,resps,err,who,people,sheet,sheetBusy,onOpen,onCsv,onSheet,onRefresh,onDelete,onDeleteAll}:{docId:string;form:Form;resps:Resp[]|null;err:string;who:(r:Resp)=>string;people:Record<string,import('@/lib/zarn').ZMember>;sheet:boolean;sheetBusy:boolean;
  onOpen:(v:boolean)=>void;onCsv:()=>void;onSheet:()=>void;onRefresh:()=>void;onDelete:(r:Resp)=>void;onDeleteAll:()=>void}){
  const [view,setView]=useState<'summary'|'one'>('summary'),[at,setAt]=useState(0);
  const list=useMemo(()=>resps??[],[resps]),n=list.length,qs=useMemo(()=>form.qs.filter(isAsk),[form.qs]);
@@ -256,6 +263,7 @@ function Responses({form,resps,err,who,people,sheet,sheetBusy,onOpen,onCsv,onShe
    for(const v of vals)for(const s of Array.isArray(v)?v:[v]){const k=s.startsWith(OTHER)?'Other':s;c.set(k,(c.get(k)??0)+1);}
    return {q,answered:vals.length,bars:[...c.entries()],texts:vals.flatMap(v=>(Array.isArray(v)?v:[v]).filter(s=>s.startsWith(OTHER)).map(s=>s.slice(OTHER.length)))};
   }
+  if(q.t==='file')return {q,answered:vals.length,bars:null,texts:[] as string[],files:vals.flatMap(v=>Array.isArray(v)?v:[v])};
   return {q,answered:vals.length,bars:null,texts:vals.map(v=>answerText(q,v))};
  }),[qs,list]);
  return <div className="zfe-col" onClick={e=>e.stopPropagation()}>
@@ -275,6 +283,7 @@ function Responses({form,resps,err,who,people,sheet,sheetBusy,onOpen,onCsv,onShe
   {n>0&&view==='summary'&&stats.map(s=><section key={s.q.id} className="zfe-card zfe-stat">
    <h3>{s.q.title||'Untitled question'}</h3><small>{s.answered} response{s.answered===1?'':'s'}</small>
    {s.bars?<div className="zfe-bars">{s.bars.map(([k,c])=>{const pct=s.answered?Math.round(c/s.answered*100):0;return <div key={k} className="zfe-bar"><span className="zfe-bar-l" title={k}>{k}</span><span className="zfe-bar-t"><i style={{width:`${pct}%`}}/></span><span className="zfe-bar-n">{c} <small>({pct}%)</small></span></div>;})}</div>:null}
+   {'files' in s&&s.files&&s.files.length>0&&<Files docId={docId} list={s.files.slice(0,200)}/>}
    {s.texts.length>0&&<ul className="zfe-texts">{s.texts.slice(0,100).map((t,i)=><li key={i}>{t}</li>)}{s.texts.length>100&&<li className="zfe-muted">and {s.texts.length-100} more. Download the CSV to see all.</li>}</ul>}
   </section>)}
   {n>0&&view==='one'&&one&&<>
@@ -285,7 +294,13 @@ function Responses({form,resps,err,who,people,sheet,sheetBusy,onOpen,onCsv,onShe
     <span className="zfe-who">{one.user_id&&<Avatar m={people[one.user_id]} size={22}/>}<b>{who(one)}</b><small>{new Date(one.created_at).toLocaleString(undefined,{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'})}</small></span>
     <button type="button" className="zfe-ibtn" aria-label="Delete response" data-tip="Delete response" onClick={()=>{onDelete(one);setAt(a=>Math.max(0,Math.min(a,n-2)));}}><Trash2 size={17}/></button>
    </section>
-   {qs.map(q=><section key={q.id} className="zfe-card zfe-answer"><h3>{q.title||'Untitled question'}</h3><p>{answerText(q,one.answers[q.id])||<span className="zfe-muted">No answer</span>}</p></section>)}
+   {qs.map(q=><section key={q.id} className="zfe-card zfe-answer"><h3>{q.title||'Untitled question'}</h3>{q.t==='file'&&Array.isArray(one.answers[q.id])&&(one.answers[q.id] as string[]).length?<Files docId={docId} list={one.answers[q.id] as string[]}/>:<p>{answerText(q,one.answers[q.id])||<span className="zfe-muted">No answer</span>}</p>}</section>)}
   </>}
  </div>;
+}
+
+// Files people uploaded, each one a download link (only the form's owners and editors can open them).
+function Files({docId,list}:{docId:string;list:string[]}){
+ return <ul className="zfe-files">{list.map(f=>{const p=parseFile(f);if(!p)return null;
+  return <li key={f}><a href={`/api/zarn/forms/file?id=${docId}&k=${encodeURIComponent(p.key)}&n=${encodeURIComponent(p.name)}`} target="_blank" rel="noopener"><Download size={15}/><span>{p.name}</span><small>{fileBytes(p.size)}</small></a></li>;})}</ul>;
 }

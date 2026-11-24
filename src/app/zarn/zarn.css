@@ -3558,3 +3558,17 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zb-rows li>.zb-stage+.zb-row-acts{flex-basis:100%;margin-left:40px}
  .zb-rowlink{flex-wrap:wrap;row-gap:6px}.zb-rowlink>.zb-main{flex-basis:100%}
 }
+
+/* Form file upload questions */
+.zfe-file{display:flex;flex-direction:column;margin-top:4px}
+.zfe-kinds{display:flex;flex-wrap:wrap;gap:8px 20px;padding:4px 0 12px}
+.zfe-kind{display:inline-flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+.zfe-kind input{width:16px;height:16px;accent-color:var(--z-accent,#673ab7)}
+.zfe-mini{border:1px solid var(--z-border);background:var(--z-surface,transparent);color:inherit;border-radius:6px;padding:6px 10px;font:inherit;font-size:13px}
+.zfe-fakefile{display:inline-flex;align-items:center;gap:8px;border-bottom:0;width:auto}
+.zfe-fakefile small{color:var(--z-muted);font-size:12px}
+.zfe-files{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:340px;overflow-y:auto}
+.zfe-files a{display:flex;align-items:center;gap:10px;border:1px solid var(--z-border);border-radius:8px;padding:8px 12px;color:inherit;text-decoration:none;min-width:0}
+.zfe-files a:hover{border-color:var(--z-muted)}
+.zfe-files span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zfe-files small{color:var(--z-muted);font-size:12px;white-space:nowrap}

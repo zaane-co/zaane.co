@@ -3,7 +3,8 @@ import {createHash} from 'node:crypto';
 import {serviceClient} from '@/lib/supabase/server';
 import {zarnMember} from '@/lib/zarn-server';
 import {pushTo} from '@/lib/zarn-push';
-import {checkAnswers,leadFrom,readForm} from '@/lib/form';
+import {checkAnswers,leadFrom,parseFile,readForm} from '@/lib/form';
+import {headPrivate} from '@/lib/r2';
 // Someone answering a form. Public forms take answers from anyone with the link; team forms need a ZARN sign-in.
 const body=z.object({id:z.uuid(),answers:z.record(z.string(),z.unknown()),email:z.string().max(200).optional(),hp:z.string().optional()});
 const fail=(error:string,status=400)=>Response.json({error},{status});
@@ -26,7 +27,15 @@ export async function POST(request:Request){
  if(f.set.once&&me){const {count}=await db.from('zarn_form_responses').select('id',{count:'exact',head:true}).eq('doc_id',b.id).eq('user_id',me.user_id);if(count)return fail('You’ve already answered this form.',409);}
  let email:string|null=null;
  if(f.set.email&&!me){email=(b.email??'').trim().toLowerCase();if(!EMAIL.test(email))return fail('Enter a valid email address.');}
- const chk=checkAnswers(f,b.answers);if(!chk.ok)return fail(chk.error);
+ const chk=checkAnswers(f,b.answers,b.id);if(!chk.ok)return fail(chk.error);
+ // Uploaded files must really be in storage and within the question's size limit; the size kept is the stored one.
+ for(const q of f.qs){if(q.t!=='file'||!Array.isArray(chk.clean[q.id]))continue;
+  const out:string[]=[];
+  for(const s of chk.clean[q.id] as string[]){const p=parseFile(s)!;const h=await headPrivate(p.key);
+   if(!h)return fail(`${p.name} didn’t finish uploading. Remove it and add it again.`);
+   if(h.size>(q.maxMb??100)*1048576)return fail(`${p.name} is too big for “${q.title||'a question'}”.`);
+   out.push(`${p.key}|${h.size}|${p.name}`);}
+  chk.clean[q.id]=out;}
  const ip=ipHash(request);
  if(ip&&!me){
   const since=(ms:number)=>new Date(Date.now()-ms).toISOString();
