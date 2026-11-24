@@ -3597,3 +3597,46 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zn-joincall h1{margin:4px 0 0;font-size:22px}
 .zn-joincall p{margin:0;color:var(--z-muted)}
 @media(max-width:760px){.zn-room-stage.is-grid{grid-template-columns:repeat(min(var(--cols,1),2),minmax(0,1fr));padding:12px;gap:8px}.zn-room-stage.is-grid[data-n="2"]{grid-template-columns:1fr}}
+
+/* Mail (Zoho) */
+.zm-pad{padding:20px 24px}
+.zm-acts{display:flex;gap:8px}.zm-acts .zn-btn:not(.is-primary){width:38px;padding:0}
+.zm-err{margin:10px 24px 0}
+.zm-wrap{flex:1;min-height:0;display:grid;grid-template-columns:200px minmax(280px,380px) 1fr}
+.zm-folders{border-right:1px solid var(--z-border);overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.zm-folders button{display:flex;align-items:center;gap:8px;height:34px;padding-right:10px;border-radius:8px;font-size:13.5px;color:var(--z-fg);text-align:left}
+.zm-folders button span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zm-folders button:hover{background:var(--z-hover)}.zm-folders button.is-on{background:var(--z-hover);font-weight:700}
+.zm-folders em{font-style:normal;font-size:11px;font-weight:700;background:var(--z-accent);color:#fff;border-radius:99px;padding:1px 7px}
+.zm-list{border-right:1px solid var(--z-border);display:flex;flex-direction:column;min-height:0}
+.zm-search{display:flex;align-items:center;gap:8px;margin:10px;padding:0 12px;height:38px;border:1px solid var(--z-border);border-radius:9px;background:var(--z-input);color:var(--z-muted)}
+.zm-search input{flex:1;min-width:0;background:none;border:0;outline:none;color:var(--z-fg);font:inherit;font-size:14px}
+.zm-folder-pick{display:none}
+.zm-row{display:flex;flex-direction:column;gap:2px;width:100%;padding:11px 14px;border-bottom:1px solid var(--z-border);text-align:left;color:var(--z-fg)}
+.zm-row:hover{background:var(--z-hover)}.zm-row.is-on{background:var(--z-panel-2)}
+.zm-row-top{display:flex;gap:8px;align-items:baseline}.zm-row-top b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;font-size:13.5px}
+.zm-row-top small{color:var(--z-muted);font-size:11.5px;flex:none}
+.zm-row-sub{display:flex;align-items:center;gap:5px;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zm-row-sum{font-size:12.5px;color:var(--z-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zm-row.is-unread .zm-row-top b,.zm-row.is-unread .zm-row-sub{font-weight:800}
+.zm-row.is-unread{box-shadow:inset 3px 0 0 var(--z-accent)}
+.zm-more{margin:12px auto;display:flex}
+.zm-read{display:flex;flex-direction:column;min-width:0;min-height:0}
+.zm-pick{margin:auto}
+.zm-read-head{display:flex;gap:12px;padding:16px 20px 8px}
+.zm-read-head h2{font-size:18px;font-weight:800;line-height:1.3;margin-bottom:6px}
+.zm-read-head p{font-size:13px}.zm-read-head p span,.zm-to{color:var(--z-muted)}.zm-to{margin-top:2px;font-size:12px!important}
+.zm-back{display:none;width:38px;padding:0;flex:none}
+.zm-read-acts{display:flex;gap:8px;flex-wrap:wrap;padding:4px 20px 10px}.zm-read-acts .zn-btn{height:34px;padding:0 12px}
+.zm-files{display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 10px}
+.zm-files a{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--z-border);border-radius:8px;font-size:12.5px;color:var(--z-fg);background:var(--z-panel)}
+.zm-files a small{color:var(--z-muted)}.zm-files a:hover{background:var(--z-hover)}
+.zm-body{flex:1;min-height:300px;width:100%;border:0;border-top:1px solid var(--z-border);background:#fff}
+.zm-compose{min-height:200px}
+@media (max-width:1100px){.zm-wrap{grid-template-columns:minmax(260px,340px) 1fr}.zm-folders{display:none}.zm-folder-pick{display:block;margin:0 10px 10px;width:calc(100% - 20px)}}
+@media (max-width:760px){
+ .zm-wrap{grid-template-columns:1fr}.zm-list{border-right:0}.zm-read{display:none}
+ .zm-wrap.is-reading .zm-list{display:none}.zm-wrap.is-reading .zm-read{display:flex}
+ .zm-back{display:inline-flex}.zm-acts .zn-btn.is-primary{padding:0 12px}
+ .zn-page-head p{max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
