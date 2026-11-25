@@ -28,7 +28,7 @@ type Msg={messageId:string;folderId:string;subject?:string;summary?:string;sende
 const esc=(s:string)=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]!));
 const clean=(h:string)=>h.replace(/<(script|style|iframe|object|embed|form)[\s\S]*?<\/\1>/gi,'').replace(/<(script|iframe|object|embed|meta|link|base)[^>]*>/gi,'').replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi,'').replace(/(href|src)\s*=\s*(["'])\s*javascript:[^"']*\2/gi,'$1="#"');
 // Zoho sends names and addresses HTML-escaped (sometimes twice), e.g. &amp;lt;a@b.com&amp;gt;.
-const un=(v?:string)=>{let x=v??'';for(let i=0;i<2;i++)x=x.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');return x;};
+const unesc=(v?:string)=>{let x=v??'';for(let i=0;i<2;i++)x=x.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');return x;};
 const list=(s:string)=>s.split(/[,;]/).map(x=>x.trim()).filter(Boolean).join(',');
 
 export async function POST(request:Request){
@@ -47,7 +47,7 @@ export async function POST(request:Request){
   }
   if(b.action==='list'){
    const qs=new URLSearchParams({start:String(b.start),limit:'50',includeto:'true'});
-   const row=(m:Msg,unread:boolean)=>({id:String(m.messageId),folderId:String(m.folderId),subject:un(m.subject),summary:un(m.summary),from:un(m.sender||m.fromAddress),fromAddress:un(m.fromAddress),to:un(m.toAddress),
+   const row=(m:Msg,unread:boolean)=>({id:String(m.messageId),folderId:String(m.folderId),subject:unesc(m.subject),summary:unesc(m.summary),from:unesc(m.sender||m.fromAddress),fromAddress:unesc(m.fromAddress),to:unesc(m.toAddress),
     at:Number(m.receivedTime)||0,unread,attach:m.hasAttachment==='1'});
    if(b.q){qs.set('searchKey',`entire:${b.q}`);const msgs=await zoho<Msg[]>(a,`/messages/search?${qs}`);return Response.json({messages:(msgs??[]).map(m=>row(m,false)),more:(msgs??[]).length===50});}
    // Zoho is asked for the unread ones directly, so the unread marks and the folder count are always right.
@@ -66,7 +66,7 @@ export async function POST(request:Request){
     zoho<{attachments?:{attachmentId:string;attachmentName:string;attachmentSize:number}[]}>(a,`${base}/attachmentinfo`).catch(()=>({attachments:[]})),
    ]);
    void zoho(a,'/updatemessage',{method:'PUT',json:{mode:'markAsRead',messageId:[b.messageId]}}).catch(()=>0);
-   return Response.json({html:content?.content??'',subject:un(details?.subject),from:un(details?.sender),fromAddress:un(details?.fromAddress),to:un(details?.toAddress),cc:un(details?.ccAddress),replyTo:un(details?.replyTo),
+   return Response.json({html:content?.content??'',subject:unesc(details?.subject),from:unesc(details?.sender),fromAddress:unesc(details?.fromAddress),to:unesc(details?.toAddress),cc:unesc(details?.ccAddress),replyTo:unesc(details?.replyTo),
     at:Number(details?.receivedTime)||0,files:(att?.attachments??[]).map(x=>({id:String(x.attachmentId),name:x.attachmentName,size:Number(x.attachmentSize)||0}))});
   }
   if(b.action==='link_sign'){
