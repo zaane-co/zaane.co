@@ -59,7 +59,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
  const chName=channels.find(c=>c.id===channelId)?.name??'this channel';
  const [rec,setRec]=useState(false),[recSecs,setRecSecs]=useState(0),[recBusy,setRecBusy]=useState(false);
  const recorder=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),recStream=useRef<MediaStream|null>(null),recTimer=useRef<ReturnType<typeof setInterval>|null>(null),recStart=useRef(0),discard=useRef(false);
- const MAX_VOICE=180;
+ const MAX_VOICE=900;
  // Press and hold the mic to record, release to send, slide left to cancel. A quick tap keeps recording until you press send.
  const [holding,setHolding]=useState(false),[slide,setSlide]=useState(false);
  const hold=useRef<{t:number;x:number;cancel:boolean}|null>(null),stopAfterStart=useRef<'send'|'cancel'|null>(null);
@@ -72,7 +72,7 @@ export default function Composer({channelId,parentId,placeholder,onSent,onTyping
    recStream.current=stream;
    const mime=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg'].find(t=>MediaRecorder.isTypeSupported(t));
    // Echo cancellation is for calls; on a voice note it only makes the voice warble. A higher bitrate keeps speech clear.
-   const r=new MediaRecorder(stream,{...(mime?{mimeType:mime}:{}),audioBitsPerSecond:96000});
+   const r=new MediaRecorder(stream,{...(mime?{mimeType:mime}:{}),audioBitsPerSecond:64000});
    chunks.current=[];discard.current=false;
    r.ondataavailable=e=>{if(e.data.size)chunks.current.push(e.data);};
    r.onstop=()=>{const secs=Math.max(1,Math.round((Date.now()-recStart.current)/1000));stopTracks();if(discard.current){setRec(false);return;}void sendVoice(new Blob(chunks.current,{type:r.mimeType||mime||'audio/webm'}),secs);};
@@ -105,9 +105,19 @@ function micDown(e:React.PointerEvent){
    if(blob.size<600)throw new Error('That was too short. Hold on a little longer.');
    const base=blob.type.split(';')[0]||'audio/webm',ext=base.includes('mp4')?'m4a':base.includes('ogg')?'ogg':'webm';
    const file=new File([blob],`voice-note-${Date.now()}.${ext}`,{type:base});
-   const form=new FormData();form.set('channel_id',channelId);form.set('file',file);
-   const r=await fetch('/api/zarn/files',{method:'POST',body:form});const d=await r.json().catch(()=>({}));
-   if(!r.ok)throw new Error(d.error||'Could not send the voice note.');
+   // Straight to storage like any file (no size cap). If that's blocked, short notes go through the site instead.
+   let d:{key:string;name:string;size:number;type:string};
+   try{
+    const r=await fetch('/api/zarn/files',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'chat_sign',channel_id:channelId,name:file.name,type:file.type,size:file.size})});
+    const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Could not send the voice note.');
+    await putDirect(j.url,file,j.type,()=>{});d={key:j.key,name:j.name,size:file.size,type:j.type};
+   }catch(direct){
+    if(file.size>4*1024*1024)throw direct;
+    const form=new FormData();form.set('channel_id',channelId);form.set('file',file);
+    const r=await fetch('/api/zarn/files',{method:'POST',body:form}).catch(()=>null);const j=await r?.json().catch(()=>({}));
+    if(!r?.ok)throw new Error(j?.error||'Voice note not sent. Check your connection and try again.');
+    d=j;
+   }
    const msg={id:crypto.randomUUID(),channel_id:channelId,parent_id:parentId??null,user_id:me.user_id,body:'',attachments:[{key:d.key,name:d.name,size:d.size,type:d.type,duration:secs}],lead_id:null};
    emit({table:'zarn_messages',type:'INSERT',row:{...msg,invoice_id:null,kind:'user',meta:{},reply_count:0,last_reply_at:null,pinned_at:null,edited_at:null,deleted_at:null,created_at:new Date().toISOString(),pending:true}});
    const {error:e}=await db.from('zarn_messages').insert(msg);
