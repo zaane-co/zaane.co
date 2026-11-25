@@ -26,17 +26,17 @@ insert into public.zarn_call_people(call_id,user_id,status,created_at,joined_at,
  from public.zarn_calls where callee_id is not null
 on conflict do nothing;
 
-create function public.zarn_in_call(c uuid) returns boolean language sql stable security definer set search_path='' as $$
+create function private.zarn_in_call(c uuid) returns boolean language sql stable security definer set search_path='' as $$
  select exists(select 1 from public.zarn_call_people where call_id=c and user_id=(select auth.uid())) $$;
 
 alter table public.zarn_call_people enable row level security;
-create policy people_read on public.zarn_call_people for select to authenticated using(public.zarn_in_call(call_id));
+create policy people_read on public.zarn_call_people for select to authenticated using(private.zarn_in_call(call_id));
 revoke all on public.zarn_call_people from anon, authenticated;
 grant select on public.zarn_call_people to authenticated;
 
 -- People see calls they were part of, and calls going on right now in chats they belong to (to join them).
 drop policy parties_read on public.zarn_calls;
 create policy call_read on public.zarn_calls for select to authenticated using(
- (select auth.uid()) in (caller_id,callee_id) or public.zarn_in_call(id) or (status in ('ringing','active') and public.zarn_in_channel(channel_id)));
+ (select auth.uid()) in (caller_id,callee_id) or private.zarn_in_call(id) or (status in ('ringing','active') and private.zarn_in_channel(channel_id)));
 
 alter publication supabase_realtime add table public.zarn_call_people;

@@ -3641,3 +3641,4 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zn-page-head p{max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 @media(min-width:861px){.zn-mail-phone{display:none}}
+.zn-empty-state .zb-err{color:#fff;margin:0 0 16px}
