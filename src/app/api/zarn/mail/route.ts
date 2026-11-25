@@ -13,10 +13,13 @@ const actions=z.discriminatedUnion('action',[
  z.object({action:z.literal('folders')}),
  z.object({action:z.literal('list'),folderId:zid,start:z.number().int().min(1).max(100000).default(1),q:z.string().trim().max(200).default(''),unread:z.boolean().default(false)}),
  z.object({action:z.literal('read'),folderId:zid,messageId:zid}),
- z.object({action:z.literal('send'),to:addrs.refine(Boolean,'Add who it’s to.'),cc:addrs,bcc:addrs,subject:z.string().trim().max(500),html:z.string().max(500000),
+ z.object({action:z.literal('send'),to:addrs,cc:addrs,bcc:addrs,subject:z.string().trim().max(500),html:z.string().max(500000),
   attachments:z.array(z.object({storeName:z.string().max(300),attachmentPath:z.string().max(1000),attachmentName:z.string().max(300)})).max(20).default([]),
   links:z.array(z.object({key:z.string().regex(/^private\/zarn\/mail\/[0-9a-f-]{36}\/[\w.-]{1,200}$/i),name:z.string().max(300),size:z.number().min(0)})).max(20).default([]),
-  reply:z.object({folderId:zid,messageId:zid,mode:z.enum(['reply','replyall','forward'])}).optional()}),
+  reply:z.object({folderId:zid,messageId:zid,mode:z.enum(['reply','replyall','forward'])}).optional(),
+  fwd:z.array(zid).max(20).default([]),draft:z.boolean().default(false),draftOf:z.object({folderId:zid,messageId:zid}).optional()}),
+ z.object({action:z.literal('signature')}),
+ z.object({action:z.literal('delete'),folderId:zid,messageId:zid}),
  z.object({action:z.literal('link_sign'),name:z.string().trim().min(1).max(300),type:z.string().max(200).default(''),size:z.number().int().min(1).max(5*1024**3,'Files must be under 5 GB.')}),
  z.object({action:z.literal('flag'),messageIds:z.array(zid).min(1).max(100),mode:z.enum(['markAsRead','markAsUnread'])}),
  z.object({action:z.literal('disconnect')}),
@@ -69,7 +72,27 @@ export async function POST(request:Request){
    return Response.json({key,url:await signPut(key,b.type||'application/octet-stream')});
   }
   if(b.action==='flag'){await zoho(a,'/updatemessage',{method:'PUT',json:{mode:b.mode,messageId:b.messageIds}});return Response.json({ok:true});}
+  if(b.action==='delete'){await zoho(a,`/folders/${b.folderId}/messages/${b.messageId}`,{method:'DELETE'});return Response.json({ok:true});}
+  if(b.action==='signature'){
+   // The person's Zoho signature, added to new emails. Not every Zoho plan exposes it; then there is simply none.
+   const d=await zoho<{content?:string;position?:number}[]|{content?:string}>(a,'/accounts/signature',{root:true}).catch(()=>null);
+   const sig=Array.isArray(d)?d.find(x=>x.content)?.content:d?.content;
+   return Response.json({html:sig?clean(sig):''});
+  }
   if(b.action==='send'){
+   if(!b.draft&&!list(b.to))return fail('Add who it’s to.');
+   // Forwarding: the original email's files are copied across to Zoho as attachments of the new email.
+   const extra:{storeName:string;attachmentPath:string;attachmentName:string}[]=[];
+   if(b.reply?.mode==='forward'&&b.fwd.length){
+    const base=`/folders/${b.reply.folderId}/messages/${b.reply.messageId}`;
+    const info=await zoho<{attachments?:{attachmentId:string;attachmentName:string}[]}>(a,`${base}/attachmentinfo`).catch(()=>null);
+    for(const f of (info?.attachments??[]).filter(x=>b.fwd.includes(String(x.attachmentId)))){
+     const r=await zoho<Response>(a,`${base}/attachments/${f.attachmentId}`,{raw:true});
+     const form=new FormData();form.append('attach',new Blob([await r.arrayBuffer()]),f.attachmentName);
+     const d=await zoho<{storeName:string;attachmentName:string;attachmentPath:string}|{storeName:string;attachmentName:string;attachmentPath:string}[]>(a,'/messages/attachments?uploadType=multipart',{method:'POST',form});
+     const x=Array.isArray(d)?d[0]:d;if(x?.storeName)extra.push({storeName:x.storeName,attachmentPath:x.attachmentPath,attachmentName:x.attachmentName});
+    }
+   }
    // The composer's HTML (script and event handlers stripped), big files as download links, then the earlier email quoted.
    let html=`<div style="font-family:Arial,sans-serif;font-size:14px">${clean(b.html)}</div>`;
    if(b.links.length){const o=new URL(request.url).origin;
@@ -79,9 +102,12 @@ export async function POST(request:Request){
     const [c,d]=await Promise.all([zoho<{content:string}>(a,`${base}/content`).catch(()=>null),zoho<{sender?:string;receivedTime?:string}>(a,`${base}/details`).catch(()=>null)]);
     if(c?.content)html+=`<br><div>On ${new Date(Number(d?.receivedTime)||Date.now()).toUTCString()}, ${esc(d?.sender??'')} wrote:</div><blockquote style="margin:0 0 0 8px;padding-left:10px;border-left:2px solid #ccc">${c.content}</blockquote>`;
    }
-   const msg={fromAddress:a.email,toAddress:list(b.to),ccAddress:list(b.cc)||undefined,bccAddress:list(b.bcc)||undefined,attachments:b.attachments.length?b.attachments:undefined,subject:b.subject||'(no subject)',content:html,mailFormat:'html',
-    ...(b.reply&&b.reply.mode!=='forward'?{action:'reply'}:{})};
-   await zoho(a,b.reply&&b.reply.mode!=='forward'?`/messages/${b.reply.messageId}`:'/messages',{method:'POST',json:msg});
+   const msg={fromAddress:a.email,toAddress:list(b.to),ccAddress:list(b.cc)||undefined,bccAddress:list(b.bcc)||undefined,attachments:b.attachments.length+extra.length?[...b.attachments,...extra]:undefined,subject:b.subject||'(no subject)',content:html,mailFormat:'html',
+    ...(b.draft?{mode:'draft'}:b.reply&&b.reply.mode!=='forward'?{action:'reply'}:{})};
+   const asReply=!b.draft&&b.reply&&b.reply.mode!=='forward';
+   await zoho(a,asReply?`/messages/${b.reply!.messageId}`:'/messages',{method:'POST',json:msg});
+   // A draft that was opened again and then sent (or saved again) replaces the old copy in Drafts.
+   if(b.draftOf)await zoho(a,`/folders/${b.draftOf.folderId}/messages/${b.draftOf.messageId}`,{method:'DELETE'}).catch(()=>0);
    return Response.json({ok:true});
   }
   // disconnect: forget the mailbox here and cancel the token at Zoho.

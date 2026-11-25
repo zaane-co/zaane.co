@@ -29,7 +29,7 @@ export default function Mail(){
  const [folders,setFolders]=useState<Folder[]>([]),[folder,setFolder]=useState<string>('');
  const [rows,setRows]=useState<Row[]|null>(null),[more,setMore]=useState(false),[q,setQ]=useState(''),[search,setSearch]=useState('');
  const [open,setOpen]=useState<Row|null>(null),[full,setFull]=useState<Full|null>(null);
- const [draft,setDraft]=useState<(ComposeInit&{n:number})|null>(null),[err,setErr]=useState(params.get('error')?errors[params.get('error')!]??'':''),[onlyUnread,setOnlyUnread]=useState(false);
+ const [draft,setDraft]=useState<(ComposeInit&{n:number})|null>(null),[err,setErr]=useState(params.get('error')?errors[params.get('error')!]??'':''),[onlyUnread,setOnlyUnread]=useState(false),[sig,setSig]=useState('');
  const seq=useRef(0);
  const lost=useCallback((e:unknown)=>{if((e as {status?:number}).status===409||(e as {status?:number}).status===401)setSt(s=>s?{...s,connected:false}:s);setErr((e as Error).message);},[]);
 
@@ -40,6 +40,7 @@ export default function Mail(){
   setFolders(sorted);setFolder(sorted.find(x=>x.type.toLowerCase()==='inbox')?.id??sorted[0]?.id??'');
  }catch(e){lost(e);}})();},[st?.connected,lost]);
 
+ useEffect(()=>{if(!st?.connected)return;void api<{html:string}>({action:'signature'}).then(r=>setSig(r.html)).catch(()=>0);},[st?.connected]);
  const load=useCallback(async(start=1,quiet=false)=>{
   if(!folder)return;const n=++seq.current;if(!quiet&&start===1)setRows(null);
   try{const r=await api<{messages:Row[];more:boolean;unreadCount?:number}>({action:'list',folderId:folder,start,q:search,unread:onlyUnread});
@@ -61,8 +62,12 @@ export default function Mail(){
   const me=(st?.email??'').toLowerCase();
   const to=mode==='forward'?'':addr(full.replyTo||full.fromAddress||full.from);
   const cc=mode==='replyall'?[...new Set([...full.to.split(','),...full.cc.split(',')].map(addr).filter(x=>x&&x.toLowerCase()!==me&&x.toLowerCase()!==to.toLowerCase()))]:[];
-  setDraft({n:Date.now(),to:to?[to]:[],cc,subject:re(full.subject,mode==='forward'?'Fwd':'Re'),reply:{folderId:open.folderId,messageId:open.id,mode}});
+  setDraft({n:Date.now(),to:to?[to]:[],cc,subject:re(full.subject,mode==='forward'?'Fwd':'Re'),reply:{folderId:open.folderId,messageId:open.id,mode},files:mode==='forward'?full.files:undefined});
  }
+ // A draft opens back in the compose window; sending or saving it replaces the copy in Drafts.
+ function editDraft(){if(!open||!full)return;const split=(s:string)=>s.split(',').map(addr).filter(Boolean);
+  setDraft({n:Date.now(),to:split(full.to),cc:split(full.cc),subject:full.subject,html:full.html,draftOf:{folderId:open.folderId,messageId:open.id}});}
+ const inDrafts=folders.find(f=>f.id===folder)?.type.toLowerCase()==='drafts';
  async function disconnect(){
   if(!await confirm({title:'Disconnect Zoho Mail?',message:'Your emails stay in Zoho. You can connect again any time.',confirm:'Disconnect',danger:true}))return;
   await api({action:'disconnect'}).catch(()=>0);setSt(s=>s?{...s,connected:false,email:null}:s);setRows(null);setFolders([]);setOpen(null);
@@ -103,7 +108,8 @@ export default function Mail(){
       <div><h2>{full?.subject||open.subject||'(no subject)'}</h2>
        <p><b>{nameOf(full?.from??open.from)}</b> <span>{addr(full?.fromAddress??open.fromAddress)}</span></p>
        {full&&<p className="zm-to">To {full.to.split(',').map(nameOf).join(', ')}{full.cc?` · Cc ${full.cc.split(',').map(nameOf).join(', ')}`:''} · {new Date(full.at||open.at).toLocaleString()}</p>}</div></div>
-     {full&&<div className="zm-read-acts"><button type="button" className="zn-btn" onClick={()=>reply('reply')}><Reply size={15}/>Reply</button>
+     {full&&inDrafts&&<div className="zm-read-acts"><button type="button" className="zn-btn is-primary" onClick={editDraft}><PenSquare size={15}/>Edit draft</button></div>}
+     {full&&!inDrafts&&<div className="zm-read-acts"><button type="button" className="zn-btn" onClick={()=>reply('reply')}><Reply size={15}/>Reply</button>
       <button type="button" className="zn-btn" onClick={()=>reply('replyall')}><ReplyAll size={15}/>Reply all</button>
       <button type="button" className="zn-btn" onClick={()=>reply('forward')}><Forward size={15}/>Forward</button></div>}
      {full&&full.files.length>0&&<div className="zm-files">{full.files.map(f=><a key={f.id} href={`/api/zarn/mail?f=${open.folderId}&m=${open.id}&a=${f.id}&n=${encodeURIComponent(f.name)}`}><Paperclip size={13}/>{f.name}<small>{size(f.size)}</small></a>)}</div>}
@@ -113,6 +119,6 @@ export default function Mail(){
     </>}
    </section>
   </div>
-  {draft&&<MailCompose key={draft.n} init={draft} from={st.email??''} onClose={()=>setDraft(null)} onSent={()=>{setDraft(null);if(folders.find(f=>f.id===folder)?.type.toLowerCase()==='sent')void load(1,true);}}/>}
+  {draft&&<MailCompose key={draft.n} init={draft} from={st.email??''} onClose={()=>setDraft(null)} signature={sig} onSent={d=>{const t=folders.find(f=>f.id===folder)?.type.toLowerCase();if(draft?.draftOf)setOpen(null);setDraft(null);if(t==='sent'||t==='drafts'||d&&t==='drafts')void load(1,true);}}/>}
  </div>;
 }

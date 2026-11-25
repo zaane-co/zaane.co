@@ -1,10 +1,10 @@
 'use client';
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Bold,Italic,Underline,List,ListOrdered,Link2,RemoveFormatting,Paperclip,Send,Trash2,Minus,Maximize2,Minimize2,X,Loader2} from 'lucide-react';
 import {useConfirm} from './ConfirmProvider';
 
-export type ComposeInit={to:string[];cc:string[];subject:string;reply?:{folderId:string;messageId:string;mode:'reply'|'replyall'|'forward'}};
-type Att={id:string;name:string;size:number;pct:number;state:'up'|'done'|'err';err?:string;zoho?:{storeName:string;attachmentName:string;attachmentPath:string};link?:{key:string;name:string;size:number}};
+export type ComposeInit={to:string[];cc:string[];subject:string;reply?:{folderId:string;messageId:string;mode:'reply'|'replyall'|'forward'};html?:string;files?:{id:string;name:string;size:number}[];draftOf?:{folderId:string;messageId:string}};
+type Att={id:string;name:string;size:number;pct:number;state:'up'|'done'|'err';err?:string;zoho?:{storeName:string;attachmentName:string;attachmentPath:string};link?:{key:string;name:string;size:number};fwd?:string};
 const DIRECT=3.5*1024*1024,MAX=5*1024**3;
 const okAddr=(s:string)=>/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(s);
 const size=(b:number)=>b<1024*1024?`${Math.max(1,Math.round(b/1024))} KB`:b<1024**3?`${(b/1024/1024).toFixed(1)} MB`:`${(b/1024**3).toFixed(2)} GB`;
@@ -33,12 +33,14 @@ function Recipients({label,list,setList,extra,auto}:{label:string;list:string[];
  </div>;
 }
 
-export default function MailCompose({init,from,onClose,onSent}:{init:ComposeInit;from:string;onClose:()=>void;onSent:()=>void}){
+export default function MailCompose({init,from,signature,onClose,onSent}:{init:ComposeInit;from:string;signature:string;onClose:()=>void;onSent:(draft:boolean)=>void}){
  const confirm=useConfirm();
  const [to,setTo]=useState(init.to),[cc,setCc]=useState(init.cc),[bcc,setBcc]=useState<string[]>([]),[showCc,setShowCc]=useState(init.cc.length>0),[showBcc,setShowBcc]=useState(false);
- const [subject,setSubject]=useState(init.subject),[atts,setAtts]=useState<Att[]>([]),[busy,setBusy]=useState(false),[err,setErr]=useState('');
+ const [subject,setSubject]=useState(init.subject),[atts,setAtts]=useState<Att[]>(()=>init.reply?.mode==='forward'?(init.files??[]).map(f=>({id:`fwd-${f.id}`,name:f.name,size:f.size,pct:100,state:'done' as const,fwd:f.id})):[]),[busy,setBusy]=useState(false),[err,setErr]=useState('');
  const [view,setView]=useState<'dock'|'min'|'big'>('dock');
- const ed=useRef<HTMLDivElement>(null),pick=useRef<HTMLInputElement>(null);
+ const ed=useRef<HTMLDivElement>(null),pick=useRef<HTMLInputElement>(null),start=useRef('');
+ // The message starts with the saved draft, or a blank line and the person's Zoho signature.
+ useEffect(()=>{if(!ed.current)return;ed.current.innerHTML=init.html??(signature?`<div><br></div><div><br></div><div class="zmc-sig">${signature}</div>`:'');start.current=ed.current.innerHTML;},[]); // eslint-disable-line react-hooks/exhaustive-deps
  const title=init.reply?init.reply.mode==='forward'?'Forward':'Reply':'New message';
  const patch=(id:string,p:Partial<Att>)=>setAtts(l=>l.map(a=>a.id===id?{...a,...p}:a));
  const cmd=(c:string,v?:string)=>{ed.current?.focus();document.execCommand(c,false,v);};
@@ -60,22 +62,34 @@ export default function MailCompose({init,from,onClose,onSent}:{init:ComposeInit
    }catch(e){patch(id,{state:'err',err:(e as Error).message});}
   }
  }
- const empty=()=>!to.length&&!cc.length&&!subject.trim()&&!(ed.current?.innerText.trim())&&!atts.length;
- async function discard(){if(empty()||await confirm({title:'Discard this email?',message:'What you’ve written will be lost.',confirm:'Discard',danger:true}))onClose();}
+ const empty=()=>!to.length&&!cc.length&&!bcc.length&&subject===init.subject&&(ed.current?.innerHTML??'')===start.current&&!atts.some(a=>!a.fwd)&&!init.draftOf;
+ const payload=(draft:boolean)=>JSON.stringify({action:'send',draft,to:to.join(','),cc:cc.join(','),bcc:bcc.join(','),subject,html:ed.current?.innerHTML??'',
+  attachments:atts.filter(a=>a.zoho).map(a=>a.zoho),links:atts.filter(a=>a.link).map(a=>a.link),fwd:atts.filter(a=>a.fwd).map(a=>a.fwd),reply:init.reply,draftOf:init.draftOf});
+ // Closing keeps what you wrote: it's saved to your Zoho Drafts, like Gmail. The bin icon throws it away.
+ async function close(){
+  if(empty())return onClose();
+  if(atts.some(a=>a.state==='up')&&!await confirm({title:'Files are still uploading',message:'Close anyway? Files that haven’t finished won’t be in the draft.',confirm:'Close'}))return;
+  setBusy(true);
+  try{const r=await fetch('/api/zarn/mail',{method:'POST',headers:{'Content-Type':'application/json'},body:payload(true)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error);
+   window.dispatchEvent(new CustomEvent('zarn-toast',{detail:'Draft saved'}));onSent(true);}
+  catch{setBusy(false);if(await confirm({title:'Couldn’t save the draft',message:'Close and lose this email?',confirm:'Close',danger:true}))onClose();}
+ }
+ async function discard(){
+  if(!empty()&&!await confirm({title:'Discard this email?',message:init.draftOf?'The draft will be deleted.':'What you’ve written will be lost.',confirm:'Discard',danger:true}))return;
+  if(init.draftOf){await fetch('/api/zarn/mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'delete',...init.draftOf})}).catch(()=>0);onSent(true);}else onClose();
+ }
  async function send(){
   setErr('');
   const all=[...to,...cc,...bcc];
   if(!to.length)return setErr('Add who it’s to.');
   if(all.some(a=>!okAddr(a)))return setErr('One of the addresses doesn’t look right. It’s marked in red.');
   if(atts.some(a=>a.state==='up'))return setErr('Wait for your files to finish uploading.');
-  const html=ed.current?.innerHTML??'';
   if(!subject.trim()&&!(ed.current?.innerText.trim())&&!await confirm({title:'Send without a subject or message?',message:'',confirm:'Send'}))return;
   setBusy(true);
   try{
-   const r=await fetch('/api/zarn/mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'send',to:to.join(','),cc:cc.join(','),bcc:bcc.join(','),subject,html,
-    attachments:atts.filter(a=>a.zoho).map(a=>a.zoho),links:atts.filter(a=>a.link).map(a=>a.link),reply:init.reply})});
+   const r=await fetch('/api/zarn/mail',{method:'POST',headers:{'Content-Type':'application/json'},body:payload(false)});
    const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error??'Could not send. Try again.');
-   window.dispatchEvent(new CustomEvent('zarn-toast',{detail:'Email sent'}));onSent();
+   window.dispatchEvent(new CustomEvent('zarn-toast',{detail:'Email sent'}));onSent(false);
   }catch(e){setErr((e as Error).message);setBusy(false);}
  }
 
@@ -85,7 +99,7 @@ export default function MailCompose({init,from,onClose,onSent}:{init:ComposeInit
    <b>{subject.trim()||title}</b>
    <button type="button" aria-label={view==='min'?'Open':'Minimise'} onClick={e=>{e.stopPropagation();setView(v=>v==='min'?'dock':'min');}}><Minus size={16}/></button>
    <button type="button" className="zmc-big-btn" aria-label={view==='big'?'Smaller':'Bigger'} onClick={e=>{e.stopPropagation();setView(v=>v==='big'?'dock':'big');}}>{view==='big'?<Minimize2 size={15}/>:<Maximize2 size={15}/>}</button>
-   <button type="button" aria-label="Close" onClick={e=>{e.stopPropagation();void discard();}}><X size={16}/></button>
+   <button type="button" aria-label="Save draft and close" data-tip="Save draft and close" disabled={busy} onClick={e=>{e.stopPropagation();void close();}}><X size={16}/></button>
   </header>
   {view!=='min'&&<>
    <div className="zmc-from"><span className="zmc-lbl">From</span>{from}</div>
@@ -96,10 +110,10 @@ export default function MailCompose({init,from,onClose,onSent}:{init:ComposeInit
    <div className="zmc-body" data-lenis-prevent>
     <div ref={ed} className="zmc-editor" contentEditable suppressContentEditableWarning role="textbox" aria-multiline aria-label="Message" data-ph="Write your message" autoFocus={!!init.to.length}
      onKeyDown={e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();void send();}}}/>
-    {init.reply&&<p className="zmc-quote-note">{init.reply.mode==='forward'?'The original email is added below your message.':'The earlier email is quoted below your reply.'}</p>}
+    {init.reply&&<p className="zmc-quote-note">{init.reply.mode==='forward'?'The original email and its files are added below your message.':'The earlier email is quoted below your reply.'}</p>}
     {atts.length>0&&<div className="zmc-atts">{atts.map(a=><div key={a.id} className={`zmc-att is-${a.state}`}>
      <Paperclip size={13}/><span className="zmc-att-name">{a.name}</span>
-     <small>{a.state==='err'?a.err:a.state==='up'?`${a.pct}%`:a.link?`${size(a.size)} · sent as link`:size(a.size)}</small>
+     <small>{a.state==='err'?a.err:a.state==='up'?`${a.pct}%`:a.link?`${size(a.size)} · sent as link`:a.fwd?`${size(a.size)} · from original`:size(a.size)}</small>
      <button type="button" aria-label={`Remove ${a.name}`} onClick={()=>setAtts(l=>l.filter(x=>x.id!==a.id))}><X size={13}/></button>
      {a.state==='up'&&<i style={{width:`${a.pct}%`}}/>}</div>)}</div>}
    </div>

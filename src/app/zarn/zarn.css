@@ -3682,3 +3682,4 @@ a.zn-act-row:hover{background:var(--z-hover)}
 .zmc-tools button:hover,.zmc-trash:hover{background:var(--z-hover);color:var(--z-fg)}
 .zmc-sep{width:1px;height:20px;background:var(--z-border);margin:0 4px;flex:none}
 @media (max-width:760px){.zmc,.zmc.is-big{inset:0;transform:none;width:auto;height:auto;border-radius:0;border:0}.zmc.is-min{inset:auto 0 0 0}.zmc-big-btn{display:none!important}}
+.zmc-sig{color:var(--z-muted)}
