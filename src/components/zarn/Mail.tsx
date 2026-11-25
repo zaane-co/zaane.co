@@ -19,8 +19,8 @@ const errors:Record<string,string>={setup:'Zoho Mail isn’t set up on this site
 const order=['inbox','drafts','sent','spam','trash'];
 const when=(t:number)=>{if(!t)return '';const d=new Date(t),n=new Date();return d.toDateString()===n.toDateString()?d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):d.getFullYear()===n.getFullYear()?d.toLocaleDateString([],{day:'numeric',month:'short'}):d.toLocaleDateString([],{day:'numeric',month:'short',year:'numeric'});};
 const size=(b:number)=>b<1024*1024?`${Math.max(1,Math.round(b/1024))} KB`:`${(b/1024/1024).toFixed(1)} MB`;
-const nameOf=(s:string)=>s.replace(/<[^>]*>/g,'').replace(/&lt;.*?&gt;/g,'').replace(/"/g,'').trim()||s;
-const addr=(s:string)=>{const m=s.match(/<([^>]+)>|&lt;(.+?)&gt;/);return (m?.[1]??m?.[2]??s).trim();};
+const nameOf=(s:string)=>s.replace(/<[^>]*>/g,'').replace(/"/g,'').trim()||addr(s);
+const addr=(s:string)=>{const m=s.match(/<([^>]+)>/);return (m?.[1]??s).trim();};
 const re=(s:string,p:string)=>new RegExp(`^${p}:`,'i').test(s)?s:`${p}: ${s}`;
 
 export default function Mail(){
