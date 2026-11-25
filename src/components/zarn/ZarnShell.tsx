@@ -29,8 +29,8 @@ import {usePushState} from '@/lib/zarn-push-client';
 import CallProvider from './CallProvider';
 import {ChannelRow,ShellCtx,useNav,type Dialog} from './nav';
 
-type Area='chat'|'business'|'clients'|'projects'|'drive';
-const areaOf=(p:string):Area=>p.startsWith('/zarn/drive')||p.startsWith('/zarn/docs')||p.startsWith('/zarn/sheets')||p.startsWith('/zarn/forms')?'drive':p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')||p.startsWith('/zarn/crm')||p.startsWith('/zarn/business/clients')?'clients':p.startsWith('/zarn/business')?'business':'chat';
+type Area='chat'|'business'|'clients'|'projects'|'drive'|'mail';
+const areaOf=(p:string):Area=>p.startsWith('/zarn/mail')?'mail':p.startsWith('/zarn/drive')||p.startsWith('/zarn/docs')||p.startsWith('/zarn/sheets')||p.startsWith('/zarn/forms')?'drive':p.startsWith('/zarn/projects')?'projects':p.startsWith('/zarn/clients')||p.startsWith('/zarn/crm')||p.startsWith('/zarn/business/clients')?'clients':p.startsWith('/zarn/business')?'business':'chat';
 // Phone tab roots (tab bar visible). Inside a conversation the tab bar hides and a back arrow shows instead.
 const tabs=['/zarn/home','/zarn/todos','/zarn/drive','/zarn/projects','/zarn/clients'];
 
@@ -103,7 +103,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  const link=(href:string,icon:React.ReactNode,label:string,badge?:number,exact=true)=><Link href={href} className={`zn-nav-item is-big-link${(exact?pathname===href:pathname.startsWith(href))?' is-active':''}${badge?' is-unread':''}`}>{icon}<span>{label}</span>{badge?<em className="zn-badge">{badge}</em>:null}</Link>;
  // Home on a computer opens #general (or the first open channel), like it does on sign-in.
  const homeHref=()=>{const c=channels.find(x=>x.name==='general'&&!x.archived_at&&z.membership[x.id])??channels.find(x=>x.kind!=='dm'&&!x.archived_at&&z.membership[x.id]);return c?`/zarn/c/${c.id}`:'/zarn';};
- const railBtn=(a:Area,icon:React.ReactNode,label:string,badge:number)=><button type="button" className={`zn-rail-btn${area===a?' is-on':''}`} aria-pressed={area===a} onClick={()=>{setArea(a);if(a==='projects'&&pathname!=='/zarn/projects')router.push('/zarn/projects');else if(routeArea==='drive')router.push(a==='chat'?homeHref():`/zarn/${a}`);}}><span className="zn-rail-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small>{label}</small></button>;
+ const railBtn=(a:Area,icon:React.ReactNode,label:string,badge:number)=><button type="button" className={`zn-rail-btn${area===a?' is-on':''}`} aria-pressed={area===a} onClick={()=>{setArea(a);if(a==='projects'&&pathname!=='/zarn/projects')router.push('/zarn/projects');else if(routeArea==='drive'||routeArea==='mail')router.push(a==='chat'?homeHref():`/zarn/${a}`);}}><span className="zn-rail-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small>{label}</small></button>;
  const tab=(href:string,icon:React.ReactNode,label:string,badge:number,go=href)=>{const on=pathname===href||(href==='/zarn/home'&&pathname==='/zarn');return <Link href={go} className={`zn-tab${on?' is-on':''}`} aria-label={label} aria-current={on?'page':undefined}><span className="zn-tab-icon">{icon}{badge>0&&<em>{badge>99?'99+':badge}</em>}</span><small className="zn-tab-label">{label}</small></Link>;};
  const quickAction=(icon:React.ReactNode,label:string,go:()=>void)=><button type="button" role="menuitem" className="zn-quick-item" onClick={()=>{setQuick(false);go();}}><span>{icon}</span><small>{label}</small></button>;
 
@@ -112,12 +112,13 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
  const leaveProfile=()=>{const st=history.state as {znProfile?:number}|null;if(st?.znProfile){const rest={...st};delete rest.znProfile;try{history.replaceState(rest,'',location.href);}catch{}}setProfileId(null);};
  const closeProfile=()=>{if((history.state as {znProfile?:number}|null)?.znProfile)history.back();else setProfileId(null);};
  return <ConfirmProvider><CallProvider><ShellCtx.Provider value={{open:setDialog,profile:openProfile}}>
- <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}${routeArea==='drive'?' is-drive':''}${fileDrag&&hasDropTarget()?' is-file-drag':''}`} data-lenis-prevent>
+ <div className={`zarn${light?' is-light':''}${isTab?' is-tab':' is-deep'}${routeArea==='drive'||routeArea==='mail'?' is-drive':''}${fileDrag&&hasDropTarget()?' is-file-drag':''}`} data-lenis-prevent>
   <div className="zn-nav-wrap">
    <nav className="zn-rail" aria-label="Areas">
     <button type="button" className="zn-rail-logo" aria-label="Workspace menu" onClick={()=>setMenu(v=>!v)}><img src="/zarn%20logo2.png" alt="ZARN"/></button>
     {railBtn('chat',<MessageSquare size={20}/>,'Home',badges.home+badges.dms)}
     <button type="button" className={`zn-rail-btn${area==='drive'?' is-on':''}`} aria-pressed={area==='drive'} onClick={()=>{setArea('drive');if(routeArea!=='drive')router.push(driveLast);else if(!pathname.startsWith('/zarn/drive'))router.push('/zarn/drive');}}><span className="zn-rail-icon"><HardDrive size={20}/></span><small>Drive</small></button>
+    {!guest&&<button type="button" className={`zn-rail-btn${area==='mail'?' is-on':''}`} aria-pressed={area==='mail'} onClick={()=>{setArea('mail');if(pathname!=='/zarn/mail')router.push('/zarn/mail');}}><span className="zn-rail-icon"><Mail size={20}/></span><small>Mail</small></button>}
     {!guest&&railBtn('projects',<FolderKanban size={20}/>,'Projects',badges.projects)}
     {canBusiness&&railBtn('business',<TrendingUp size={20}/>,'Business',0)}
     {!guest&&railBtn('clients',<Briefcase size={20}/>,'Clients',badges.clients)}
@@ -170,7 +171,7 @@ export default function ZarnShell({children,workspace='ZARN'}:{children:React.Re
        {link('/zarn/mentions',<AtSign size={18} strokeWidth={1.75}/>,'Mentions',badges.activity)}
        {link('/zarn/threads',<MessageSquareText size={18} strokeWidth={1.75}/>,'Threads')}
        {link('/zarn/calls',<Phone size={18} strokeWidth={1.75}/>,'Calls')}
-       {me.account_type!=='guest'&&link('/zarn/mail',<Mail size={18} strokeWidth={1.75}/>,'Mail')}
+       {me.account_type!=='guest'&&<span className="zn-mail-phone">{link('/zarn/mail',<Mail size={18} strokeWidth={1.75}/>,'Mail')}</span>}
        {link('/zarn/drafts',<PencilLine size={18} strokeWidth={1.75}/>,'Drafts')}</>)}
       {section('library','Library',<>
         {link('/zarn/saved',<Bookmark size={18} strokeWidth={1.75}/>,'Saved')}

@@ -3640,3 +3640,4 @@ a.zn-act-row:hover{background:var(--z-hover)}
  .zm-back{display:inline-flex}.zm-acts .zn-btn.is-primary{padding:0 12px}
  .zn-page-head p{max-width:46vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
+@media(min-width:861px){.zn-mail-phone{display:none}}
