@@ -1,14 +1,13 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {useSearchParams} from 'next/navigation';
-import {ArrowLeft,Forward,Inbox,Mail as MailIcon,Paperclip,PenSquare,RefreshCw,Reply,ReplyAll,Search,Send,Unplug} from 'lucide-react';
-import {Modal} from './Dialogs';
+import {ArrowLeft,Forward,Inbox,Mail as MailIcon,Paperclip,PenSquare,RefreshCw,Reply,ReplyAll,Search,Unplug} from 'lucide-react';
+import MailCompose,{type ComposeInit} from './MailCompose';
 import {useConfirm} from './ConfirmProvider';
 
 type Folder={id:string;name:string;type:string;path:string;unread:number};
 type Row={id:string;folderId:string;subject:string;summary:string;from:string;fromAddress:string;to:string;at:number;unread:boolean;attach:boolean};
 type Full={html:string;subject:string;from:string;fromAddress:string;to:string;cc:string;replyTo:string;at:number;files:{id:string;name:string;size:number}[]};
-type Draft={to:string;cc:string;subject:string;body:string;reply?:{folderId:string;messageId:string;mode:'reply'|'replyall'|'forward'}};
 
 async function api<T>(body:object):Promise<T>{
  const r=await fetch('/api/zarn/mail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -30,7 +29,7 @@ export default function Mail(){
  const [folders,setFolders]=useState<Folder[]>([]),[folder,setFolder]=useState<string>('');
  const [rows,setRows]=useState<Row[]|null>(null),[more,setMore]=useState(false),[q,setQ]=useState(''),[search,setSearch]=useState('');
  const [open,setOpen]=useState<Row|null>(null),[full,setFull]=useState<Full|null>(null);
- const [draft,setDraft]=useState<Draft|null>(null),[err,setErr]=useState(params.get('error')?errors[params.get('error')!]??'':''),[busy,setBusy]=useState(false);
+ const [draft,setDraft]=useState<(ComposeInit&{n:number})|null>(null),[err,setErr]=useState(params.get('error')?errors[params.get('error')!]??'':''),[onlyUnread,setOnlyUnread]=useState(false);
  const seq=useRef(0);
  const lost=useCallback((e:unknown)=>{if((e as {status?:number}).status===409||(e as {status?:number}).status===401)setSt(s=>s?{...s,connected:false}:s);setErr((e as Error).message);},[]);
 
@@ -43,30 +42,26 @@ export default function Mail(){
 
  const load=useCallback(async(start=1,quiet=false)=>{
   if(!folder)return;const n=++seq.current;if(!quiet&&start===1)setRows(null);
-  try{const r=await api<{messages:Row[];more:boolean}>({action:'list',folderId:folder,start,q:search});
-   if(n!==seq.current)return;setRows(x=>start===1?r.messages:[...(x??[]),...r.messages]);setMore(r.more);}
+  try{const r=await api<{messages:Row[];more:boolean;unreadCount?:number}>({action:'list',folderId:folder,start,q:search,unread:onlyUnread});
+   if(n!==seq.current)return;setRows(x=>start===1?r.messages:[...(x??[]),...r.messages]);setMore(r.more);
+   if(r.unreadCount!=null)setFolders(l=>l.map(f=>f.id===folder?{...f,unread:r.unreadCount!}:f));}
   catch(e){if(n===seq.current){lost(e);setRows(x=>x??[]);}}
- },[folder,search,lost]);
+ },[folder,search,onlyUnread,lost]);
  useEffect(()=>{void (async()=>{await load();})();},[load]);
  // New mail: check every minute while the page is open and visible.
  useEffect(()=>{const t=setInterval(()=>{if(document.visibilityState==='visible')void load(1,true);},60_000);return()=>clearInterval(t);},[load]);
 
  async function read(r:Row){
   setOpen(r);setFull(null);setErr('');
-  if(r.unread)setRows(x=>x?.map(m=>m.id===r.id?{...m,unread:false}:m)??null);
+  if(r.unread){setRows(x=>x?.map(m=>m.id===r.id?{...m,unread:false}:m)??null);setFolders(l=>l.map(f=>f.id===r.folderId?{...f,unread:Math.max(0,f.unread-1)}:f));}
   try{setFull(await api<Full>({action:'read',folderId:r.folderId,messageId:r.id}));}catch(e){lost(e);}
  }
  function reply(mode:'reply'|'replyall'|'forward'){
   if(!open||!full)return;
   const me=(st?.email??'').toLowerCase();
   const to=mode==='forward'?'':addr(full.replyTo||full.fromAddress||full.from);
-  const cc=mode==='replyall'?[...full.to.split(','),...full.cc.split(',')].map(addr).filter(x=>x&&x.toLowerCase()!==me&&x.toLowerCase()!==to.toLowerCase()).join(', '):'';
-  setDraft({to,cc,subject:re(full.subject,mode==='forward'?'Fwd':'Re'),body:'',reply:{folderId:open.folderId,messageId:open.id,mode}});
- }
- async function send(e:React.FormEvent){
-  e.preventDefault();if(!draft)return;setBusy(true);setErr('');
-  try{await api({action:'send',...draft});setDraft(null);if(folders.find(f=>f.id===folder)?.type.toLowerCase()==='sent')void load(1,true);}
-  catch(x){setErr((x as Error).message);}finally{setBusy(false);}
+  const cc=mode==='replyall'?[...new Set([...full.to.split(','),...full.cc.split(',')].map(addr).filter(x=>x&&x.toLowerCase()!==me&&x.toLowerCase()!==to.toLowerCase()))]:[];
+  setDraft({n:Date.now(),to:to?[to]:[],cc,subject:re(full.subject,mode==='forward'?'Fwd':'Re'),reply:{folderId:open.folderId,messageId:open.id,mode}});
  }
  async function disconnect(){
   if(!await confirm({title:'Disconnect Zoho Mail?',message:'Your emails stay in Zoho. You can connect again any time.',confirm:'Disconnect',danger:true}))return;
@@ -76,7 +71,7 @@ export default function Mail(){
  const head=<header className="zn-page-head"><div><h1><MailIcon size={20}/>Mail</h1><p>{st?.connected?st.email:'Your Zoho mailbox, inside ZARN'}</p></div>
   {st?.connected&&<div className="zm-acts"><button type="button" className="zn-btn" onClick={()=>void load(1,true)} aria-label="Check for new mail"><RefreshCw size={15}/></button>
    <button type="button" className="zn-btn" onClick={()=>void disconnect()} aria-label="Disconnect Zoho Mail"><Unplug size={15}/></button>
-   <button type="button" className="zn-btn is-primary" onClick={()=>setDraft({to:'',cc:'',subject:'',body:''})}><PenSquare size={15}/>New email</button></div>}</header>;
+   <button type="button" className="zn-btn is-primary" onClick={()=>setDraft({n:Date.now(),to:[],cc:[],subject:''})}><PenSquare size={15}/>New email</button></div>}</header>;
 
  if(!st)return <div className="zn-page">{head}<p className="zn-note zm-pad">Loading…</p></div>;
  if(!st.connected)return <div className="zn-page">{head}<div className="zn-empty-state"><h2>Connect your Zoho Mail</h2>
@@ -91,9 +86,10 @@ export default function Mail(){
     {f.type.toLowerCase()==='inbox'?<Inbox size={15}/>:null}<span>{f.name}</span>{f.unread>0&&<em>{f.unread}</em>}</button>)}</nav>
    <section className="zm-list">
     <form className="zm-search" onSubmit={e=>{e.preventDefault();setOpen(null);setSearch(q.trim());}}><Search size={14}/><input value={q} onChange={e=>{setQ(e.target.value);if(!e.target.value&&search)setSearch('');}} placeholder="Search mail"/></form>
+    <div className="zm-filter" role="tablist">{([[false,'All'],[true,'Unread']] as const).map(([v,l])=><button key={l} type="button" role="tab" aria-selected={onlyUnread===v} className={onlyUnread===v?'is-on':''} onClick={()=>{setOnlyUnread(v);setOpen(null);}}>{l}{v&&(folders.find(f=>f.id===folder)?.unread??0)>0?` (${folders.find(f=>f.id===folder)!.unread})`:''}</button>)}</div>
     <select className="zn-input zm-folder-pick" value={folder} onChange={e=>{setFolder(e.target.value);setOpen(null);}}>{folders.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>
     <div className="zn-scroll" data-lenis-prevent>
-     {rows===null?<p className="zn-note zm-pad">Loading…</p>:rows.length===0?<p className="zn-note zm-pad">{search?'Nothing matches.':'No emails here.'}</p>:
+     {rows===null?<p className="zn-note zm-pad">Loading…</p>:rows.length===0?<p className="zn-note zm-pad">{search?'Nothing matches.':onlyUnread?'No unread emails here.':'No emails here.'}</p>:
      rows.map(r=><button type="button" key={r.id} className={`zm-row${r.unread?' is-unread':''}${open?.id===r.id?' is-on':''}`} onClick={()=>void read(r)}>
       <span className="zm-row-top"><b>{nameOf(r.from)}</b><small>{when(r.at)}</small></span>
       <span className="zm-row-sub">{r.attach&&<Paperclip size={12}/>}{r.subject||'(no subject)'}</span>
@@ -117,14 +113,6 @@ export default function Mail(){
     </>}
    </section>
   </div>
-  {draft&&<Modal title={draft.reply?draft.reply.mode==='forward'?'Forward':'Reply':'New email'} onClose={()=>setDraft(null)} wide><form className="zn-modal-body" onSubmit={send}>
-   <label className="zn-label">To<input className="zn-input" value={draft.to} onChange={e=>setDraft({...draft,to:e.target.value})} placeholder="name@company.com" autoFocus={!draft.to}/></label>
-   <label className="zn-label">Cc<input className="zn-input" value={draft.cc} onChange={e=>setDraft({...draft,cc:e.target.value})} placeholder="Optional, separate with commas"/></label>
-   <label className="zn-label">Subject<input className="zn-input" value={draft.subject} maxLength={500} onChange={e=>setDraft({...draft,subject:e.target.value})}/></label>
-   <label className="zn-label">Message<textarea className="zn-input zm-compose" value={draft.body} onChange={e=>setDraft({...draft,body:e.target.value})} rows={10} autoFocus={!!draft.to}/></label>
-   {draft.reply&&<p className="zn-note">{draft.reply.mode==='forward'?'The original email is included below your message.':'The earlier email is quoted below your reply.'}</p>}
-   {err&&<p className="zb-err" role="alert">{err}</p>}
-   <div className="zn-modal-foot"><button type="button" className="zn-btn" onClick={()=>setDraft(null)}>Cancel</button><button type="submit" className="zn-btn is-primary" disabled={busy}><Send size={15}/>{busy?'Sending…':'Send'}</button></div>
-  </form></Modal>}
+  {draft&&<MailCompose key={draft.n} init={draft} from={st.email??''} onClose={()=>setDraft(null)} onSent={()=>{setDraft(null);if(folders.find(f=>f.id===folder)?.type.toLowerCase()==='sent')void load(1,true);}}/>}
  </div>;
 }

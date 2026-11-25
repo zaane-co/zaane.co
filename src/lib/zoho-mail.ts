@@ -38,10 +38,10 @@ async function accessToken(a:MailAccount){
 export class MailError extends Error{constructor(m:string,public status=502){super(m);}}
 
 // A call to the Zoho Mail API for this person's mailbox. `path` starts after /api/accounts/{accountId}.
-export async function zoho<T=unknown>(a:MailAccount,path:string,init?:{method?:string;json?:unknown;raw?:boolean}){
+export async function zoho<T=unknown>(a:MailAccount,path:string,init?:{method?:string;json?:unknown;form?:FormData;raw?:boolean}){
  const tok=await accessToken(a);
  const r=await fetch(`${a.mail_host}/api/accounts/${a.zoho_account_id}${path}`,{method:init?.method??'GET',cache:'no-store',
-  headers:{Authorization:`Zoho-oauthtoken ${tok}`,...(init?.json?{'Content-Type':'application/json'}:{})},body:init?.json?JSON.stringify(init.json):undefined});
+  headers:{Authorization:`Zoho-oauthtoken ${tok}`,...(init?.json?{'Content-Type':'application/json'}:{})},body:init?.form??(init?.json?JSON.stringify(init.json):undefined)});
  if(init?.raw){if(!r.ok)throw new MailError('Could not get that file from Zoho.');return r as unknown as T;}
  const j=await r.json().catch(()=>null) as {data?:T;status?:{code?:number;description?:string}}|null;
  if(!r.ok||!j||(j.status?.code&&j.status.code>=300)){
